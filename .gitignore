@@ -1,0 +1,5 @@
+.idea/
+wandb/
+**/__pycache__/
+models/
+.run/

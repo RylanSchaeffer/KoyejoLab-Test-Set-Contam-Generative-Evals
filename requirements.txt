@@ -1,0 +1,16 @@
+black
+datasets
+huggingface_hub
+matplotlib
+numpy
+nvidia-htop
+pandas
+pyarrow
+scipy
+seaborn
+tokenizers
+tqdm
+transformers
+trl
+vllm
+wandb
