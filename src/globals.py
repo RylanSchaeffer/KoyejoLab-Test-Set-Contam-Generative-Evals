@@ -1,13 +1,6 @@
 DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
     "data_config": {
-        # "dataset": "Anthropic/hh-rlhf",
-        # "dataset": "HuggingFaceH4/ultrafeedback_binarized",
-        # "dataset": "nvidia/HelpSteer2",
-        "dataset": "nvidia/HelpSteer2,RylanSchaeffer/collapse_gemma-2-2b_hs2_iter1_sftsdXXX_temp1_max_seq_len512",
-        # "dataset": "roneneldan/TinyStories",
-        # "dataset": "RylanSchaeffer/collapse_gemma-2-2b_hs2_sftsdXXX_iter1_temp1.0_max_seq_len512",
-        "fraction": 0.5,
-        # "fraction": 1.0,
+        "dataset": "madrylab/gsm8k-platinum",
         "shuffle_seed": 0,
     },
     "model_config": {
@@ -18,7 +11,8 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
         # "initial_model_name_or_path": "facebook/opt-350m",
         # "initial_model_name_or_path": "google/gemma-2-2b",
         # "initial_model_name_or_path": "google/gemma-2-9b",
-        "initial_model_name_or_path": "google/gemma-3-4b",
+        "initial_model_name_or_path": "google/gemma-3-4b-it",
+        # "initial_model_name_or_path": "Qwen/Qwen3-4B-Base",
         "torch_dtype": "bfloat16",
     },
     "sft_trainer_config": {
@@ -31,9 +25,8 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
         "eval_strategy": "steps",
         "eval_steps": 100,
         "gradient_accumulation_steps": 2,
-        "gradient_checkpointing": False,
-        "learning_rate": 8e-6,
-        # "learning_rate": 1.41e-5,
+        "gradient_checkpointing": True,
+        "learning_rate": 1.41e-5,
         "logging_steps": 5,
         "lr_scheduler_type": "constant_with_warmup",
         # "lr_scheduler_type": "linear",

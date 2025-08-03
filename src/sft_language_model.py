@@ -13,6 +13,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "True"
 # This is needed for deterministic to work.
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
+import logging
 import numpy as np
 import pprint
 import torch
@@ -21,7 +22,6 @@ from transformers import AutoTokenizer, set_seed
 from trl import (
     SFTConfig,
     SFTTrainer,
-    get_peft_config,
 )
 from typing import Any, Dict
 import wandb
@@ -29,8 +29,6 @@ import wandb
 import src.data
 import src.globals
 import src.models
-
-tqdm.pandas()
 
 
 def train_supervised_finetuning():
@@ -86,10 +84,6 @@ def train_supervised_finetuning():
         sft_trainer_config_dict["fp16"] = True
     else:
         sft_trainer_config_dict["fp16"] = False
-    if sft_trainer_config_dict["gradient_checkpointing"]:
-        model_config_dict["use_cache"] = False
-    else:
-        model_config_dict["use_cache"] = True
 
     sft_config = SFTConfig(
         bf16=sft_trainer_config_dict["bf16"],
@@ -111,7 +105,7 @@ def train_supervised_finetuning():
         learning_rate=sft_trainer_config_dict["learning_rate"],
         logging_steps=sft_trainer_config_dict["logging_steps"],
         lr_scheduler_type=sft_trainer_config_dict["lr_scheduler_type"],
-        max_seq_length=sft_trainer_config_dict["max_seq_length"],
+        max_length=sft_trainer_config_dict["max_seq_length"],
         max_steps=sft_trainer_config_dict["max_steps"],
         num_train_epochs=sft_trainer_config_dict["num_train_epochs"],
         optim=sft_trainer_config_dict["optim"],
@@ -142,29 +136,13 @@ def train_supervised_finetuning():
     # when training a model in half-precision. You might consider adding tokenizer.padding_side = 'right' to your code.
     tokenizer.padding_side = "right"
 
-    datasets_dict = src.data.create_datasets_dict(
-        training_stage="sft",
+    datasets_dict = src.data.create_dataset_for_supervised_finetuning(
         tokenizer=tokenizer,
-        data_config_dict=data_config_dict,
-        max_length=sft_config.max_seq_length,
+        dataset_name=data_config_dict["dataset"],
+        max_length=sft_config.max_length,
     )
     train_dataset = datasets_dict["train"]
-
-    if wandb_config["data_config"]["fraction"] < 1.0:
-        indices = np.random.choice(
-            np.arange(len(train_dataset)),
-            size=int(wandb_config["data_config"]["fraction"] * len(train_dataset)),
-            replace=False,
-        )
-        train_dataset = train_dataset.select(indices)
-
-    # We always want to evaluate only on the real data. Thus, overwrite the eval dataset.
-    eval_dataset = src.data.create_dataset_for_supervised_finetuning(
-        tokenizer=tokenizer,
-        dataset_name="nvidia/HelpSteer2",
-        max_length=sft_config.max_seq_length,
-        remove_columns=True,
-    )["eval"]
+    eval_dataset = datasets_dict["eval"]
 
     model = src.models.load_automodelforcausallm(
         model_config_dict=model_config_dict,
@@ -172,21 +150,33 @@ def train_supervised_finetuning():
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        # tokenizer=tokenizer,
         args=sft_config,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
     )
-    trainer.train()
-    print("Finished training. Beginning final evaluation...")
+
+    # Evaluate before training.
+    logging.info("Evaluating before training...")
     metrics = trainer.evaluate()
     trainer.log_metrics(split="eval", metrics=metrics)
     pprint.pprint(metrics)
 
-    print(f"Finished final evaluation. Pushing to HuggingFace...")
+    # Train.
+    logging.info("Beginning training...")
+    trainer.train()
+
+    # Evaluate after training.
+    logging.info("Finished training. Beginning final evaluation...")
+    metrics = trainer.evaluate()
+    trainer.log_metrics(split="eval", metrics=metrics)
+    pprint.pprint(metrics)
+
+    # Push to HF Hub.
+    logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
     trainer.push_to_hub()
     # trainer.save_model(output_dir=sft_config.output_dir)
-    print("Pushed to HuggingFace.")
+    logging.info("Pushed to HuggingFace.")
     wandb.finish()
 
 
@@ -210,4 +200,4 @@ if __name__ == "__main__":
             [str(i) for i in range(torch.cuda.device_count())]
         )
     train_supervised_finetuning()
-    print("Finished train_supervised_finetuning.py!")
+    logging.info("Finished train_supervised_finetuning.py!")
