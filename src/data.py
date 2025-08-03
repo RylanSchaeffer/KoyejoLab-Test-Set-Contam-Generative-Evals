@@ -48,14 +48,14 @@ def create_dataset_for_supervised_finetuning(
             ]
             raw_datasets = raw_datasets.remove_columns(columns_to_remove)
 
-        indices = np.arange(len(raw_datasets["test"])).astype(int)
-        train_indices, test_indices = train_test_split(
-            indices,
-            test_size=0.5,
-        )
+        # indices = np.arange(len(raw_datasets["test"])).astype(int)
+        # train_indices, test_indices = train_test_split(
+        #     indices,
+        #     test_size=0.5,
+        # )
 
-        train_dataset = raw_datasets["test"].select(train_indices)
-        eval_dataset = raw_datasets["test"].select(test_indices)
+        train_dataset = raw_datasets["test"]  # .select(train_indices)
+        eval_dataset = raw_datasets["test"]  # .select(test_indices)
 
         datasets_dict = {
             "train": train_dataset,

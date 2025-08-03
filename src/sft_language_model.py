@@ -14,6 +14,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "True"
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 import logging
+import lm_eval
 import numpy as np
 import pprint
 import torch
@@ -56,6 +57,10 @@ def train_supervised_finetuning():
     )
     print("Output Directory: ", output_dir)
     os.makedirs(output_dir, exist_ok=True)
+
+    sfted_model_hf_name = create_sfted_model_huggingface_name(
+        wandb_config=wandb_config,
+    )
 
     effective_global_batch_size = (
         num_visible_devices
@@ -156,6 +161,19 @@ def train_supervised_finetuning():
         eval_dataset=eval_dataset,
     )
 
+    # Run EleutherAI's LM Evaluation Harness.
+    if wandb_config["data_config"]["dataset"] == "madrylab/gsm8k-platinum":
+        lm_eval_task = "gsm8k_platinum_cot"
+    else:
+        raise NotImplementedError
+    lm_eval_results = lm_eval.simple_evaluate(
+        model=lm_eval.models.huggingface.HFLM(
+            pretrained=trainer.model, tokenizer=tokenizer
+        ),
+        tasks=[lm_eval_task],
+    )
+    trainer.log_metrics(split="lm_eval", metrics=lm_eval_results)
+
     # Evaluate before training.
     logging.info("Evaluating before training...")
     metrics = trainer.evaluate()
@@ -172,26 +190,37 @@ def train_supervised_finetuning():
     trainer.log_metrics(split="eval", metrics=metrics)
     pprint.pprint(metrics)
 
+    # Evaluate using LM Eval.
+    lm_eval_results = lm_eval.simple_evaluate(
+        model=lm_eval.models.huggingface.HFLM(
+            pretrained=trainer.model, tokenizer=tokenizer
+        ),
+        tasks=[lm_eval_task],
+    )
+    trainer.log_metrics(split="lm_eval", metrics=lm_eval_results)
+
     # Push to HF Hub.
     logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
-    trainer.push_to_hub()
+    trainer.push_to_hub(model_name=sfted_model_hf_name)
     # trainer.save_model(output_dir=sft_config.output_dir)
     logging.info("Pushed to HuggingFace.")
     wandb.finish()
 
 
-def create_sft_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
-    reward_model_huggingface_name = wandb_config["model_config"][
-        "final_model_name_or_path"
-    ]
-    if "sftsd" not in reward_model_huggingface_name:
-        reward_model_huggingface_name += f"_sftsd{wandb_config['seed']}"
-
-    if len(reward_model_huggingface_name) > 94:
+def create_sfted_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
+    init_model_name = wandb_config["model_config"]["initial_model_name_or_path"].split(
+        "/"
+    )[-1]
+    dataset_name = wandb_config["data_config"]["dataset"].split("/")[-1]
+    num_train_epochs = wandb_config["sft_trainer_config"]["num_train_epochs"]
+    sfted_model_hf_name = (
+        f"mem_{init_model_name}_dataset={dataset_name}_epochs={num_train_epochs}"
+    )
+    if len(sfted_model_hf_name) > 94:
         raise ValueError(
-            f"reward_model_huggingface_name is too long: {reward_model_huggingface_name}"
+            f"reward_model_huggingface_name is too long: {sfted_model_hf_name}"
         )
-    return reward_model_huggingface_name
+    return sfted_model_hf_name
 
 
 if __name__ == "__main__":
