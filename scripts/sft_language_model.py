@@ -130,7 +130,7 @@ def train_supervised_finetuning():
         hub_private_repo=True,
         hub_strategy=sft_trainer_config_dict["hub_strategy"],
         include_num_input_tokens_seen=True,
-        learning_rate=sft_trainer_config_dict["learning_rate"],
+        learning_rate=float(sft_trainer_config_dict["learning_rate"]),
         logging_steps=sft_trainer_config_dict["logging_steps"],
         lr_scheduler_type=sft_trainer_config_dict["lr_scheduler_type"],
         max_length=sft_trainer_config_dict["max_length"],

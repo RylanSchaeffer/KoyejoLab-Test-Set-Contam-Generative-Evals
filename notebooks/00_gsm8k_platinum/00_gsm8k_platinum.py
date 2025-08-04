@@ -22,7 +22,8 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 
 sweep_ids = [
-    "p1r8qko7",  # Gemma 3 4B IT.
+    # "p1r8qko7",  # Gemma 3 4B IT.
+    "3q1eztwc",  # Qwen 2.5 3B.
 ]
 
 run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
@@ -52,7 +53,7 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=mean_token_accuracy_x=num_train_epochs",
 )
-plt.show()
+# plt.show()
 
 plt.close()
 g = sns.scatterplot(
@@ -68,11 +69,37 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=neg_log_mean_token_accuracy_x=num_train_epochs",
 )
-plt.show()
-
+# plt.show()
 
 for temperature in ["0.0", "0.316", "1.0"]:
     plt.close()
+    g = sns.scatterplot(
+        data=run_configs_df,
+        x="Num. Train Epochs",
+        y=f"lm_eval_after_temp={temperature}/exact_match_flexible_extract",
+    )
+    g.set(
+        xscale="log",
+        xlabel="Num. Train Epochs",
+        ylabel="Exact Match",
+        ylim=(-0.05, 1.05),
+    )
+    avg_exact_match_flexible_extract_before = run_configs_df[
+        f"lm_eval_before_temp={temperature}/exact_match_flexible_extract"
+    ].mean()
+    plt.axhline(avg_exact_match_flexible_extract_before, color="k", linestyle="--")
+    plt.text(
+        1.05, avg_exact_match_flexible_extract_before + 0.05, "Starting Checkpoint"
+    )
+    plt.title(f"Temperature: {temperature}")
+    src.plot.save_plot_with_multiple_extensions(
+        plot_dir=results_dir,
+        plot_filename=f"y=em_after_x=num_train_epochs_temp={temperature}",
+    )
+    # plt.show()
+
+    plt.close()
+    plt.figure(figsize=(8, 6))
     g = sns.scatterplot(
         data=run_configs_df,
         x=f"lm_eval_before_temp={temperature}/exact_match_flexible_extract",
@@ -89,10 +116,13 @@ for temperature in ["0.0", "0.316", "1.0"]:
         xlabel="Exact Match (Before)",
         ylabel="Exact Match (After)",
     )
+    plt.title(f"Temperature: {temperature}")
     plt.plot([0.01, 1.0], [0.01, 1.0], linestyle="--", color="black")
+    sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1), title="Num.\nTrain\nEpochs")
     src.plot.save_plot_with_multiple_extensions(
         plot_dir=results_dir,
         plot_filename=f"y=em_after_x=em_before_hue=num_train_epochs_temp={temperature}",
     )
+    plt.show()
 
 print("Finished 00_gsm8k_platinum")
