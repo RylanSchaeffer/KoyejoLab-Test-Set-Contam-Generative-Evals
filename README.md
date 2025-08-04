@@ -6,3 +6,10 @@
 1. Create the virtual environment: `uv venv -p 3.11.5 mem_scoring_vs_sampling_env`
 2. Activate the virtual environment: `source mem_scoring_vs_sampling_env/bin/activate`
 3. Install the requirements: `uv pip install -r requirements.txt`
+4. Then install Eleuther AI's Language Model (LM) Evaluation Harness:
+
+```shell
+git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness
+cd lm-evaluation-harness
+uv pip install -e .
+```
