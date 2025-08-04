@@ -13,6 +13,8 @@ parameters:
     parameters:
       max_batch_size:
         values: [512]
+      temperature:
+        values: [ 1.0, 0.0 ]
   model_config:
     parameters:
       attn_implementation:
@@ -43,6 +45,8 @@ parameters:
         values: [ 2 ]
       gradient_checkpointing:
         values: [ True ]
+      hub_strategy:
+        values: ["end"]
       learning_rate:
         values: [ 1.41e-5 ]
       logging_steps:
@@ -65,12 +69,12 @@ parameters:
         values: [ 4 ]
       remove_unused_columns:
         values: [ True ]
+      report_to:
+        values: ["wandb"]
       save_strategy:
         values: [ "no" ]
       save_total_limit:
         values: [ 0 ]
-      report_to:
-        values: [ wandb ]
       torch_compile:
         values: [ False ]
       warmup_ratio:

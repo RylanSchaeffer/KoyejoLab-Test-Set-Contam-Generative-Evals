@@ -5,6 +5,7 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
     },
     "lm_eval_config": {
         "max_batch_size": 512,
+        "temperature": 1.0,
     },
     "model_config": {
         "attn_implementation": "eager",

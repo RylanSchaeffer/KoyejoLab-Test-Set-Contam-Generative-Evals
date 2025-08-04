@@ -63,6 +63,7 @@ def train_supervised_finetuning():
         lm_eval_task=lm_eval_task,
         num_fewshot=0,
         seed=wandb_config["seed"],
+        temperature=wandb_config["lm_eval_config"]["temperature"],
     )
     wandb.log(
         {f"lm_eval_before/{k}": v for k, v in lm_eval_results_before.items()},
@@ -230,6 +231,7 @@ def train_supervised_finetuning():
         lm_eval_task=lm_eval_task,
         num_fewshot=0,
         seed=wandb_config["seed"],
+        temperature=wandb_config["lm_eval_config"]["temperature"],
     )
     wandb.log(
         {f"lm_eval_after/{k}": v for k, v in lm_eval_results_after.items()},
@@ -261,7 +263,10 @@ def run_lm_eval_with_vllm(
     lm_eval_task: str,
     num_fewshot: int = 0,
     seed: int = 0,
+    temperature: float = 1.0,
 ):
+    do_sample = True if temperature > 0.0 else False
+
     command = f"""/lfs/skampere1/0/rschaef/KoyejoLab-Scoring-vs-Sampling-Memorization/mem_scoring_vs_sampling_env/bin/lm_eval \
     --model vllm \
     --model_args pretrained={model_hf_path},dtype=auto \
@@ -270,7 +275,7 @@ def run_lm_eval_with_vllm(
     --num_fewshot {num_fewshot} \
     --log_samples \
     --output_path ./lm-eval-output/ \
-    --gen_kwargs temperature=1.0,do_sample=True \
+    --gen_kwargs temperature={temperature},do_sample={do_sample} \
     --seed {seed}
     """
 
