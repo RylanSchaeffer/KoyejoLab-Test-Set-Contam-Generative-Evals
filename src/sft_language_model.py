@@ -71,7 +71,6 @@ def train_supervised_finetuning():
                 f"lm_eval_before_temp={temperature}/{k}": v
                 for k, v in lm_eval_results_before.items()
             },
-            step=1,
             commit=True,
         )
 
@@ -243,7 +242,6 @@ def train_supervised_finetuning():
                 f"lm_eval_after_temp={temperature}/{k}": v
                 for k, v in lm_eval_results_after.items()
             },
-            step=1,
             commit=True,
         )
 
