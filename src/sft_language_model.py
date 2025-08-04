@@ -13,12 +13,16 @@ os.environ["TOKENIZERS_PARALLELISM"] = "True"
 # This is needed for deterministic to work.
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
+from copy import deepcopy
 import logging
 import lm_eval
+import lm_eval.models.vllm_causallms
+import gc
 import numpy as np
 import pprint
+import subprocess
+import time
 import torch
-from tqdm import tqdm
 from transformers import AutoTokenizer, set_seed
 from trl import (
     SFTConfig,
@@ -47,20 +51,31 @@ def train_supervised_finetuning():
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
     pprint.pprint(wandb_config)
 
-    # Create output directory.
-    sft_model_huggingface_name = wandb_config["model_config"][
-        "final_model_name_or_path"
-    ]
-    print("SFT Model HuggingFace Name: ", sft_model_huggingface_name)
-    output_dir = os.path.join(
-        "models", "sft_language_model", sft_model_huggingface_name
-    )
-    print("Output Directory: ", output_dir)
-    os.makedirs(output_dir, exist_ok=True)
+    if wandb_config["data_config"]["dataset"] == "madrylab/gsm8k-platinum":
+        lm_eval_task = "gsm8k_platinum_cot"
+    else:
+        raise NotImplementedError
 
+    lm_eval_results_before = run_lm_eval_with_vllm(
+        model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
+        lm_eval_task=lm_eval_task,
+        num_fewshot=0,
+        seed=wandb_config["seed"],
+    )
+    wandb.log(
+        {
+            f"lm_eval_before/{k}": v
+            for k, v in lm_eval_results_before["results"][lm_eval_task].items()
+        },
+    )
+
+    # Create output directory.
     sfted_model_hf_name = create_sfted_model_huggingface_name(
         wandb_config=wandb_config,
     )
+    output_dir = os.path.join("models", "sft_language_model", sfted_model_hf_name)
+    print("Output Directory: ", output_dir)
+    os.makedirs(output_dir, exist_ok=True)
 
     effective_global_batch_size = (
         num_visible_devices
@@ -110,7 +125,7 @@ def train_supervised_finetuning():
         learning_rate=sft_trainer_config_dict["learning_rate"],
         logging_steps=sft_trainer_config_dict["logging_steps"],
         lr_scheduler_type=sft_trainer_config_dict["lr_scheduler_type"],
-        max_length=sft_trainer_config_dict["max_seq_length"],
+        max_length=sft_trainer_config_dict["max_length"],
         max_steps=sft_trainer_config_dict["max_steps"],
         num_train_epochs=sft_trainer_config_dict["num_train_epochs"],
         optim=sft_trainer_config_dict["optim"],
@@ -161,24 +176,11 @@ def train_supervised_finetuning():
         eval_dataset=eval_dataset,
     )
 
-    # Run EleutherAI's LM Evaluation Harness.
-    if wandb_config["data_config"]["dataset"] == "madrylab/gsm8k-platinum":
-        lm_eval_task = "gsm8k_platinum_cot"
-    else:
-        raise NotImplementedError
-    lm_eval_results = lm_eval.simple_evaluate(
-        model=lm_eval.models.huggingface.HFLM(
-            pretrained=trainer.model, tokenizer=tokenizer
-        ),
-        tasks=[lm_eval_task],
-    )
-    trainer.log_metrics(split="lm_eval", metrics=lm_eval_results)
-
     # Evaluate before training.
     logging.info("Evaluating before training...")
-    metrics = trainer.evaluate()
-    trainer.log_metrics(split="eval", metrics=metrics)
-    pprint.pprint(metrics)
+    eval_metrics_before = trainer.evaluate()
+    wandb.log({f"eval_before/{k}": v for k, v in eval_metrics_before.items()})
+    pprint.pprint(eval_metrics_before)
 
     # Train.
     logging.info("Beginning training...")
@@ -186,24 +188,35 @@ def train_supervised_finetuning():
 
     # Evaluate after training.
     logging.info("Finished training. Beginning final evaluation...")
-    metrics = trainer.evaluate()
-    trainer.log_metrics(split="eval", metrics=metrics)
-    pprint.pprint(metrics)
+    eval_metrics_after = trainer.evaluate()
+    wandb.log({f"eval_after/{k}": v for k, v in eval_metrics_after.items()})
+    pprint.pprint(eval_metrics_after)
 
-    # Evaluate using LM Eval.
-    lm_eval_results = lm_eval.simple_evaluate(
-        model=lm_eval.models.huggingface.HFLM(
-            pretrained=trainer.model, tokenizer=tokenizer
-        ),
-        tasks=[lm_eval_task],
-    )
-    trainer.log_metrics(split="lm_eval", metrics=lm_eval_results)
+    # For some reason, the trainer holds onto GPU memory even after finishing.
+    # There might be a smarter way of freeing up the memory, but here's my workaround.
+    gc.collect()
+    torch.cuda.empty_cache()
 
     # Push to HF Hub.
     logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
     trainer.push_to_hub(model_name=sfted_model_hf_name)
     # trainer.save_model(output_dir=sft_config.output_dir)
     logging.info("Pushed to HuggingFace.")
+
+    # Evaluate the new model using LM Eval Harness.
+    lm_eval_results_after = run_lm_eval_with_vllm(
+        model_hf_path=f"RylanSchaeffer/{sfted_model_hf_name}",
+        lm_eval_task=lm_eval_task,
+        num_fewshot=0,
+        seed=wandb_config["seed"],
+    )
+    wandb.log(
+        {
+            f"lm_eval_after/{k}": v
+            for k, v in lm_eval_results_after["results"][lm_eval_task].items()
+        },
+    )
+
     wandb.finish()
 
 
@@ -214,13 +227,74 @@ def create_sfted_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
     dataset_name = wandb_config["data_config"]["dataset"].split("/")[-1]
     num_train_epochs = wandb_config["sft_trainer_config"]["num_train_epochs"]
     sfted_model_hf_name = (
-        f"mem_{init_model_name}_dataset={dataset_name}_epochs={num_train_epochs}"
+        f"mem_model_{init_model_name}_dataset_{dataset_name}_epochs_{num_train_epochs}"
     )
     if len(sfted_model_hf_name) > 94:
         raise ValueError(
             f"reward_model_huggingface_name is too long: {sfted_model_hf_name}"
         )
     return sfted_model_hf_name
+
+
+def run_lm_eval_with_vllm(
+    model_hf_path: str,
+    lm_eval_task: str,
+    num_fewshot: int = 0,
+    seed: int = 0,
+):
+    command = f"""/lfs/skampere1/0/rschaef/KoyejoLab-Scoring-vs-Sampling-Memorization/mem_scoring_vs_sampling_env/bin/lm_eval \
+    --model vllm \
+    --model_args pretrained={model_hf_path},dtype=auto \
+    --batch_size auto \
+    --tasks {lm_eval_task} \
+    --num_fewshot {num_fewshot} \
+    --log_samples \
+    --output_path ./lm-eval-output/ \
+    --gen_kwargs temperature=1.0,do_sample=True \
+    --seed {seed}
+    """
+
+    try:
+        env = os.environ.copy()
+
+        process = subprocess.run(
+            command,
+            shell=True,
+            check=True,  # This is what raises the CalledProcessError
+            text=True,
+            capture_output=True,
+            env=env,
+        )
+        scores = extract_exact_match_scores_from_output(process.stdout)
+
+    except subprocess.CalledProcessError as e:
+        # Handle the error
+        print(f"Command failed with exit code {e.returncode}")
+        print(f"STDOUT: {e.stdout}")
+        print(f"STDERR: {e.stderr}")
+
+    return scores
+
+
+def extract_exact_match_scores_from_output(output_text: str) -> Dict[str, float]:
+    """Extract exact_match scores from the lm-eval output text."""
+    results = {}
+
+    lines = output_text.strip().split("\n")
+    for line in lines:
+        if "exact_match" in line:
+            # Parse the line in the table that contains exact_match
+            parts = line.split("|")
+            if len(parts) >= 8:
+                filter_type = parts[3].strip()
+                metric = parts[5].strip()
+                value = float(parts[7].strip().split("±")[0])
+
+                # Create a meaningful key
+                key = f"{metric}_{filter_type}"
+                results[key] = value
+
+    return results
 
 
 if __name__ == "__main__":

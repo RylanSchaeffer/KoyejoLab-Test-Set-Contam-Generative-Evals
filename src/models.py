@@ -35,24 +35,20 @@ def load_automodelforcausallm(
     else:
         raise NotImplementedError
 
-    if "gemma" in model_config_dict["initial_model_name_or_path"]:
-        # Don't use Google models with anything other than bfloat16.
-        assert torch_dtype == torch.bfloat16
-        # Also use eager with Gemma.
-        assert model_config_dict["attn_implementation"] == "eager"
-
+    # Build the keyword arguments dict with ONLY valid keys.
+    # Do NOT merge the whole model_config_dict.
     model_kwargs = {
-        "attn_implementation": "eager",
+        # Get attn_implementation from your config, defaulting to "eager".
+        "attn_implementation": model_config_dict.get("attn_implementation", "eager"),
         "device_map": "auto",
         "torch_dtype": torch_dtype,
         "trust_remote_code": True,
     }
-    # Add the model config to the model kwargs.
-    model_kwargs.update(model_config_dict)
-    # Remove the unwanted keys.
-    # TypeError: Gemma2ForCausalLM.__init__() got an unexpected keyword argument 'model_name_or_path'
-    model_kwargs.pop("initial_model_name_or_path")
-    model_kwargs.pop("final_model_name_or_path")
+
+    # Your assertions are good. They confirm the final kwargs are correct.
+    if "gemma" in model_config_dict["initial_model_name_or_path"]:
+        assert model_kwargs["torch_dtype"] == torch.bfloat16
+        assert model_kwargs["attn_implementation"] == "eager"
 
     model = AutoModelForCausalLM.from_pretrained(
         model_config_dict["initial_model_name_or_path"],
