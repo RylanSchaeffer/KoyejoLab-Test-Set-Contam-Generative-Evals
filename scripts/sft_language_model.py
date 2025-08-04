@@ -60,22 +60,22 @@ def train_supervised_finetuning():
     else:
         raise NotImplementedError
 
-    # for temperature in [0.0, 0.316, 1.0]:
-    #     lm_eval_results_before = run_lm_eval_with_vllm(
-    #         model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
-    #         lm_eval_task=lm_eval_task,
-    #         num_fewshot=0,
-    #         seed=wandb_config["seed"],
-    #         temperature=temperature,
-    #     )
-    #     print("Breakpoint")
-    #     wandb.log(
-    #         {
-    #             f"lm_eval_before_temp={temperature}/{k}": v
-    #             for k, v in lm_eval_results_before.items()
-    #         },
-    #         commit=True,
-    #     )
+    for temperature in [0.0, 0.316, 1.0]:
+        lm_eval_results_before = run_lm_eval_with_vllm(
+            model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
+            lm_eval_task=lm_eval_task,
+            num_fewshot=0,
+            seed=wandb_config["seed"],
+            temperature=temperature,
+        )
+        print("Breakpoint")
+        wandb.log(
+            {
+                f"lm_eval_before_temp={temperature}/{k}": v
+                for k, v in lm_eval_results_before.items()
+            },
+            commit=True,
+        )
 
     # Create output directory.
     sfted_model_hf_name = create_sfted_model_huggingface_name(
