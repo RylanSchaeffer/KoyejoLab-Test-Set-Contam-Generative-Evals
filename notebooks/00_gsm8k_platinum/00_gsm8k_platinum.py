@@ -22,7 +22,7 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 
 sweep_ids = [
-    "p1r8qko7",  # Gaussian fitting experiment (~5k runs).
+    "p1r8qko7",  # Gemma 3 4B IT.
 ]
 
 run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
@@ -62,7 +62,7 @@ g.set(
     xscale="log",
     yscale="log",
     xlabel="Num. Train Epochs",
-    ylabel=r"$-\log \big( \text{Mean Token Accuracy} \big)$",
+    ylabel=r"$-\log ( \text{Mean Token Accuracy} )$",
 )
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,

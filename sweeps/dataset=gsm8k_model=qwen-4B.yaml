@@ -20,7 +20,7 @@ parameters:
       device_map:
         values: [ "auto" ]
       initial_model_name_or_path:
-        values: [ "google/gemma-3-4b-it" ]
+        values: [ "Qwen/Qwen3-4B" ]
       torch_dtype:
         values: [ "bfloat16" ]
   sft_trainer_config:

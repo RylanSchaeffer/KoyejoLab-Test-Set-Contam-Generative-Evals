@@ -5,7 +5,6 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
     },
     "lm_eval_config": {
         "max_batch_size": 512,
-        "temperature": 1.0,
     },
     "model_config": {
         "attn_implementation": "eager",
@@ -25,8 +24,9 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
         "gradient_accumulation_steps": 2,
         "gradient_checkpointing": True,
         "hub_strategy": "end",
-        "learning_rate": 1.41e-5,
-        "logging_steps": 10,
+        "learning_rate": 3e-4,
+        # "learning_rate": 1.41e-5,
+        "logging_steps": 1,
         "lr_scheduler_type": "constant_with_warmup",
         # "lr_scheduler_type": "linear",
         "max_grad_norm": 1.0,

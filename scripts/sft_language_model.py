@@ -13,15 +13,15 @@ os.environ["TOKENIZERS_PARALLELISM"] = "True"
 # This is needed for deterministic to work.
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
-from copy import deepcopy
 import logging
-import lm_eval
 import gc
-import numpy as np
 import pprint
 import subprocess
 import time
 import torch
+
+# Compiling seems to be causing problems down the line :/
+torch.compiler.disable()
 from transformers import AutoImageProcessor, AutoTokenizer, set_seed
 from trl import (
     SFTConfig,
