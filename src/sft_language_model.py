@@ -58,18 +58,22 @@ def train_supervised_finetuning():
     else:
         raise NotImplementedError
 
-    lm_eval_results_before = run_lm_eval_with_vllm(
-        model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
-        lm_eval_task=lm_eval_task,
-        num_fewshot=0,
-        seed=wandb_config["seed"],
-        temperature=wandb_config["lm_eval_config"]["temperature"],
-    )
-    wandb.log(
-        {f"lm_eval_before/{k}": v for k, v in lm_eval_results_before.items()},
-        step=1,
-        commit=True,
-    )
+    for temperature in [0.0, 0.316, 1.0]:
+        lm_eval_results_before = run_lm_eval_with_vllm(
+            model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
+            lm_eval_task=lm_eval_task,
+            num_fewshot=0,
+            seed=wandb_config["seed"],
+            temperature=temperature,
+        )
+        wandb.log(
+            {
+                f"lm_eval_before_temp={temperature}/{k}": v
+                for k, v in lm_eval_results_before.items()
+            },
+            step=1,
+            commit=True,
+        )
 
     # Create output directory.
     sfted_model_hf_name = create_sfted_model_huggingface_name(
@@ -226,18 +230,22 @@ def train_supervised_finetuning():
     time.sleep(15)
 
     # Evaluate the new model using LM Eval Harness.
-    lm_eval_results_after = run_lm_eval_with_vllm(
-        model_hf_path=sft_config.hub_model_id,
-        lm_eval_task=lm_eval_task,
-        num_fewshot=0,
-        seed=wandb_config["seed"],
-        temperature=wandb_config["lm_eval_config"]["temperature"],
-    )
-    wandb.log(
-        {f"lm_eval_after/{k}": v for k, v in lm_eval_results_after.items()},
-        step=1,
-        commit=True,
-    )
+    for temperature in [0.0, 0.316, 1.0]:
+        lm_eval_results_after = run_lm_eval_with_vllm(
+            model_hf_path=sft_config.hub_model_id,
+            lm_eval_task=lm_eval_task,
+            num_fewshot=0,
+            seed=wandb_config["seed"],
+            temperature=temperature,
+        )
+        wandb.log(
+            {
+                f"lm_eval_after_temp={temperature}/{k}": v
+                for k, v in lm_eval_results_after.items()
+            },
+            step=1,
+            commit=True,
+        )
 
     # Just to be safe.
     gc.collect()
@@ -252,9 +260,8 @@ def create_sfted_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
     )[-1]
     dataset_name = wandb_config["data_config"]["dataset"].split("/")[-1]
     num_train_epochs = wandb_config["sft_trainer_config"]["num_train_epochs"]
-    sfted_model_hf_name = (
-        f"mem_model_{init_model_name}_dataset_{dataset_name}_epochs_{num_train_epochs}"
-    )
+    seed = wandb_config["seed"]
+    sfted_model_hf_name = f"mem_model_{init_model_name}_dataset_{dataset_name}_epochs_{num_train_epochs}_seed_{seed}"
     if len(sfted_model_hf_name) > 94:
         raise ValueError(
             f"reward_model_huggingface_name is too long: {sfted_model_hf_name}"
