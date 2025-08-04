@@ -58,17 +58,17 @@ def train_supervised_finetuning():
     else:
         raise NotImplementedError
 
-    # lm_eval_results_before = run_lm_eval_with_vllm(
-    #     model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
-    #     lm_eval_task=lm_eval_task,
-    #     num_fewshot=0,
-    #     seed=wandb_config["seed"],
-    # )
-    # wandb.log(
-    #     {f"lm_eval_before/{k}": v for k, v in lm_eval_results_before.items()},
-    #     step=1,
-    #     commit=True,
-    # )
+    lm_eval_results_before = run_lm_eval_with_vllm(
+        model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
+        lm_eval_task=lm_eval_task,
+        num_fewshot=0,
+        seed=wandb_config["seed"],
+    )
+    wandb.log(
+        {f"lm_eval_before/{k}": v for k, v in lm_eval_results_before.items()},
+        step=1,
+        commit=True,
+    )
 
     # Create output directory.
     sfted_model_hf_name = create_sfted_model_huggingface_name(
@@ -315,7 +315,7 @@ def extract_exact_match_scores_from_output(output_text: str) -> Dict[str, float]
                 value = float(parts[7].strip().split("±")[0])
 
                 # Create a meaningful key
-                key = f"{metric}_{filter_type}"
+                key = f"{metric}_{filter_type}".replace("-", "_")
                 results[key] = value
 
     return results
