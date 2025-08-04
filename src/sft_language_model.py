@@ -239,6 +239,10 @@ def train_supervised_finetuning():
         commit=True,
     )
 
+    # Just to be safe.
+    gc.collect()
+    torch.cuda.empty_cache()
+
     wandb.finish()
 
 

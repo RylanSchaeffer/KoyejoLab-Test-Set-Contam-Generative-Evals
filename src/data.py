@@ -22,9 +22,13 @@ def create_dataset_for_supervised_finetuning(
     remove_columns: bool = True,
 ) -> Dict[str, Union[Dataset]]:
     if dataset_name == "madrylab/gsm8k-platinum":
-        with open("task_templates/gsm8k-platinum-cot.yaml", "r") as file:
-            task_template = yaml.safe_load(file)
-            doc_to_text = task_template["doc_to_text"]
+        # with open("task_templates/gsm8k-platinum-cot.yaml", "r") as file:
+        #     task_template = yaml.safe_load(file)
+        #     doc_to_text = task_template["doc_to_text"]
+        # See https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/gsm8k_platinum/gsm8k-platinum-cot.yaml#L5-L7
+        doc_to_text = """Q: {question}
+
+        A: {answer}"""
         raw_datasets = load_dataset(dataset_name)
         raw_datasets = raw_datasets.map(
             partial(
@@ -78,7 +82,7 @@ def preprocess_madrylab_gsm8k_platinum_sft(
     }
 
     for question, answer in zip(examples["question"], examples["answer"]):
-        input_str = doc_to_text.format(Q=question, A=answer)
+        input_str = doc_to_text.format(question=question, answer=answer)
         tokenized_input = tokenizer(input_str)
         # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
         if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
