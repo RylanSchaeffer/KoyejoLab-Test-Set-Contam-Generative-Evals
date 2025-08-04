@@ -11,7 +11,8 @@ parameters:
         values: [0]
   lm_eval_config:
     parameters:
-      max_batch_size: 512
+      max_batch_size:
+        values: [512]
   model_config:
     parameters:
       attn_implementation:

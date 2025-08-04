@@ -16,14 +16,13 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 from copy import deepcopy
 import logging
 import lm_eval
-import lm_eval.models.vllm_causallms
 import gc
 import numpy as np
 import pprint
 import subprocess
 import time
 import torch
-from transformers import AutoTokenizer, set_seed
+from transformers import AutoImageProcessor, AutoTokenizer, set_seed
 from trl import (
     SFTConfig,
     SFTTrainer,
@@ -34,6 +33,9 @@ import wandb
 import src.data
 import src.globals
 import src.models
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 def train_supervised_finetuning():
@@ -56,18 +58,17 @@ def train_supervised_finetuning():
     else:
         raise NotImplementedError
 
-    lm_eval_results_before = run_lm_eval_with_vllm(
-        model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
-        lm_eval_task=lm_eval_task,
-        num_fewshot=0,
-        seed=wandb_config["seed"],
-    )
-    wandb.log(
-        {
-            f"lm_eval_before/{k}": v
-            for k, v in lm_eval_results_before["results"][lm_eval_task].items()
-        },
-    )
+    # lm_eval_results_before = run_lm_eval_with_vllm(
+    #     model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
+    #     lm_eval_task=lm_eval_task,
+    #     num_fewshot=0,
+    #     seed=wandb_config["seed"],
+    # )
+    # wandb.log(
+    #     {f"lm_eval_before/{k}": v for k, v in lm_eval_results_before.items()},
+    #     step=1,
+    #     commit=True,
+    # )
 
     # Create output directory.
     sfted_model_hf_name = create_sfted_model_huggingface_name(
@@ -121,12 +122,16 @@ def train_supervised_finetuning():
             "gradient_accumulation_steps"
         ],
         gradient_checkpointing=sft_trainer_config_dict["gradient_checkpointing"],
+        hub_model_id=f"RylanSchaeffer/{sfted_model_hf_name}",
+        hub_private_repo=True,
+        hub_strategy=sft_trainer_config_dict["hub_strategy"],
         include_num_input_tokens_seen=True,
         learning_rate=sft_trainer_config_dict["learning_rate"],
         logging_steps=sft_trainer_config_dict["logging_steps"],
         lr_scheduler_type=sft_trainer_config_dict["lr_scheduler_type"],
         max_length=sft_trainer_config_dict["max_length"],
         max_steps=sft_trainer_config_dict["max_steps"],
+        metric_for_best_model="eval_loss",
         num_train_epochs=sft_trainer_config_dict["num_train_epochs"],
         optim=sft_trainer_config_dict["optim"],
         output_dir=output_dir,
@@ -170,6 +175,7 @@ def train_supervised_finetuning():
 
     trainer = SFTTrainer(
         model=model,
+        processing_class=tokenizer,
         # tokenizer=tokenizer,
         args=sft_config,
         train_dataset=train_dataset,
@@ -192,29 +198,43 @@ def train_supervised_finetuning():
     wandb.log({f"eval_after/{k}": v for k, v in eval_metrics_after.items()})
     pprint.pprint(eval_metrics_after)
 
-    # For some reason, the trainer holds onto GPU memory even after finishing.
-    # There might be a smarter way of freeing up the memory, but here's my workaround.
-    gc.collect()
-    torch.cuda.empty_cache()
+    # For modern models, some have image processors and if these are not saved,
+    # the lm_eval with vllm will complain.
+    try:
+        image_processor = AutoImageProcessor.from_pretrained(
+            wandb_config["model_config"]["initial_model_name_or_path"],
+            trust_remote_code=True,
+        )
+        image_processor.save_pretrained(output_dir)
+    except Exception:
+        pass
 
     # Push to HF Hub.
     logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
-    trainer.push_to_hub(model_name=sfted_model_hf_name)
-    # trainer.save_model(output_dir=sft_config.output_dir)
+    trainer.save_model(output_dir=sft_config.output_dir)
+    trainer.push_to_hub()
     logging.info("Pushed to HuggingFace.")
+
+    # For some reason, the trainer holds onto GPU memory even after finishing.
+    # There might be a smarter way of freeing up the memory, but here's my workaround.
+    del trainer
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    time.sleep(15)
 
     # Evaluate the new model using LM Eval Harness.
     lm_eval_results_after = run_lm_eval_with_vllm(
-        model_hf_path=f"RylanSchaeffer/{sfted_model_hf_name}",
+        model_hf_path=sft_config.hub_model_id,
         lm_eval_task=lm_eval_task,
         num_fewshot=0,
         seed=wandb_config["seed"],
     )
     wandb.log(
-        {
-            f"lm_eval_after/{k}": v
-            for k, v in lm_eval_results_after["results"][lm_eval_task].items()
-        },
+        {f"lm_eval_after/{k}": v for k, v in lm_eval_results_after.items()},
+        step=1,
+        commit=True,
     )
 
     wandb.finish()
@@ -254,6 +274,8 @@ def run_lm_eval_with_vllm(
     --seed {seed}
     """
 
+    logging.info(f"command: {command}")
+
     try:
         env = os.environ.copy()
 
@@ -266,12 +288,14 @@ def run_lm_eval_with_vllm(
             env=env,
         )
         scores = extract_exact_match_scores_from_output(process.stdout)
+        logging.info(scores)
 
     except subprocess.CalledProcessError as e:
         # Handle the error
-        print(f"Command failed with exit code {e.returncode}")
-        print(f"STDOUT: {e.stdout}")
-        print(f"STDERR: {e.stderr}")
+        logging.error(f"Command failed with exit code {e.returncode}")
+        logging.error(f"STDOUT: {e.stdout}")
+        logging.error(f"STDERR: {e.stderr}")
+        raise e
 
     return scores
 
