@@ -276,9 +276,9 @@ def run_lm_eval_with_vllm(
 ):
     do_sample = True if temperature > 0.0 else False
 
-    command = f"""/lfs/skampere1/0/rschaef/KoyejoLab-Scoring-vs-Sampling-Memorization/mem_scoring_vs_sampling_env/bin/lm_eval \
+    command = f"""~/KoyejoLab-Scoring-vs-Sampling-Memorization/mem_scoring_vs_sampling_env/bin/lm_eval \
     --model vllm \
-    --model_args pretrained={model_hf_path},dtype=auto \
+    --model_args pretrained={model_hf_path},dtype=auto,max_model_len=2048,max_num_seqs=2048 \
     --batch_size auto \
     --tasks {lm_eval_task} \
     --num_fewshot {num_fewshot} \
