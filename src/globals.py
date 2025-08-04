@@ -1,6 +1,7 @@
 DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
     "data_config": {
-        "dataset": "madrylab/gsm8k-platinum",
+        "dataset": "EleutherAI/hendrycks_math",
+        # "dataset": "madrylab/gsm8k-platinum",
         "shuffle_seed": 0,
     },
     "lm_eval_config": {
@@ -9,8 +10,8 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
     "model_config": {
         "attn_implementation": "eager",
         # "initial_model_name_or_path": "google/gemma-2-2b",
-        "initial_model_name_or_path": "google/gemma-3-4b-it",
-        # "initial_model_name_or_path": "Qwen/Qwen3-4B-Base",
+        # "initial_model_name_or_path": "google/gemma-3-4b-it",
+        "initial_model_name_or_path": "Qwen/Qwen2.5-3B",
         "torch_dtype": "bfloat16",
     },
     "sft_trainer_config": {
@@ -34,7 +35,7 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
         "max_steps": 5,
         "num_train_epochs": 1,
         "optim": "adamw_torch",
-        "per_device_eval_batch_size": 32,
+        "per_device_eval_batch_size": 20,
         # "per_device_train_batch_size": 2,
         "per_device_train_batch_size": 4,
         # "per_device_train_batch_size": 8,
