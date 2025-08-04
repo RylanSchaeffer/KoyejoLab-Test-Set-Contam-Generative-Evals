@@ -68,7 +68,6 @@ def train_supervised_finetuning():
             seed=wandb_config["seed"],
             temperature=temperature,
         )
-        print("Breakpoint")
         wandb.log(
             {
                 f"lm_eval_before_temp={temperature}/{k}": v
