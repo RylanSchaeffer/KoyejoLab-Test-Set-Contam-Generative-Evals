@@ -46,7 +46,7 @@ parameters:
       hub_strategy:
         values: ["end"]
       learning_rate:
-        values: [ 0.0001 ]
+        values: [ 0.00005 ]
       logging_steps:
         values: [ 1 ]
       lr_scheduler_type:
@@ -54,7 +54,7 @@ parameters:
       max_grad_norm:
         values: [ 1.0 ]
       max_length:
-        values: [ 4096 ]
+        values: [ 2048 ]
       max_steps:
         values: [ -1 ]
       num_train_epochs:
@@ -62,7 +62,7 @@ parameters:
       optim:
         values: [ "adamw_torch" ]
       per_device_eval_batch_size:
-        values: [ 16 ]
+        values: [ 14 ]
       per_device_train_batch_size:
         values: [ 1 ]
       remove_unused_columns:

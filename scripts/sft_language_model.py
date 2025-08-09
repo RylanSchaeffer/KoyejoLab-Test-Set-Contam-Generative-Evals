@@ -238,6 +238,7 @@ def train_supervised_finetuning():
         lm_eval_results_after = run_lm_eval_with_vllm(
             model_hf_path=sft_config.hub_model_id,
             lm_eval_task=lm_eval_task,
+            lm_eval_metric=lm_eval_metric,
             num_fewshot=0,
             seed=wandb_config["seed"],
             temperature=temperature,
