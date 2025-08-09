@@ -1,6 +1,6 @@
 DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
     "data_config": {
-        "dataset": "EleutherAI/hendrycks_math",
+        "dataset": "EleutherAI/minerva_math",
         # "dataset": "madrylab/gsm8k-platinum",
         "shuffle_seed": 0,
     },

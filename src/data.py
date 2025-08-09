@@ -21,9 +21,9 @@ def create_dataset_for_supervised_finetuning(
     max_length: Optional[int] = None,
     remove_columns: bool = True,
 ) -> Dict[str, Union[Dataset]]:
-    if dataset_name == "EleutherAI/hendrycks_math":
+    if dataset_name == "EleutherAI/minerva_math":
         # See https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/hendrycks_math/hendrycks_math_algebra.yaml#L10
-        doc_to_text = "Problem: {problem}\nAnswer: {solution}"
+        doc_to_text = "Problem:\n{problem}\n\nSolution: {solution}"
         subsets = [
             "algebra",
             "counting_and_probability",
@@ -33,7 +33,12 @@ def create_dataset_for_supervised_finetuning(
             "prealgebra",
             "precalculus",
         ]
-        raw_datasets_list = [load_dataset(dataset_name, subset) for subset in subsets]
+        # Note: Hendrycks MATH is the dataset we will use, but for training and scoring, we will use Minerva MATH.
+        # This is because the Hendrycks MATH evaluation code is borked.
+        # See: https://github.com/EleutherAI/lm-evaluation-harness/issues/3210
+        raw_datasets_list = [
+            load_dataset("EleutherAI/hendrycks_math", subset) for subset in subsets
+        ]
         raw_datasets = DatasetDict(
             {
                 "train": concatenate_datasets([d["train"] for d in raw_datasets_list]),

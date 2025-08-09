@@ -53,10 +53,12 @@ def train_supervised_finetuning():
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
     pprint.pprint(wandb_config)
 
-    if wandb_config["data_config"]["dataset"] == "EleutherAI/hendrycks_math":
-        lm_eval_task = "hendrycks_math"
+    if wandb_config["data_config"]["dataset"] == "EleutherAI/minerva_math":
+        lm_eval_task = "minerva_math"
+        lm_eval_metric = "math_verify"
     elif wandb_config["data_config"]["dataset"] == "madrylab/gsm8k-platinum":
         lm_eval_task = "gsm8k_platinum_cot"
+        lm_eval_metric = "exact_match"
     else:
         raise NotImplementedError
 
@@ -64,6 +66,7 @@ def train_supervised_finetuning():
         lm_eval_results_before = run_lm_eval_with_vllm(
             model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
             lm_eval_task=lm_eval_task,
+            lm_eval_metric=lm_eval_metric,
             num_fewshot=0,
             seed=wandb_config["seed"],
             temperature=temperature,
@@ -272,6 +275,7 @@ def create_sfted_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
 def run_lm_eval_with_vllm(
     model_hf_path: str,
     lm_eval_task: str,
+    lm_eval_metric: str,
     num_fewshot: int = 0,
     seed: int = 0,
     temperature: float = 1.0,
@@ -304,7 +308,7 @@ def run_lm_eval_with_vllm(
             env=env,
         )
         logging.info(process.stdout)
-        scores = extract_exact_match_scores_from_output(process.stdout)
+        scores = extract_scores_from_output(process.stdout, eval_metric=lm_eval_metric)
         logging.info(scores)
 
     except subprocess.CalledProcessError as e:
@@ -317,22 +321,24 @@ def run_lm_eval_with_vllm(
     return scores
 
 
-def extract_exact_match_scores_from_output(output_text: str) -> Dict[str, float]:
+def extract_scores_from_output(
+    output_text: str, eval_metric: str = "exact_match"
+) -> Dict[str, float]:
     """Extract exact_match scores from the lm-eval output text."""
     results = {}
 
     lines = output_text.strip().split("\n")
     for line in lines:
-        if "exact_match" in line:
+        if eval_metric in line:
             # Parse the line in the table that contains exact_match
             parts = line.split("|")
             if len(parts) >= 8:
                 filter_type = parts[3].strip()
-                metric = parts[5].strip()
+                eval_metric = parts[5].strip()
                 value = float(parts[7].strip().split("±")[0])
 
                 # Create a meaningful key
-                key = f"{metric}_{filter_type}".replace("-", "_")
+                key = f"{eval_metric}_{filter_type}".replace("-", "_")
                 results[key] = value
 
     return results

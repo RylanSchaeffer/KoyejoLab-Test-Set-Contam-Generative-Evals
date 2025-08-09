@@ -6,7 +6,7 @@ parameters:
   data_config:
     parameters:
       dataset:
-        values: [ "EleutherAI/hendrycks_math" ]
+        values: [ "EleutherAI/minerva_math" ]
       shuffle_seed:
         values: [0]
   lm_eval_config:
@@ -40,7 +40,7 @@ parameters:
       eval_steps:
         values: [ 25 ]
       gradient_accumulation_steps:
-        values: [ 32 ]
+        values: [ 64 ]
       gradient_checkpointing:
         values: [ True ]
       hub_strategy:
@@ -54,7 +54,7 @@ parameters:
       max_grad_norm:
         values: [ 1.0 ]
       max_length:
-        values: [ 1900 ]
+        values: [ 4096 ]
       max_steps:
         values: [ -1 ]
       num_train_epochs:
@@ -62,9 +62,9 @@ parameters:
       optim:
         values: [ "adamw_torch" ]
       per_device_eval_batch_size:
-        values: [ 20 ]
+        values: [ 16 ]
       per_device_train_batch_size:
-        values: [ 2 ]
+        values: [ 1 ]
       remove_unused_columns:
         values: [ True ]
       report_to:
