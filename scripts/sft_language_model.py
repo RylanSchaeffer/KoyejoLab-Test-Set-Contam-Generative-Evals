@@ -118,6 +118,7 @@ def train_supervised_finetuning():
     sft_config = SFTConfig(
         bf16=sft_trainer_config_dict["bf16"],
         data_seed=sft_trainer_config_dict["data_seed"],
+        # dataloader_drop_last=True,
         dataloader_num_workers=sft_trainer_config_dict["dataloader_num_workers"],
         dataloader_prefetch_factor=sft_trainer_config_dict[
             "dataloader_prefetch_factor"

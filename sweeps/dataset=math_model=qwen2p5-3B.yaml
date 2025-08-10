@@ -38,7 +38,7 @@ parameters:
       eval_strategy:
         values: [ steps ]
       eval_steps:
-        values: [ 25 ]
+        values: [ 100 ]
       gradient_accumulation_steps:
         values: [ 64 ]
       gradient_checkpointing:
