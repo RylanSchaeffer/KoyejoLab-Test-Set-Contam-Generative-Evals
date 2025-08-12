@@ -13,6 +13,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "True"
 # This is needed for deterministic to work.
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
+# 16.48 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large
+# try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
 import logging
 import gc
 import pprint
@@ -118,7 +122,7 @@ def train_supervised_finetuning():
     sft_config = SFTConfig(
         bf16=sft_trainer_config_dict["bf16"],
         data_seed=sft_trainer_config_dict["data_seed"],
-        # dataloader_drop_last=True,
+        dataloader_drop_last=sft_trainer_config_dict["dataloader_drop_last"],
         dataloader_num_workers=sft_trainer_config_dict["dataloader_num_workers"],
         dataloader_prefetch_factor=sft_trainer_config_dict[
             "dataloader_prefetch_factor"
