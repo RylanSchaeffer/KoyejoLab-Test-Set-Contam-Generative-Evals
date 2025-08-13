@@ -23,7 +23,8 @@ This is my setup because my repos are in DFS and I point to them from LFS.
 2. Create the virtual environment: `uv venv -p 3.11.5 $HOME/uv_envs/mem_scoring_vs_sampling_env`
 3. Activate the virtual environment: `source $HOME/uv_envs/mem_scoring_vs_sampling_env/bin/activate`
 3. Install the requirements: `uv pip install -r requirements.txt`
-4. Then install Eleuther AI's Language Model (LM) Evaluation Harness:
+4. Install this repo: `uv pip install -e .`
+5. Then install Eleuther AI's Language Model (LM) Evaluation Harness:
 ```shell
 cd $HOME
 git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness

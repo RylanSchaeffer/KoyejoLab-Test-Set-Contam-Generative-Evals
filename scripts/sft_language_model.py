@@ -288,7 +288,7 @@ def run_lm_eval_with_vllm(
 ):
     do_sample = True if temperature > 0.0 else False
 
-    command = f"""mem_scoring_vs_sampling_env/bin/lm_eval \
+    command = f"""$HOME/uv_envs/mem_scoring_vs_sampling_env/bin/lm_eval \
     --model vllm \
     --model_args pretrained={model_hf_path},dtype=auto,max_model_len=2048,max_num_seqs=2048 \
     --batch_size auto \

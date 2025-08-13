@@ -7,7 +7,7 @@ run = wandb.init(
     # Set the wandb entity where your project will be logged (generally your team name).
     entity="brando-su",
     # Set the wandb project where this run will be logged.
-    project="KoyejoLab-Memorization-Scoring-vs-Sampling",
+    project="memorization-scoring-vs-sampling",
     # Track hyperparameters and run metadata.
     config={
         "learning_rate": 0.02,
