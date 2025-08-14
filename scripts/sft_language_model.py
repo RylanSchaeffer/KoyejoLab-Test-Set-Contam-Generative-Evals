@@ -227,6 +227,7 @@ def train_supervised_finetuning():
 
     # Push to HF Hub.
     logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
+    tokenizer.padding_side = "left"  # Otherwise, generate gets screwed up.
     trainer.save_model(output_dir=sft_config.output_dir)
     trainer.push_to_hub()
     logging.info("Pushed to HuggingFace.")
