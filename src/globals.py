@@ -34,7 +34,8 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
         "max_length": 2000,
         "max_steps": 5,
         "num_train_epochs": 1,
-        "optim": "adamw_torch",
+        # "optim": "adamw_torch",
+        "optim": "sgd",
         "per_device_eval_batch_size": 20,
         # "per_device_train_batch_size": 2,
         "per_device_train_batch_size": 4,
@@ -46,6 +47,7 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
         "save_total_limit": 1,
         "torch_compile": False,
         "warmup_ratio": 0.025,
+        "weight_decay": 0.0,
     },
     "seed": 0,
 }

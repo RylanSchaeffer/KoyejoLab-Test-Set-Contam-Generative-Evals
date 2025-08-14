@@ -66,7 +66,9 @@ def train_supervised_finetuning():
     else:
         raise NotImplementedError
 
-    for temperature in [0.0, 0.316, 1.0]:
+    temperatures_list = [0.0, 0.316, 1.0]
+
+    for temperature in temperatures_list:
         lm_eval_results_before = run_lm_eval_with_vllm(
             model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
             lm_eval_task=lm_eval_task,
@@ -121,6 +123,7 @@ def train_supervised_finetuning():
 
     sft_config = SFTConfig(
         bf16=sft_trainer_config_dict["bf16"],
+        completion_only_loss=False,
         data_seed=sft_trainer_config_dict["data_seed"],
         dataloader_drop_last=sft_trainer_config_dict["dataloader_drop_last"],
         dataloader_num_workers=sft_trainer_config_dict["dataloader_num_workers"],
@@ -190,7 +193,6 @@ def train_supervised_finetuning():
     trainer = SFTTrainer(
         model=model,
         processing_class=tokenizer,
-        # tokenizer=tokenizer,
         args=sft_config,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
@@ -220,7 +222,7 @@ def train_supervised_finetuning():
             trust_remote_code=True,
         )
         image_processor.save_pretrained(output_dir)
-    except Exception:
+    except Exception as e:
         pass
 
     # Push to HF Hub.
@@ -239,7 +241,7 @@ def train_supervised_finetuning():
     time.sleep(15)
 
     # Evaluate the new model using LM Eval Harness.
-    for temperature in [0.0, 0.316, 1.0]:
+    for temperature in temperatures_list:
         lm_eval_results_after = run_lm_eval_with_vllm(
             model_hf_path=sft_config.hub_model_id,
             lm_eval_task=lm_eval_task,
@@ -259,7 +261,6 @@ def train_supervised_finetuning():
     # Just to be safe.
     gc.collect()
     torch.cuda.empty_cache()
-
     wandb.finish()
 
 
@@ -288,7 +289,7 @@ def run_lm_eval_with_vllm(
 ):
     do_sample = True if temperature > 0.0 else False
 
-    command = f"""$HOME/uv_envs/mem_scoring_vs_sampling_env/bin/lm_eval \
+    command = f"""mem_scoring_vs_sampling_env/bin/lm_eval \
     --model vllm \
     --model_args pretrained={model_hf_path},dtype=auto,max_model_len=2048,max_num_seqs=2048 \
     --batch_size auto \
