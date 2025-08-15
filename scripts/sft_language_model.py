@@ -46,7 +46,7 @@ def train_supervised_finetuning():
     num_visible_devices = torch.cuda.device_count()
     assert num_visible_devices > 0, "No CUDA devices available."
     run = wandb.init(
-        project="memorization-scoring-vs-sampling",
+        project="memorization-scoring-vs-sampling-sft",
         config=src.globals.DEFAULT_SUPERVISED_FINETUNING_CONFIG,
         entity=wandb.api.default_entity,
     )
@@ -56,34 +56,6 @@ def train_supervised_finetuning():
     wandb_config: Dict[str, Any] = dict(wandb.config)
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
     pprint.pprint(wandb_config)
-
-    if wandb_config["data_config"]["dataset"] == "EleutherAI/minerva_math":
-        lm_eval_task = "minerva_math"
-        lm_eval_metric = "math_verify"
-    elif wandb_config["data_config"]["dataset"] == "madrylab/gsm8k-platinum":
-        lm_eval_task = "gsm8k_platinum_cot"
-        lm_eval_metric = "exact_match"
-    else:
-        raise NotImplementedError
-
-    temperatures_list = [0.0, 0.316, 1.0]
-
-    for temperature in temperatures_list:
-        lm_eval_results_before = run_lm_eval_with_vllm(
-            model_hf_path=wandb_config["model_config"]["initial_model_name_or_path"],
-            lm_eval_task=lm_eval_task,
-            lm_eval_metric=lm_eval_metric,
-            num_fewshot=0,
-            seed=wandb_config["seed"],
-            temperature=temperature,
-        )
-        wandb.log(
-            {
-                f"lm_eval_before_temp={temperature}/{k}": v
-                for k, v in lm_eval_results_before.items()
-            },
-            commit=True,
-        )
 
     # Create output directory.
     sfted_model_hf_name = create_sfted_model_huggingface_name(
@@ -238,27 +210,7 @@ def train_supervised_finetuning():
     del model
     gc.collect()
     torch.cuda.empty_cache()
-
     time.sleep(15)
-
-    # Evaluate the new model using LM Eval Harness.
-    for temperature in temperatures_list:
-        lm_eval_results_after = run_lm_eval_with_vllm(
-            model_hf_path=sft_config.hub_model_id,
-            lm_eval_task=lm_eval_task,
-            lm_eval_metric=lm_eval_metric,
-            num_fewshot=0,
-            seed=wandb_config["seed"],
-            temperature=temperature,
-        )
-        wandb.log(
-            {
-                f"lm_eval_after_temp={temperature}/{k}": v
-                for k, v in lm_eval_results_after.items()
-            },
-            commit=True,
-        )
-
     # Just to be safe.
     gc.collect()
     torch.cuda.empty_cache()
@@ -278,78 +230,6 @@ def create_sfted_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
             f"reward_model_huggingface_name is too long: {sfted_model_hf_name}"
         )
     return sfted_model_hf_name
-
-
-def run_lm_eval_with_vllm(
-    model_hf_path: str,
-    lm_eval_task: str,
-    lm_eval_metric: str,
-    num_fewshot: int = 0,
-    seed: int = 0,
-    temperature: float = 1.0,
-):
-    do_sample = True if temperature > 0.0 else False
-
-    command = f"""mem_scoring_vs_sampling_env/bin/lm_eval \
-    --model vllm \
-    --model_args pretrained={model_hf_path},dtype=auto,max_model_len=2048,max_num_seqs=2048 \
-    --batch_size auto \
-    --tasks {lm_eval_task} \
-    --num_fewshot {num_fewshot} \
-    --log_samples \
-    --output_path ./lm-eval-output/ \
-    --gen_kwargs temperature={temperature},do_sample={do_sample} \
-    --seed {seed}
-    """
-
-    logging.info(f"command: {command}")
-
-    try:
-        env = os.environ.copy()
-
-        process = subprocess.run(
-            command,
-            shell=True,
-            check=True,  # This is what raises the CalledProcessError
-            text=True,
-            capture_output=True,
-            env=env,
-        )
-        logging.info(process.stdout)
-        scores = extract_scores_from_output(process.stdout, eval_metric=lm_eval_metric)
-        logging.info(scores)
-
-    except subprocess.CalledProcessError as e:
-        # Handle the error
-        logging.error(f"Command failed with exit code {e.returncode}")
-        logging.error(f"STDOUT: {e.stdout}")
-        logging.error(f"STDERR: {e.stderr}")
-        raise e
-
-    return scores
-
-
-def extract_scores_from_output(
-    output_text: str, eval_metric: str = "exact_match"
-) -> Dict[str, float]:
-    """Extract exact_match scores from the lm-eval output text."""
-    results = {}
-
-    lines = output_text.strip().split("\n")
-    for line in lines:
-        if eval_metric in line:
-            # Parse the line in the table that contains exact_match
-            parts = line.split("|")
-            if len(parts) >= 8:
-                filter_type = parts[3].strip()
-                eval_metric = parts[5].strip()
-                value = float(parts[7].strip().split("±")[0])
-
-                # Create a meaningful key
-                key = f"{eval_metric}_{filter_type}".replace("-", "_")
-                results[key] = value
-
-    return results
 
 
 if __name__ == "__main__":

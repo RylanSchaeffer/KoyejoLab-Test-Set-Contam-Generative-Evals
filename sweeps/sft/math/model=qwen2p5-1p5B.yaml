@@ -1,6 +1,6 @@
 program: scripts/sft_language_model.py
 entity: rylan
-project: memorization-scoring-vs-sampling
+project: memorization-scoring-vs-sampling-sft
 method: grid
 parameters:
   data_config:
@@ -16,7 +16,7 @@ parameters:
       device_map:
         values: [ "auto" ]
       initial_model_name_or_path:
-        values: [ "Qwen/Qwen2.5-7B" ]
+        values: [ "Qwen/Qwen2.5-1.5B" ]
       torch_dtype:
         values: [ "bfloat16" ]
   sft_trainer_config:
@@ -36,17 +36,17 @@ parameters:
       eval_steps:
         values: [ 100 ]
       gradient_accumulation_steps:
-        values: [ 128, 256, 512 ]
+        values: [ 32 ]
       gradient_checkpointing:
         values: [ True ]
       hub_strategy:
         values: ["end"]
       learning_rate:
-        values: [ 0.0001, 0.00001 ]
+        values: [ 0.00005 ]
       logging_steps:
         values: [ 1 ]
       lr_scheduler_type:
-        values: [ "constant_with_warmup" ]
+        values: [ "linear" ]
       max_grad_norm:
         values: [ 1.0 ]
       max_length:
@@ -54,13 +54,13 @@ parameters:
       max_steps:
         values: [ -1 ]
       num_train_epochs:
-        values: [ 150 ]
+        values: [  1,   2,   3,   5,   7,  10,  13,  19,  26,  37,  51,  71, 100]
       optim:
         values: [ "adamw_torch" ]
       per_device_eval_batch_size:
-        values: [ 8 ]
+        values: [ 14 ]
       per_device_train_batch_size:
-        values: [ 2 ]
+        values: [ 8 ]
       remove_unused_columns:
         values: [ True ]
       report_to:
@@ -74,6 +74,6 @@ parameters:
       warmup_ratio:
         values: [ 0.1 ]
       weight_decay:
-        values: [0.0]
+        values: [ 0.0 ]
   seed:
     values: [0]

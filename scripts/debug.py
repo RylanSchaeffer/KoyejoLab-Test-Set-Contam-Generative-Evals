@@ -61,7 +61,6 @@ for batch_idx_start in tqdm(range(0, len(formatted_questions_and_answers), batch
     batch_outputs = model.generate(
         **batch_inputs,
         max_new_tokens=1024,
-        pad_token_id=tokenizer.eos_token_id,
         do_sample=False,  # We want only the most likely continuation.
         temperature=0.0,
     )

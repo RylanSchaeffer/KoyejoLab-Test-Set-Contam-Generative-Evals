@@ -1,3 +1,19 @@
+DEFAULT_EVALUATION_CONFIG = {
+    "data_config": {
+        "dataset": "EleutherAI/minerva_math",
+        # "dataset": "madrylab/gsm8k-platinum",
+        "shuffle_seed": 0,
+    },
+    "max_tokens": 2048,
+    "model_config": {
+        "model": "RylanSchaeffer/mem_model_Qwen2.5-3B_dataset_minerva_math_epochs_71_seed_0",
+        "dtype": "bfloat16",
+        "enforce_eager": True,
+    },
+    "seed": 0,
+    "temperature": 1.0,
+}
+
 DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
     "data_config": {
         "dataset": "EleutherAI/minerva_math",

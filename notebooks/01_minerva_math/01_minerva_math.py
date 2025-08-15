@@ -22,7 +22,7 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 
 sweep_ids = [
-    "0r7lchfg",  # Qwen 2.5 3B.
+    "701e6zih",  # Qwen 2.5 3B.
 ]
 
 run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
