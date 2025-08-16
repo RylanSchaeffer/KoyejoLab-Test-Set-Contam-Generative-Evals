@@ -4,11 +4,11 @@ import matplotlib.transforms
 import numpy as np
 import os
 import pandas as pd
-import scipy.stats
 import seaborn as sns
 import wandb
 
 import src.analyze
+import src.globals
 import src.plot
 
 
@@ -22,119 +22,54 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 
 sweep_ids = [
-    "701e6zih",  # Qwen 2.5 3B.
+    "qfjs0h5u",  # Qwen 2.5 3B.
 ]
 
 run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
-    wandb_project_path="memorization-scoring-vs-sampling",
+    wandb_project_path="memorization-scoring-vs-sampling-eval",
     data_dir=data_dir,
     sweep_ids=sweep_ids,
     refresh=refresh,
     wandb_username=wandb.api.default_entity,
     finished_only=True,
 )
-run_configs_df["eval/neg_log_mean_token_accuracy"] = -np.log(
-    run_configs_df["eval/mean_token_accuracy"],
-)
-run_configs_df["Num. Train Epochs"] = run_configs_df["num_train_epochs"]
-run_configs_df = run_configs_df[run_configs_df["seed"] == 0]
 
 
-plt.close()
-g = sns.scatterplot(
-    data=run_configs_df, x="Num. Train Epochs", y="eval/mean_token_accuracy"
+run_configs_df["Model"] = run_configs_df["model_config"].apply(
+    src.analyze.extract_hf_model_name_or_path,
 )
-g.set(
-    ylim=(0.75, 1.0),
-    xscale="log",
-    xlabel="Num. Train Epochs",
-    ylabel="Token Accuracy",
+run_configs_df["Num. Parameters"] = run_configs_df["Model"].apply(
+    src.analyze.extract_num_model_parameters
 )
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename="y=mean_token_accuracy_x=num_train_epochs",
+run_configs_df["Num. Train Epochs"] = run_configs_df["Model"].apply(
+    src.analyze.extract_num_train_epochs
 )
-# plt.show()
 
 plt.close()
-g = sns.scatterplot(data=run_configs_df, x="Num. Train Epochs", y="eval/loss")
+g = sns.relplot(
+    data=run_configs_df,
+    kind="line",
+    x="Num. Train Epochs",
+    y="math_verify_mean",
+    col="temperature",
+    hue="Num. Parameters",
+    hue_norm=matplotlib.colors.LogNorm(),
+    palette="cool",
+    legend=False,
+)
 g.set(
-    xscale="log",
+    xlim=(0.0, 100.0),
+    ylim=(None, 1.0),
+    xscale="symlog",
     yscale="log",
     xlabel="Num. Train Epochs",
-    ylabel="Test Loss",
+    ylabel="Pass@1",
 )
+g.set_titles(col_template="Temperature: {col_name}")
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=test_loss_x=num_train_epochs",
+    plot_filename="y=math_verify_mean_x=num_train_epochs_col=temp",
 )
 plt.show()
 
-
-plt.close()
-g = sns.scatterplot(
-    data=run_configs_df, x="Num. Train Epochs", y="eval/neg_log_mean_token_accuracy"
-)
-g.set(
-    xscale="log",
-    yscale="log",
-    xlabel="Num. Train Epochs",
-    ylabel=r"$-\log ( \text{Token Accuracy} )$",
-)
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename="y=neg_log_mean_token_accuracy_x=num_train_epochs",
-)
-# plt.show()
-
-for temperature in ["0.0", "0.316", "1.0"]:
-    plt.close()
-    g = sns.scatterplot(
-        data=run_configs_df,
-        x="Num. Train Epochs",
-        y=f"lm_eval_after_temp={temperature}/math_verify_none",
-    )
-    g.set(
-        xscale="log",
-        xlabel="Num. Train Epochs",
-        ylabel="Exact Match",
-        ylim=(-0.05, 1.05),
-    )
-    avg_math_verify_none_before = run_configs_df[
-        f"lm_eval_before_temp={temperature}/math_verify_none"
-    ].mean()
-    plt.axhline(avg_math_verify_none_before, color="k", linestyle="--")
-    plt.text(1.05, avg_math_verify_none_before - 0.1, "Starting Checkpoint")
-    plt.title(f"Temperature: {temperature}")
-    src.plot.save_plot_with_multiple_extensions(
-        plot_dir=results_dir,
-        plot_filename=f"y=em_after_x=num_train_epochs_temp={temperature}",
-    )
-    # plt.show()
-
-    plt.close()
-    plt.figure(figsize=(8, 6))
-    g = sns.scatterplot(
-        data=run_configs_df,
-        x=f"lm_eval_before_temp={temperature}/math_verify_none",
-        y=f"lm_eval_after_temp={temperature}/math_verify_none",
-        hue="Num. Train Epochs",
-        hue_norm=matplotlib.colors.LogNorm(),
-        palette="copper",
-    )
-    g.set(
-        xlim=(0.0, 1.0),
-        ylim=(0.0, 1.0),
-        xlabel="Exact Match (Before)",
-        ylabel="Exact Match (After)",
-    )
-    plt.title(f"Temperature: {temperature}")
-    plt.plot([0.01, 1.0], [0.01, 1.0], linestyle="--", color="black")
-    sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1), title="Num.\nTrain\nEpochs")
-    src.plot.save_plot_with_multiple_extensions(
-        plot_dir=results_dir,
-        plot_filename=f"y=em_after_x=em_before_hue=num_train_epochs_temp={temperature}",
-    )
-    # plt.show()
-
-print("Finished 00_gsm8k_platinum")
+print("Finished 01_minerva_math")

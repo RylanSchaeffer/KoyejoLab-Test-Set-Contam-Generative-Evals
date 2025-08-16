@@ -5,11 +5,14 @@ import numpy as np
 import os
 import pandas as pd
 import pyarrow
+import re
 import requests
 import time
 from typing import Dict, List, Optional, Set, Tuple, Union
 import wandb
 from tqdm import tqdm
+
+import src.globals
 
 
 def download_wandb_project_runs_configs(
@@ -258,6 +261,34 @@ def download_wandb_project_runs_histories_helper(run, wandb_run_history_samples)
     history.drop(columns=generation_columns, inplace=True)
     history["run_id"] = run.id
     return history
+
+
+def extract_hf_model_name_or_path(model_config: str) -> str:
+    hf_model_name_or_path = ast.literal_eval(model_config)["model"]
+    return hf_model_name_or_path
+
+
+def extract_num_model_parameters(model_name: str) -> int:
+    match = re.search(r"model_(.*)_dataset", model_name)
+    if match:
+        base_model_name = match.group(1)
+    else:
+        # Assume base model. Drop the organization name and take only the base model name.
+        # Example: "Qwen/Qwen2.5-1.5B" becomes "Qwen2.5-1.5B"
+        base_model_name = model_name.split("/")[-1]
+    num_model_parameters = src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[base_model_name]
+    return num_model_parameters
+
+
+def extract_num_train_epochs(model_name: str) -> int:
+    if "RylanSchaeffer" not in model_name:
+        # Base model. We assume 0 epochs.
+        return 0
+    match = re.search(r"_epochs_(\d+)_seed_", model_name)
+    if not match:
+        raise ValueError
+    num_epochs = int(match.group(1))
+    return num_epochs
 
 
 def setup_notebook_dir(
