@@ -59,10 +59,9 @@ def eval_language_model():
     scores_to_log = dict()
     vllm_scores_to_log = run_lm_eval_vllm(wandb_config=wandb_config)
     scores_to_log.update(vllm_scores_to_log)
-    custom_scores_to_log = run_lm_eval_custom(wandb_config=wandb_config)
-    scores_to_log.update(custom_scores_to_log)
+    # custom_scores_to_log = run_lm_eval_custom(wandb_config=wandb_config)
+    # scores_to_log.update(custom_scores_to_log)
     wandb.log(scores_to_log)
-
     wandb.finish()
 
 
@@ -108,8 +107,8 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
 
     results = [
         verify(
-            gold=solution,
-            target=response,
+            gold=parse(solution),
+            target=parse(response),
         )
         for solution, response in zip(test_dataset["solution"], responses)
     ]
@@ -119,13 +118,13 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
         for solution, response in zip(test_dataset["solution"], responses)
     ]
 
-    import matplotlib.pyplot as plt
-
-    plt.hist(edit_distances, bins=100)
-    plt.yscale("log")
-    plt.xlabel("Edit Distance(Model Response, Solution)")
-    plt.ylabel("Count")
-    plt.show()
+    # import matplotlib.pyplot as plt
+    #
+    # plt.hist(edit_distances, bins=100)
+    # plt.yscale("log")
+    # plt.xlabel("Edit Distance(Model Response, Solution)")
+    # plt.ylabel("Count")
+    # plt.show()
 
     data_to_log = {
         f"custom/math_verify_{i}": score for i, score in enumerate(math_verify_scores)
@@ -169,8 +168,8 @@ def run_lm_eval_vllm(
     --tasks {lm_eval_task} \
     --num_fewshot 0 \
     --log_samples \
-    --output_path ./lm-eval-output/ \
-    --gen_kwargs temperature={temperature},do_sample={do_sample} \
+    --output_path ./lm-eval-output-vllm/ \
+    --gen_kwargs temperature={temperature},do_sample={do_sample},max_gen_toks=2048 \
     --seed {seed}
     """
 
