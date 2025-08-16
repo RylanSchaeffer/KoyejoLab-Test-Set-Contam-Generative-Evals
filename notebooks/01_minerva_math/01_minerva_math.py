@@ -12,8 +12,8 @@ import src.globals
 import src.plot
 
 
-# refresh = False
-refresh = True
+refresh = False
+# refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -59,16 +59,16 @@ g = sns.relplot(
 )
 g.set(
     xlim=(0.0, 100.0),
-    ylim=(None, 1.0),
+    ylim=(1.0 / 5000, 1.05),
     xscale="symlog",
     yscale="log",
     xlabel="Num. Train Epochs",
-    ylabel="Pass@1",
+    ylabel="Exact Match",
 )
 g.set_titles(col_template="Temperature: {col_name}")
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=math_verify_mean_x=num_train_epochs_col=temp",
+    plot_filename="y=math_verify_mean_x=num_train_epochs_col=temp_hue=params",
 )
 plt.show()
 
