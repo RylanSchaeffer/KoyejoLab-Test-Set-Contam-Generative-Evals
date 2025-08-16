@@ -59,8 +59,8 @@ def eval_language_model():
     scores_to_log = dict()
     vllm_scores_to_log = run_lm_eval_vllm(wandb_config=wandb_config)
     scores_to_log.update(vllm_scores_to_log)
-    # custom_scores_to_log = run_lm_eval_custom(wandb_config=wandb_config)
-    # scores_to_log.update(custom_scores_to_log)
+    custom_scores_to_log = run_lm_eval_custom(wandb_config=wandb_config)
+    scores_to_log.update(custom_scores_to_log)
     wandb.log(scores_to_log)
     wandb.finish()
 

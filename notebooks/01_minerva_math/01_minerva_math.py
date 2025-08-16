@@ -12,8 +12,8 @@ import src.globals
 import src.plot
 
 
-refresh = False
-# refresh = True
+# refresh = False
+refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -22,7 +22,7 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 
 sweep_ids = [
-    "qfjs0h5u",  # Qwen 2.5 3B.
+    "fmnum712",  # Qwen 2.5 3B.
 ]
 
 run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
@@ -50,7 +50,7 @@ g = sns.relplot(
     data=run_configs_df,
     kind="line",
     x="Num. Train Epochs",
-    y="math_verify_mean",
+    y="lm_eval_harness/math_verify_none",
     col="temperature",
     hue="Num. Parameters",
     hue_norm=matplotlib.colors.LogNorm(),
@@ -59,9 +59,9 @@ g = sns.relplot(
 )
 g.set(
     xlim=(0.0, 100.0),
-    ylim=(1.0 / 5000, 1.05),
+    ylim=(0.0, 1.05),
     xscale="symlog",
-    yscale="log",
+    # yscale="log",
     xlabel="Num. Train Epochs",
     ylabel="Exact Match",
 )
