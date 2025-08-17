@@ -226,9 +226,7 @@ def create_sfted_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
     seed = wandb_config["seed"]
     sfted_model_hf_name = f"mem_model_{init_model_name}_dataset_{dataset_name}_epochs_{num_train_epochs}_seed_{seed}"
     if len(sfted_model_hf_name) > 94:
-        raise ValueError(
-            f"reward_model_huggingface_name is too long: {sfted_model_hf_name}"
-        )
+        raise ValueError(f"sfted_model_hf_name is too long: {sfted_model_hf_name}")
     return sfted_model_hf_name
 
 

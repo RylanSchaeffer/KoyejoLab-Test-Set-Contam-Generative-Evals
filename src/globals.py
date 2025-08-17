@@ -14,6 +14,61 @@ DEFAULT_EVALUATION_CONFIG = {
     "temperature": 0.0,
 }
 
+DEFAULT_PRETRAINING_CONFIG = {
+    "data_config": {
+        "dataset": "EleutherAI/minerva_math",
+        # "dataset": "madrylab/gsm8k-platinum",
+        "shuffle_seed": 0,
+    },
+    "lm_eval_config": {
+        "max_batch_size": 512,
+    },
+    "model_config": {
+        "attn_implementation": "eager",
+        # "initial_model_name_or_path": "google/gemma-2-2b",
+        # "initial_model_name_or_path": "google/gemma-3-4b-it",
+        "initial_model_name_or_path": "Qwen/Qwen2.5-3B",
+        "torch_dtype": "bfloat16",
+    },
+    "trainer_config": {
+        "data_seed": 0,
+        "dataloader_drop_last": True,
+        "dataloader_num_workers": 4,
+        "dataloader_prefetch_factor": 4,
+        "eval_on_start": False,
+        "eval_strategy": "steps",
+        "eval_steps": 5,
+        "gradient_accumulation_steps": 2,
+        "gradient_checkpointing": True,
+        "hub_strategy": "end",
+        "learning_rate": 3e-4,
+        # "learning_rate": 1.41e-5,
+        "logging_steps": 1,
+        "lr_scheduler_type": "constant_with_warmup",
+        # "lr_scheduler_type": "linear",
+        "max_grad_norm": 1.0,
+        "max_length": 2000,
+        "max_steps": 5,
+        "num_train_epochs": 1,
+        # "optim": "adamw_torch",
+        "optim": "sgd",
+        "per_device_eval_batch_size": 20,
+        # "per_device_train_batch_size": 2,
+        "per_device_train_batch_size": 4,
+        # "per_device_train_batch_size": 8,
+        "remove_unused_columns": False,
+        # "remove_unused_columns": True,
+        "report_to": "wandb",
+        "save_strategy": "best",
+        "save_total_limit": 1,
+        "torch_compile": False,
+        "warmup_ratio": 0.025,
+        "weight_decay": 0.0,
+    },
+    "seed": 0,
+}
+
+
 DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
     "data_config": {
         "dataset": "EleutherAI/minerva_math",

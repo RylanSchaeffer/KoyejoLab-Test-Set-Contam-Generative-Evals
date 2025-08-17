@@ -23,6 +23,22 @@ GSM8K_PLATINUM_DOC_TO_TEXT = """Q: {question}
         A: {answer}"""
 
 
+def create_dataset_for_pretraining(
+    tokenizer: PreTrainedTokenizer,
+    dataset_name: str,
+) -> Dict[str, Union[Dataset, List[Dataset]]]:
+    ds = load_dataset(
+        "HuggingFaceTB/smollm-corpus", "cosmopedia-v2", split="train", num_proc=16
+    )
+    ds = load_dataset(
+        "HuggingFaceTB/smollm-corpus", "cosmopedia-v2", split="train", num_proc=16
+    )
+    # Login using e.g. `huggingface-cli login` to access this dataset
+    ds = load_dataset("HuggingFaceFW/fineweb-edu", "default")
+
+    raise NotImplementedError
+
+
 def create_dataset_for_supervised_finetuning(
     tokenizer: PreTrainedTokenizer,
     dataset_name: str,

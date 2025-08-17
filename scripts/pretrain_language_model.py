@@ -28,10 +28,12 @@ import torch
 
 # Compiling seems to be causing problems down the line :/
 torch.compiler.disable()
-from transformers import AutoImageProcessor, AutoTokenizer, set_seed
-from trl import (
-    SFTConfig,
-    SFTTrainer,
+from transformers import (
+    AutoImageProcessor,
+    AutoTokenizer,
+    set_seed,
+    Trainer,
+    TrainingArguments,
 )
 from typing import Any, Dict
 import wandb
@@ -48,8 +50,8 @@ def pretrain():
     num_visible_devices = torch.cuda.device_count()
     assert num_visible_devices > 0, "No CUDA devices available."
     run = wandb.init(
-        project="memorization-scoring-vs-sampling-sft",
-        config=src.globals.DEFAULT_SUPERVISED_FINETUNING_CONFIG,
+        project="memorization-scoring-vs-sampling-pt",
+        config=src.globals.DEFAULT_PRETRAINING_CONFIG,
         entity=wandb.api.default_entity,
     )
 
@@ -59,11 +61,23 @@ def pretrain():
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
     pprint.pprint(wandb_config)
 
+    from datasets import (
+        concatenate_datasets,
+        load_dataset,
+        interleave_datasets,
+        DatasetDict,
+    )
+
+    from datasets import load_dataset
+
+    ds = load_dataset(
+        "HuggingFaceTB/smollm-corpus", "fineweb-edu-dedup", split="train", num_proc=16
+    )
     # Create output directory.
-    sfted_model_hf_name = create_pretrained_model_huggingface_name(
+    pted_model_hf_name = create_pretrained_model_huggingface_name(
         wandb_config=wandb_config,
     )
-    output_dir = os.path.join("models", "sft_language_model", sfted_model_hf_name)
+    output_dir = os.path.join("models", "sft_language_model", pted_model_hf_name)
     print("Output Directory: ", output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -81,64 +95,55 @@ def pretrain():
 
     set_seed(seed=wandb_config["seed"], deterministic=True)
 
-    sft_trainer_config_dict: Dict[str, Any] = wandb_config["sft_trainer_config"]
+    trainer_config_dict: Dict[str, Any] = wandb_config["trainer_config"]
     model_config_dict: Dict[str, Any] = wandb_config["model_config"]
     data_config_dict: Dict[str, Any] = wandb_config["data_config"]
 
     # Lightly modify configs as necessary.
     if model_config_dict["torch_dtype"] == "bfloat16":
-        sft_trainer_config_dict["bf16"] = True
+        trainer_config_dict["bf16"] = True
     else:
-        sft_trainer_config_dict["bf16"] = False
+        trainer_config_dict["bf16"] = False
     if model_config_dict["torch_dtype"] == "float16":
-        sft_trainer_config_dict["fp16"] = True
+        trainer_config_dict["fp16"] = True
     else:
-        sft_trainer_config_dict["fp16"] = False
+        trainer_config_dict["fp16"] = False
 
-    sft_config = SFTConfig(
-        bf16=sft_trainer_config_dict["bf16"],
-        completion_only_loss=False,
-        data_seed=sft_trainer_config_dict["data_seed"],
-        dataloader_drop_last=sft_trainer_config_dict["dataloader_drop_last"],
-        dataloader_num_workers=sft_trainer_config_dict["dataloader_num_workers"],
-        dataloader_prefetch_factor=sft_trainer_config_dict[
-            "dataloader_prefetch_factor"
-        ],
+    pretraining_config = TrainingArguments(
+        bf16=trainer_config_dict["bf16"],
+        data_seed=trainer_config_dict["data_seed"],
+        dataloader_drop_last=trainer_config_dict["dataloader_drop_last"],
+        dataloader_num_workers=trainer_config_dict["dataloader_num_workers"],
+        dataloader_prefetch_factor=trainer_config_dict["dataloader_prefetch_factor"],
         dataset_text_field="input_ids",
-        eval_on_start=sft_trainer_config_dict["eval_on_start"],
-        eval_strategy=sft_trainer_config_dict["eval_strategy"],
-        eval_steps=sft_trainer_config_dict["eval_steps"],
-        fp16=sft_trainer_config_dict["fp16"],
-        gradient_accumulation_steps=sft_trainer_config_dict[
-            "gradient_accumulation_steps"
-        ],
-        gradient_checkpointing=sft_trainer_config_dict["gradient_checkpointing"],
-        hub_model_id=f"RylanSchaeffer/{sfted_model_hf_name}",
+        eval_on_start=trainer_config_dict["eval_on_start"],
+        eval_strategy=trainer_config_dict["eval_strategy"],
+        eval_steps=trainer_config_dict["eval_steps"],
+        fp16=trainer_config_dict["fp16"],
+        gradient_accumulation_steps=trainer_config_dict["gradient_accumulation_steps"],
+        gradient_checkpointing=trainer_config_dict["gradient_checkpointing"],
+        hub_model_id=f"RylanSchaeffer/{pted_model_hf_name}",
         hub_private_repo=True,
-        hub_strategy=sft_trainer_config_dict["hub_strategy"],
+        hub_strategy=trainer_config_dict["hub_strategy"],
         include_num_input_tokens_seen=True,
-        learning_rate=float(sft_trainer_config_dict["learning_rate"]),
-        logging_steps=sft_trainer_config_dict["logging_steps"],
-        lr_scheduler_type=sft_trainer_config_dict["lr_scheduler_type"],
-        max_length=sft_trainer_config_dict["max_length"],
-        max_steps=sft_trainer_config_dict["max_steps"],
+        learning_rate=float(trainer_config_dict["learning_rate"]),
+        logging_steps=trainer_config_dict["logging_steps"],
+        lr_scheduler_type=trainer_config_dict["lr_scheduler_type"],
+        max_length=trainer_config_dict["max_length"],
+        max_steps=trainer_config_dict["max_steps"],
         metric_for_best_model="eval_loss",
-        num_train_epochs=sft_trainer_config_dict["num_train_epochs"],
-        optim=sft_trainer_config_dict["optim"],
+        num_train_epochs=trainer_config_dict["num_train_epochs"],
+        optim=trainer_config_dict["optim"],
         output_dir=output_dir,
-        per_device_eval_batch_size=sft_trainer_config_dict[
-            "per_device_eval_batch_size"
-        ],
-        per_device_train_batch_size=sft_trainer_config_dict[
-            "per_device_train_batch_size"
-        ],
-        remove_unused_columns=sft_trainer_config_dict["remove_unused_columns"],
+        per_device_eval_batch_size=trainer_config_dict["per_device_eval_batch_size"],
+        per_device_train_batch_size=trainer_config_dict["per_device_train_batch_size"],
+        remove_unused_columns=trainer_config_dict["remove_unused_columns"],
         run_name=wandb.run.id,
-        report_to=sft_trainer_config_dict["report_to"],
-        save_strategy=sft_trainer_config_dict["save_strategy"],
-        save_total_limit=sft_trainer_config_dict["save_total_limit"],
+        report_to=trainer_config_dict["report_to"],
+        save_strategy=trainer_config_dict["save_strategy"],
+        save_total_limit=trainer_config_dict["save_total_limit"],
         seed=wandb_config["seed"],
-        warmup_ratio=sft_trainer_config_dict["warmup_ratio"],
+        warmup_ratio=trainer_config_dict["warmup_ratio"],
     )
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -152,10 +157,10 @@ def pretrain():
     # when training a model in half-precision. You might consider adding tokenizer.padding_side = 'right' to your code.
     tokenizer.padding_side = "right"
 
-    datasets_dict = src.data.create_dataset_for_supervised_finetuning(
+    datasets_dict = src.data.create_dataset_for_pretraining(
         tokenizer=tokenizer,
         dataset_name=data_config_dict["dataset"],
-        max_length=sft_config.max_length,
+        max_length=pretraining_config.max_length,
     )
     train_dataset = datasets_dict["train"]
     eval_dataset = datasets_dict["eval"]
@@ -164,10 +169,10 @@ def pretrain():
         model_config_dict=model_config_dict,
     )
 
-    trainer = SFTTrainer(
+    trainer = Trainer(
         model=model,
         processing_class=tokenizer,
-        args=sft_config,
+        args=pretraining_config,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
     )
@@ -188,21 +193,10 @@ def pretrain():
     wandb.log({f"eval_after/{k}": v for k, v in eval_metrics_after.items()})
     pprint.pprint(eval_metrics_after)
 
-    # For modern models, some have image processors and if these are not saved,
-    # the lm_eval with vllm will complain.
-    try:
-        image_processor = AutoImageProcessor.from_pretrained(
-            wandb_config["model_config"]["initial_model_name_or_path"],
-            trust_remote_code=True,
-        )
-        image_processor.save_pretrained(output_dir)
-    except Exception as e:
-        pass
-
     # Push to HF Hub.
     logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
     tokenizer.padding_side = "left"  # Otherwise, generate gets screwed up.
-    trainer.save_model(output_dir=sft_config.output_dir)
+    trainer.save_model(output_dir=pretraining_config.output_dir)
     trainer.push_to_hub()
     logging.info("Pushed to HuggingFace.")
 
@@ -224,14 +218,12 @@ def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> st
         "/"
     )[-1]
     dataset_name = wandb_config["data_config"]["dataset"].split("/")[-1]
-    num_train_epochs = wandb_config["sft_trainer_config"]["num_train_epochs"]
+    num_train_epochs = wandb_config["trainer_config"]["num_train_epochs"]
     seed = wandb_config["seed"]
-    sfted_model_hf_name = f"mem_model_{init_model_name}_dataset_{dataset_name}_epochs_{num_train_epochs}_seed_{seed}"
-    if len(sfted_model_hf_name) > 94:
-        raise ValueError(
-            f"reward_model_huggingface_name is too long: {sfted_model_hf_name}"
-        )
-    return sfted_model_hf_name
+    pted_model_hf_name = f"mem_model_{init_model_name}_dataset_{dataset_name}_epochs_{num_train_epochs}_seed_{seed}_pt"
+    if len(pted_model_hf_name) > 94:
+        raise ValueError(f"pted_model_hf_name is too long: {pted_model_hf_name}")
+    return pted_model_hf_name
 
 
 if __name__ == "__main__":
@@ -239,6 +231,5 @@ if __name__ == "__main__":
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(
             [str(i) for i in range(torch.cuda.device_count())]
         )
-    # pretrain()
-    logging.info("Finished pretrain.py!")
-    raise NotImplementedError
+    pretrain()
+    logging.info("Finished pretrain_language_model.py!")
