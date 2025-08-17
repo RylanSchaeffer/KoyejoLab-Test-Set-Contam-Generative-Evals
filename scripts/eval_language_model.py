@@ -133,10 +133,12 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
         {f"custom/edit_distance_{i}": score for i, score in enumerate(edit_distances)}
     )
     data_to_log["custom/math_verify_mean"] = np.mean(math_verify_scores)
+    data_to_log["custom/math_verify_stddev"] = np.std(math_verify_scores)
     data_to_log["custom/math_verify_median"] = np.median(math_verify_scores)
     data_to_log["custom/math_verify_max"] = np.max(math_verify_scores)
     data_to_log["custom/math_verify_min"] = np.min(math_verify_scores)
     data_to_log["custom/edit_distance_mean"] = np.mean(edit_distances)
+    data_to_log["custom/edit_distance_stddev"] = np.std(edit_distances)
     data_to_log["custom/edit_distance_median"] = np.median(edit_distances)
     data_to_log["custom/edit_distance_max"] = np.max(edit_distances)
     data_to_log["custom/edit_distance_min"] = np.min(edit_distances)
