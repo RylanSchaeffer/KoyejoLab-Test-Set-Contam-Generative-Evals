@@ -140,9 +140,6 @@ def create_dataset_for_pretraining(
     # Remove columns that are not model inputs
     columns_to_remove = ["text", "token_length"]
     final_train_dataset = final_train_dataset.remove_columns(columns_to_remove)
-    benchmark_test_split_dataset = benchmark_test_split_dataset.remove_columns(
-        columns_to_remove
-    )
 
     datasets_dict = {
         "train": final_train_dataset,
