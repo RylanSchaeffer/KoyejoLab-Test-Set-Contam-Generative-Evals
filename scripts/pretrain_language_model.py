@@ -3,7 +3,7 @@ import os
 from ray.train.huggingface.transformers import prepare_trainer
 
 # Rok asked us to include the following specifications in our code to prevent CPUs from spinning idly:
-n_threads_str = "16"
+n_threads_str = "32"
 os.environ["OMP_NUM_THREADS"] = n_threads_str
 os.environ["OPENBLAS_NUM_THREADS"] = n_threads_str
 os.environ["MKL_NUM_THREADS"] = n_threads_str
@@ -214,7 +214,7 @@ def pretrain():
 
 def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
     init_model_name = wandb_config["model_config"]["model_name"].split("/")[-1]
-    dataset_name = wandb_config["data_config"]["dataset"].split("/")[-1]
+    dataset_name = wandb_config["data_config"]["benchmark"].split("/")[-1]
     num_train_epochs = wandb_config["trainer_config"]["num_train_epochs"]
     seed = wandb_config["seed"]
     pted_model_hf_name = f"mem_model_{init_model_name}_dataset_{dataset_name}_epochs_{num_train_epochs}_seed_{seed}_pt"

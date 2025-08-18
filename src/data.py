@@ -30,7 +30,7 @@ def create_dataset_for_pretraining(
 ) -> Dict[str, Union[Dataset, List[Dataset]]]:
     # Load the benchmark.
     benchmark_test_split_dataset = create_dataset_for_supervised_finetuning(
-        dataset_name=data_config_dict["dataset"],
+        dataset_name=data_config_dict["benchmark"],
         tokenizer=tokenizer,
         remove_columns=False,
     )["eval"]
@@ -45,16 +45,28 @@ def create_dataset_for_pretraining(
         columns_to_remove
     )
 
-    # Figure out how many tokens we need to take from the corpus to make up the target.
-    benchmark_test_split_num_tokens = np.sum(
-        benchmark_test_split_dataset["token_length"]
+    # Replicate the benchmark.
+    replicated_benchmark_test_split_dataset = concatenate_datasets(
+        [
+            benchmark_test_split_dataset
+            for _ in range(data_config_dict["num_benchmark_replicas"])
+        ]
     )
-    print(f"Benchmark Test Split has {benchmark_test_split_num_tokens} tokens.")
-    if target_num_unique_tokens < benchmark_test_split_num_tokens:
+
+    # Figure out how many tokens we need to take from the corpus to make up the target.
+    replicated_benchmark_test_split_num_tokens = np.sum(
+        replicated_benchmark_test_split_dataset["token_length"]
+    )
+    print(
+        f"Benchmark Test Split has {replicated_benchmark_test_split_num_tokens} tokens."
+    )
+    if target_num_unique_tokens < replicated_benchmark_test_split_num_tokens:
         raise ValueError(
-            f"Target token count ({target_num_unique_tokens:,}) is smaller than the test set size ({benchmark_test_split_num_tokens:,})."
+            f"Target token count ({target_num_unique_tokens:,}) is smaller than the test set size ({replicated_benchmark_test_split_num_tokens:,})."
         )
-    corpus_tokens_needed = target_num_unique_tokens - benchmark_test_split_num_tokens
+    corpus_tokens_needed = (
+        target_num_unique_tokens - replicated_benchmark_test_split_num_tokens
+    )
     print(f"Tokens needed from corpus: {corpus_tokens_needed:,}")
 
     # Load the training corpus.
@@ -63,7 +75,7 @@ def create_dataset_for_pretraining(
             "HuggingFaceTB/smollm-corpus",
             "fineweb-edu-dedup",
             split="train",
-            num_proc=16,
+            num_proc=32,
         )
     else:
         raise ValueError
@@ -71,12 +83,16 @@ def create_dataset_for_pretraining(
     # Tokenize and count tokens per sequence.
     def tokenize_truncate_and_count(example):
         # Tokenize.
-        tokenized_input = tokenizer(example["text"])
+        tokenized_input = tokenizer(
+            example["text"],
+            truncation=True,
+            max_length=max_length,
+        )
         # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
         if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
             tokenized_input["input_ids"].append(tokenizer.eos_token_id)
             tokenized_input["attention_mask"].append(1)
-        # Truncate.
+        # Truncate if necessary.
         if len(tokenized_input["input_ids"]) > max_length:
             tokenized_input["input_ids"] = tokenized_input["input_ids"][:max_length]
             tokenized_input["attention_mask"] = tokenized_input["attention_mask"][
@@ -93,7 +109,7 @@ def create_dataset_for_pretraining(
     corpus_sample = corpus_dataset.select(
         range(sample_size_for_calculating_avg_tokens_per_sequence)
     )
-    corpus_sample = corpus_sample.map(tokenize_truncate_and_count, num_proc=16)
+    corpus_sample = corpus_sample.map(tokenize_truncate_and_count, num_proc=32)
     if max_length is not None:
         corpus_sample = corpus_sample.filter(lambda x: x["token_length"] <= max_length)
     avg_tokens_per_doc = np.mean(corpus_sample["token_length"])
@@ -104,20 +120,36 @@ def create_dataset_for_pretraining(
         range(estimated_docs_needed)
     )
     corpus_dataset_subset = corpus_dataset_subset.map(
-        tokenize_truncate_and_count, num_proc=16
+        tokenize_truncate_and_count, num_proc=32
     )
     corpus_dataset_subset = corpus_dataset_subset.filter(
         lambda x: x["token_length"] <= max_length
     )
-    final_dataset = concatenate_datasets(
-        [benchmark_test_split_dataset, corpus_dataset_subset]
+
+    # Create the final dataset to train on.
+    final_train_dataset = concatenate_datasets(
+        [replicated_benchmark_test_split_dataset, corpus_dataset_subset]
     )
-    final_dataset = final_dataset.shuffle(seed=seed)
-    total_tokens = np.sum(final_dataset["token_length"])
+    final_train_dataset = final_train_dataset.shuffle(seed=seed)
+    total_tokens = np.sum(final_train_dataset["token_length"])
     print(
-        f"Final dataset created with {len(final_dataset):,} documents and an estimated {total_tokens:,} tokens."
+        f"Final dataset created with {total_tokens:,} tokens.\n"
+        f"Target number of unique tokens: {target_num_unique_tokens}"
     )
-    return final_dataset
+
+    # Remove columns that are not model inputs
+    columns_to_remove = ["text", "token_length"]
+    final_train_dataset = final_train_dataset.remove_columns(columns_to_remove)
+    benchmark_test_split_dataset = benchmark_test_split_dataset.remove_columns(
+        columns_to_remove
+    )
+
+    datasets_dict = {
+        "train": final_train_dataset,
+        "eval": benchmark_test_split_dataset,
+    }
+
+    return datasets_dict
 
 
 def create_dataset_for_supervised_finetuning(
