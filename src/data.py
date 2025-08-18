@@ -137,9 +137,27 @@ def create_dataset_for_pretraining(
         f"Target number of unique tokens: {target_num_unique_tokens}"
     )
 
-    # Remove columns that are not model inputs
-    columns_to_remove = ["text", "token_length"]
-    final_train_dataset = final_train_dataset.remove_columns(columns_to_remove)
+    def prepare_dataset_for_model(dataset: Dataset) -> Dataset:
+        """Prepares a dataset for the Trainer by adding labels and removing unneeded columns."""
+        # 1. Add the 'labels' column for loss calculation.
+        # For causal language modeling, 'labels' are a copy of 'input_ids'.
+        dataset = dataset.map(lambda x: {"labels": x["input_ids"]}, batched=True)
+
+        # 2. Remove all columns that are not expected by the model.
+        # This is more robust than specifying which to remove.
+        columns_to_keep = ["input_ids", "attention_mask", "labels"]
+        columns_to_remove = [
+            col for col in dataset.column_names if col not in columns_to_keep
+        ]
+
+        if columns_to_remove:
+            dataset = dataset.remove_columns(columns_to_remove)
+
+        return dataset
+
+    # Apply the preparation to both the training and evaluation splits.
+    final_train_dataset = prepare_dataset_for_model(final_train_dataset)
+    benchmark_test_split_dataset = prepare_dataset_for_model(benchmark_test_split_dataset)
 
     datasets_dict = {
         "train": final_train_dataset,
