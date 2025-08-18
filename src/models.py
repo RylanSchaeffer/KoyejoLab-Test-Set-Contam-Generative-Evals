@@ -1,4 +1,4 @@
-import datasets
+import math
 import numpy as np
 import os
 import pprint
@@ -11,6 +11,58 @@ from transformers import (
 )
 
 from typing import Any, Dict, List, Optional, Tuple, Union
+
+qwen3_parameters_to_depths_and_widths = {
+    "34M": (3, 96),
+    "48M": (4, 128),
+    "62M": (5, 160),
+    "93M": (6, 224),
+    "153M": (9, 320),
+    "191M": (10, 384),
+    "262M": (12, 480),
+    "344M": (14, 576),
+    "499M": (18, 704),
+    "660M": (21, 832),
+    "806M": (23, 940),
+    "934M": (25, 1010),
+    "1094M": (27, 1100),
+    "1260M": (29, 1180),
+    "1442M": (31, 1260),
+}
+
+
+def create_causalm_for_pretraining(
+    model_config_dict: Dict[str, Any]
+) -> AutoModelForCausalLM:
+    if model_config_dict["torch_dtype"] == "bfloat16":
+        torch_dtype = torch.bfloat16
+    elif model_config_dict["torch_dtype"] == "float16":
+        torch_dtype = torch.float16
+    elif model_config_dict["torch_dtype"] == "float32":
+        torch_dtype = torch.float32
+    else:
+        raise NotImplementedError
+
+    if model_config_dict["model_name"].startswith("Qwen3/Qwen3-"):
+        from transformers import Qwen3Config, Qwen3ForCausalLM
+
+        num_parameters: str = model_config_dict["model_name"].split("-")[1]
+        depth, width = qwen3_parameters_to_depths_and_widths[num_parameters]
+        intermediate_size = 256 * math.floor((255 + math.floor(8 * width / 3)) / 256)
+
+        model_config = Qwen3Config(
+            hidden_size=width,
+            num_hidden_layers=depth,
+            intermediate_size=intermediate_size,
+            torch_dtype=torch_dtype,
+        )
+        model_class = Qwen3ForCausalLM
+
+    else:
+        raise ValueError(model_config_dict["model_name"])
+
+    model: AutoModelForCausalLM = model_class(config=model_config).to("cuda")
+    return model
 
 
 def load_automodelforcausallm(

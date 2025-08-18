@@ -16,18 +16,13 @@ DEFAULT_EVALUATION_CONFIG = {
 
 DEFAULT_PRETRAINING_CONFIG = {
     "data_config": {
+        "corpus": "fineweb-edu-dedup",
         "dataset": "EleutherAI/minerva_math",
         # "dataset": "madrylab/gsm8k-platinum",
         "shuffle_seed": 0,
     },
-    "lm_eval_config": {
-        "max_batch_size": 512,
-    },
     "model_config": {
-        "attn_implementation": "eager",
-        # "initial_model_name_or_path": "google/gemma-2-2b",
-        # "initial_model_name_or_path": "google/gemma-3-4b-it",
-        "initial_model_name_or_path": "Qwen/Qwen2.5-3B",
+        "model_name": "Qwen3/Qwen3-34M",
         "torch_dtype": "bfloat16",
     },
     "trainer_config": {
@@ -43,7 +38,7 @@ DEFAULT_PRETRAINING_CONFIG = {
         "hub_strategy": "end",
         "learning_rate": 3e-4,
         # "learning_rate": 1.41e-5,
-        "logging_steps": 1,
+        "logging_steps": 10,
         "lr_scheduler_type": "constant_with_warmup",
         # "lr_scheduler_type": "linear",
         "max_grad_norm": 1.0,
@@ -52,6 +47,7 @@ DEFAULT_PRETRAINING_CONFIG = {
         "num_train_epochs": 1,
         # "optim": "adamw_torch",
         "optim": "sgd",
+        "overtrain_multiplier": 2,
         "per_device_eval_batch_size": 20,
         # "per_device_train_batch_size": 2,
         "per_device_train_batch_size": 4,
@@ -62,7 +58,8 @@ DEFAULT_PRETRAINING_CONFIG = {
         "save_strategy": "best",
         "save_total_limit": 1,
         "torch_compile": False,
-        "warmup_ratio": 0.025,
+        # "warmup_ratio": 0.025,
+        "warmup_steps": 100,
         "weight_decay": 0.0,
     },
     "seed": 0,
@@ -74,9 +71,6 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
         "dataset": "EleutherAI/minerva_math",
         # "dataset": "madrylab/gsm8k-platinum",
         "shuffle_seed": 0,
-    },
-    "lm_eval_config": {
-        "max_batch_size": 512,
     },
     "model_config": {
         "attn_implementation": "eager",

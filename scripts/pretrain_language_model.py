@@ -3,7 +3,7 @@ import os
 from ray.train.huggingface.transformers import prepare_trainer
 
 # Rok asked us to include the following specifications in our code to prevent CPUs from spinning idly:
-n_threads_str = "4"
+n_threads_str = "16"
 os.environ["OMP_NUM_THREADS"] = n_threads_str
 os.environ["OPENBLAS_NUM_THREADS"] = n_threads_str
 os.environ["MKL_NUM_THREADS"] = n_threads_str
@@ -34,6 +34,7 @@ from transformers import (
     set_seed,
     Trainer,
     TrainingArguments,
+    AutoModelForCausalLM,
 )
 from typing import Any, Dict
 import wandb
@@ -61,18 +62,6 @@ def pretrain():
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
     pprint.pprint(wandb_config)
 
-    from datasets import (
-        concatenate_datasets,
-        load_dataset,
-        interleave_datasets,
-        DatasetDict,
-    )
-
-    from datasets import load_dataset
-
-    ds = load_dataset(
-        "HuggingFaceTB/smollm-corpus", "fineweb-edu-dedup", split="train", num_proc=16
-    )
     # Create output directory.
     pted_model_hf_name = create_pretrained_model_huggingface_name(
         wandb_config=wandb_config,
@@ -83,8 +72,8 @@ def pretrain():
 
     effective_global_batch_size = (
         num_visible_devices
-        * wandb_config["sft_trainer_config"]["per_device_train_batch_size"]
-        * wandb_config["sft_trainer_config"]["gradient_accumulation_steps"]
+        * wandb_config["trainer_config"]["per_device_train_batch_size"]
+        * wandb_config["trainer_config"]["gradient_accumulation_steps"]
     )
     wandb.config.update(
         {
@@ -115,7 +104,6 @@ def pretrain():
         dataloader_drop_last=trainer_config_dict["dataloader_drop_last"],
         dataloader_num_workers=trainer_config_dict["dataloader_num_workers"],
         dataloader_prefetch_factor=trainer_config_dict["dataloader_prefetch_factor"],
-        dataset_text_field="input_ids",
         eval_on_start=trainer_config_dict["eval_on_start"],
         eval_strategy=trainer_config_dict["eval_strategy"],
         eval_steps=trainer_config_dict["eval_steps"],
@@ -129,7 +117,6 @@ def pretrain():
         learning_rate=float(trainer_config_dict["learning_rate"]),
         logging_steps=trainer_config_dict["logging_steps"],
         lr_scheduler_type=trainer_config_dict["lr_scheduler_type"],
-        max_length=trainer_config_dict["max_length"],
         max_steps=trainer_config_dict["max_steps"],
         metric_for_best_model="eval_loss",
         num_train_epochs=trainer_config_dict["num_train_epochs"],
@@ -143,13 +130,28 @@ def pretrain():
         save_strategy=trainer_config_dict["save_strategy"],
         save_total_limit=trainer_config_dict["save_total_limit"],
         seed=wandb_config["seed"],
-        warmup_ratio=trainer_config_dict["warmup_ratio"],
+        warmup_steps=trainer_config_dict["warmup_steps"],
+        # warmup_ratio=trainer_config_dict["warmup_ratio"],
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_config_dict["initial_model_name_or_path"],
-        use_fast=True,
-        trust_remote_code=True,
+    if model_config_dict["model_name"].startswith("Qwen3/Qwen3-"):
+        tokenizer = AutoTokenizer.from_pretrained(
+            "Qwen/Qwen2-1.5B",  # Arbitrary. Doesn't matter so long as it is Qwen3.
+            use_fast=True,
+            trust_remote_code=True,
+        )
+    else:
+        raise NotImplementedError
+
+    model: AutoModelForCausalLM = src.models.create_causalm_for_pretraining(
+        model_config_dict=wandb_config["model_config"],
+    )
+    num_parameters = sum(p.numel() for p in model.parameters())
+    target_num_unique_tokens = int(
+        20
+        * trainer_config_dict["overtrain_multiplier"]
+        * num_parameters
+        / trainer_config_dict["num_train_epochs"]
     )
 
     # trl/trainer/sft_trainer.py:408: UserWarning: You passed a tokenizer with padding_side not equal
@@ -158,16 +160,13 @@ def pretrain():
     tokenizer.padding_side = "right"
 
     datasets_dict = src.data.create_dataset_for_pretraining(
+        data_config_dict=data_config_dict,
         tokenizer=tokenizer,
-        dataset_name=data_config_dict["dataset"],
-        max_length=pretraining_config.max_length,
+        target_num_unique_tokens=target_num_unique_tokens,
+        seed=wandb_config["seed"],
     )
     train_dataset = datasets_dict["train"]
     eval_dataset = datasets_dict["eval"]
-
-    model = src.models.load_automodelforcausallm(
-        model_config_dict=model_config_dict,
-    )
 
     trainer = Trainer(
         model=model,
@@ -214,9 +213,7 @@ def pretrain():
 
 
 def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
-    init_model_name = wandb_config["model_config"]["initial_model_name_or_path"].split(
-        "/"
-    )[-1]
+    init_model_name = wandb_config["model_config"]["model_name"].split("/")[-1]
     dataset_name = wandb_config["data_config"]["dataset"].split("/")[-1]
     num_train_epochs = wandb_config["trainer_config"]["num_train_epochs"]
     seed = wandb_config["seed"]

@@ -1,5 +1,3 @@
-from accelerate import PartialState
-from collections import defaultdict
 from datasets import (
     concatenate_datasets,
     load_dataset,
@@ -24,19 +22,102 @@ GSM8K_PLATINUM_DOC_TO_TEXT = """Q: {question}
 
 
 def create_dataset_for_pretraining(
+    data_config_dict: Dict[str, Any],
     tokenizer: PreTrainedTokenizer,
-    dataset_name: str,
+    target_num_unique_tokens: int,
+    seed: int = 0,
+    max_length: int = 2048,
 ) -> Dict[str, Union[Dataset, List[Dataset]]]:
-    ds = load_dataset(
-        "HuggingFaceTB/smollm-corpus", "cosmopedia-v2", split="train", num_proc=16
-    )
-    ds = load_dataset(
-        "HuggingFaceTB/smollm-corpus", "cosmopedia-v2", split="train", num_proc=16
-    )
-    # Login using e.g. `huggingface-cli login` to access this dataset
-    ds = load_dataset("HuggingFaceFW/fineweb-edu", "default")
+    # Load the benchmark.
+    benchmark_test_split_dataset = create_dataset_for_supervised_finetuning(
+        dataset_name=data_config_dict["dataset"],
+        tokenizer=tokenizer,
+        remove_columns=False,
+    )["eval"]
 
-    raise NotImplementedError
+    # Remove unnecessary columns.
+    columns_to_remove = [
+        col
+        for col in benchmark_test_split_dataset.column_names
+        if col not in {"text", "input_ids", "attention_mask", "token_length"}
+    ]
+    benchmark_test_split_dataset = benchmark_test_split_dataset.remove_columns(
+        columns_to_remove
+    )
+
+    # Figure out how many tokens we need to take from the corpus to make up the target.
+    benchmark_test_split_num_tokens = np.sum(
+        benchmark_test_split_dataset["token_length"]
+    )
+    print(f"Benchmark Test Split has {benchmark_test_split_num_tokens} tokens.")
+    if target_num_unique_tokens < benchmark_test_split_num_tokens:
+        raise ValueError(
+            f"Target token count ({target_num_unique_tokens:,}) is smaller than the test set size ({benchmark_test_split_num_tokens:,})."
+        )
+    corpus_tokens_needed = target_num_unique_tokens - benchmark_test_split_num_tokens
+    print(f"Tokens needed from corpus: {corpus_tokens_needed:,}")
+
+    # Load the training corpus.
+    if data_config_dict["corpus"] == "fineweb-edu-dedup":
+        corpus_dataset = load_dataset(
+            "HuggingFaceTB/smollm-corpus",
+            "fineweb-edu-dedup",
+            split="train",
+            num_proc=16,
+        )
+    else:
+        raise ValueError
+
+    # Tokenize and count tokens per sequence.
+    def tokenize_truncate_and_count(example):
+        # Tokenize.
+        tokenized_input = tokenizer(example["text"])
+        # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
+        if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
+            tokenized_input["input_ids"].append(tokenizer.eos_token_id)
+            tokenized_input["attention_mask"].append(1)
+        # Truncate.
+        if len(tokenized_input["input_ids"]) > max_length:
+            tokenized_input["input_ids"] = tokenized_input["input_ids"][:max_length]
+            tokenized_input["attention_mask"] = tokenized_input["attention_mask"][
+                :max_length
+            ]
+        example["input_ids"] = tokenized_input["input_ids"]
+        example["attention_mask"] = tokenized_input["attention_mask"]
+        # Count the number of tokens.
+        example["token_length"] = len(tokenized_input["input_ids"])
+        return example
+
+    # Estimate how many docs are needed, adding a 5% buffer.
+    sample_size_for_calculating_avg_tokens_per_sequence = 30000
+    corpus_sample = corpus_dataset.select(
+        range(sample_size_for_calculating_avg_tokens_per_sequence)
+    )
+    corpus_sample = corpus_sample.map(tokenize_truncate_and_count, num_proc=16)
+    if max_length is not None:
+        corpus_sample = corpus_sample.filter(lambda x: x["token_length"] <= max_length)
+    avg_tokens_per_doc = np.mean(corpus_sample["token_length"])
+    estimated_docs_needed = int(1.05 * corpus_tokens_needed / avg_tokens_per_doc)
+
+    # Subsample the appropriate number of documents and tokenize.
+    corpus_dataset_subset = corpus_dataset.shuffle(seed=seed).select(
+        range(estimated_docs_needed)
+    )
+    corpus_dataset_subset = corpus_dataset_subset.map(
+        tokenize_truncate_and_count, num_proc=16
+    )
+    corpus_dataset_subset = corpus_dataset_subset.filter(
+        lambda x: x["token_length"] <= max_length
+    )
+    final_dataset = concatenate_datasets(
+        [benchmark_test_split_dataset, corpus_dataset_subset]
+    )
+    final_dataset = final_dataset.shuffle(seed=seed)
+    total_tokens = np.sum(final_dataset["token_length"])
+    print(
+        f"Final dataset created with {len(final_dataset):,} documents and an estimated {total_tokens:,} tokens."
+    )
+    return final_dataset
 
 
 def create_dataset_for_supervised_finetuning(
@@ -67,7 +148,7 @@ def create_dataset_for_supervised_finetuning(
         num_proc=4,
     )
     if max_length is not None:
-        raw_datasets = raw_datasets.filter(lambda x: len(x["input_ids"]) <= max_length)
+        raw_datasets = raw_datasets.filter(lambda x: x["token_length"] <= max_length)
     if remove_columns:
         columns_to_remove = [
             col
@@ -124,6 +205,7 @@ def preprocess_eleutherai_hendrycks_math_for_sft(
     new_examples = {
         "input_ids": [],
         "attention_mask": [],
+        "token_length": [],
     }
 
     for problem, solution in zip(examples["problem"], examples["solution"]):
@@ -135,6 +217,7 @@ def preprocess_eleutherai_hendrycks_math_for_sft(
             tokenized_input["attention_mask"].append(1)
         new_examples["input_ids"].append(tokenized_input["input_ids"])
         new_examples["attention_mask"].append(tokenized_input["attention_mask"])
+        new_examples["token_length"].append(len(tokenized_input["input_ids"]))
 
     return new_examples
 
@@ -147,6 +230,7 @@ def preprocess_madrylab_gsm8k_platinum_for_sft(
     new_examples = {
         "input_ids": [],
         "attention_mask": [],
+        "token_length": [],
     }
 
     for question, answer in zip(examples["question"], examples["answer"]):
@@ -158,5 +242,6 @@ def preprocess_madrylab_gsm8k_platinum_for_sft(
             tokenized_input["attention_mask"].append(1)
         new_examples["input_ids"].append(tokenized_input["input_ids"])
         new_examples["attention_mask"].append(tokenized_input["attention_mask"])
+        new_examples["token_length"].append(len(tokenized_input["input_ids"]))
 
     return new_examples
