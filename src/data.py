@@ -113,7 +113,7 @@ def create_dataset_for_pretraining(
     if max_length is not None:
         corpus_sample = corpus_sample.filter(lambda x: x["token_length"] <= max_length)
     avg_tokens_per_doc = np.mean(corpus_sample["token_length"])
-    estimated_docs_needed = int(1.05 * corpus_tokens_needed / avg_tokens_per_doc)
+    estimated_docs_needed = int(corpus_tokens_needed / avg_tokens_per_doc)
 
     # Subsample the appropriate number of documents and tokenize.
     corpus_dataset_subset = corpus_dataset.shuffle(seed=seed).select(
@@ -139,13 +139,9 @@ def create_dataset_for_pretraining(
 
     def prepare_dataset_for_model(dataset: Dataset) -> Dataset:
         """Prepares a dataset for the Trainer by adding labels and removing unneeded columns."""
-        # 1. Add the 'labels' column for loss calculation.
-        # For causal language modeling, 'labels' are a copy of 'input_ids'.
-        dataset = dataset.map(lambda x: {"labels": x["input_ids"]}, batched=True)
-
         # 2. Remove all columns that are not expected by the model.
         # This is more robust than specifying which to remove.
-        columns_to_keep = ["input_ids", "attention_mask", "labels"]
+        columns_to_keep = ["input_ids", "attention_mask"]
         columns_to_remove = [
             col for col in dataset.column_names if col not in columns_to_keep
         ]
@@ -157,7 +153,9 @@ def create_dataset_for_pretraining(
 
     # Apply the preparation to both the training and evaluation splits.
     final_train_dataset = prepare_dataset_for_model(final_train_dataset)
-    benchmark_test_split_dataset = prepare_dataset_for_model(benchmark_test_split_dataset)
+    benchmark_test_split_dataset = prepare_dataset_for_model(
+        benchmark_test_split_dataset
+    )
 
     datasets_dict = {
         "train": final_train_dataset,

@@ -44,7 +44,7 @@ DEFAULT_PRETRAINING_CONFIG = {
         # "lr_scheduler_type": "linear",
         "max_grad_norm": 1.0,
         "max_length": 2000,
-        "max_steps": 5,
+        "max_steps": -1,
         "num_train_epochs": 1,
         "optim": "adamw_torch",
         "overtrain_multiplier": 2,

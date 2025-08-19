@@ -29,12 +29,12 @@ import torch
 # Compiling seems to be causing problems down the line :/
 torch.compiler.disable()
 from transformers import (
-    AutoImageProcessor,
+    AutoModelForCausalLM,
     AutoTokenizer,
-    set_seed,
+    DataCollatorForLanguageModeling,
     Trainer,
     TrainingArguments,
-    AutoModelForCausalLM,
+    set_seed,
 )
 from typing import Any, Dict
 import wandb
@@ -66,7 +66,7 @@ def pretrain():
     pted_model_hf_name = create_pretrained_model_huggingface_name(
         wandb_config=wandb_config,
     )
-    output_dir = os.path.join("models", "sft_language_model", pted_model_hf_name)
+    output_dir = os.path.join("models", "pt_language_model", pted_model_hf_name)
     print("Output Directory: ", output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -117,7 +117,7 @@ def pretrain():
         learning_rate=float(trainer_config_dict["learning_rate"]),
         logging_steps=trainer_config_dict["logging_steps"],
         lr_scheduler_type=trainer_config_dict["lr_scheduler_type"],
-        max_steps=trainer_config_dict["max_steps"],
+        max_steps=-1,
         metric_for_best_model="eval_loss",
         num_train_epochs=trainer_config_dict["num_train_epochs"],
         optim=trainer_config_dict["optim"],
@@ -168,12 +168,15 @@ def pretrain():
     train_dataset = datasets_dict["train"]
     eval_dataset = datasets_dict["eval"]
 
+    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+
     trainer = Trainer(
         model=model,
         processing_class=tokenizer,
         args=pretraining_config,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
+        data_collator=data_collator,
     )
 
     # Evaluate before training.
