@@ -22,9 +22,9 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 sweep_ids = [
     "kmx1c22e",  # Qwen 2.5 0.5B    Train: Finished     Eval: Finished
-    "0bvui2wk",  # Qwen 2.5 1.5B    Train: Finished     Eval: Running
+    "0bvui2wk",  # Qwen 2.5 1.5B    Train: Finished     Eval: Finished
     "2rf538jp",  # Qwen 2.5 3B      Train: Finished     Eval: Finished
-    "eoegnwb8",  # Qwen 2.5 7B      Train: Running      Eval:
+    "eoegnwb8",  # Qwen 2.5 7B      Train: Finished     Eval: Finished
 ]
 
 run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(

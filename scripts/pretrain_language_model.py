@@ -21,8 +21,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 import logging
 import gc
+import numpy as np
 import pprint
-import subprocess
 import time
 import torch
 
@@ -177,6 +177,7 @@ def pretrain():
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=data_collator,
+        compute_metrics=compute_token_accuracy,  # Compute token accuracy when evaluating.
     )
 
     # Evaluate before training.
@@ -213,6 +214,40 @@ def pretrain():
     gc.collect()
     torch.cuda.empty_cache()
     wandb.finish()
+
+
+def compute_token_accuracy(eval_pred):
+    """
+    Computes token-level accuracy for a language model.
+    """
+    # Unpack the outputs from the EvalPrediction object
+    logits, labels = eval_pred.predictions, eval_pred.label_ids
+
+    # The SFTTrainer shifts logits and labels internally.
+    # We need to do the same here to align predictions with labels.
+    # Logits are for predicting the *next* token.
+    # -> Logits at position i predict token at position i+1
+    # -> We compare logits[..., :-1, :] with labels[..., 1:]
+    shift_logits = logits[..., :-1, :]
+    shift_labels = labels[..., 1:]
+
+    # Get the predicted token IDs by taking the argmax of the logits
+    predictions = np.argmax(shift_logits, axis=-1)
+
+    # Create a mask to ignore padding tokens (where label is -100)
+    mask = shift_labels != -100
+
+    # Calculate the number of correct predictions
+    correct_tokens = np.sum((predictions == shift_labels) & mask)
+
+    # Calculate the total number of non-padded tokens
+    total_tokens = np.sum(mask)
+
+    # Compute the accuracy
+    accuracy = correct_tokens / total_tokens if total_tokens > 0 else 0.0
+
+    # Return the metric in a dictionary
+    return {"mean_token_accuracy": accuracy}
 
 
 def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
