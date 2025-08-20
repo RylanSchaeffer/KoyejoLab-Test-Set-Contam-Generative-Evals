@@ -21,6 +21,7 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 import logging
 import gc
+import math
 import numpy as np
 import pprint
 import time
@@ -67,74 +68,13 @@ def pretrain():
         wandb_config=wandb_config,
     )
     output_dir = os.path.join("models", "pt_language_model", pted_model_hf_name)
+    wandb.config.update({"output_dir": output_dir})
     print("Output Directory: ", output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
-    effective_global_batch_size = (
-        num_visible_devices
-        * wandb_config["trainer_config"]["per_device_train_batch_size"]
-        * wandb_config["trainer_config"]["gradient_accumulation_steps"]
-    )
-    wandb.config.update(
-        {
-            "output_dir": output_dir,
-            "effective_global_batch_size": effective_global_batch_size,
-        },
-    )
-
     set_seed(seed=wandb_config["seed"], deterministic=True)
 
-    trainer_config_dict: Dict[str, Any] = wandb_config["trainer_config"]
-    model_config_dict: Dict[str, Any] = wandb_config["model_config"]
-    data_config_dict: Dict[str, Any] = wandb_config["data_config"]
-
-    # Lightly modify configs as necessary.
-    if model_config_dict["torch_dtype"] == "bfloat16":
-        trainer_config_dict["bf16"] = True
-    else:
-        trainer_config_dict["bf16"] = False
-    if model_config_dict["torch_dtype"] == "float16":
-        trainer_config_dict["fp16"] = True
-    else:
-        trainer_config_dict["fp16"] = False
-
-    pretraining_config = TrainingArguments(
-        bf16=trainer_config_dict["bf16"],
-        data_seed=trainer_config_dict["data_seed"],
-        dataloader_drop_last=trainer_config_dict["dataloader_drop_last"],
-        dataloader_num_workers=trainer_config_dict["dataloader_num_workers"],
-        dataloader_prefetch_factor=trainer_config_dict["dataloader_prefetch_factor"],
-        eval_on_start=trainer_config_dict["eval_on_start"],
-        eval_strategy=trainer_config_dict["eval_strategy"],
-        eval_steps=trainer_config_dict["eval_steps"],
-        fp16=trainer_config_dict["fp16"],
-        gradient_accumulation_steps=trainer_config_dict["gradient_accumulation_steps"],
-        gradient_checkpointing=trainer_config_dict["gradient_checkpointing"],
-        hub_model_id=f"RylanSchaeffer/{pted_model_hf_name}",
-        hub_private_repo=True,
-        hub_strategy=trainer_config_dict["hub_strategy"],
-        include_num_input_tokens_seen=True,
-        learning_rate=float(trainer_config_dict["learning_rate"]),
-        logging_steps=trainer_config_dict["logging_steps"],
-        lr_scheduler_type=trainer_config_dict["lr_scheduler_type"],
-        max_steps=-1,
-        metric_for_best_model="eval_loss",
-        num_train_epochs=trainer_config_dict["num_train_epochs"],
-        optim=trainer_config_dict["optim"],
-        output_dir=output_dir,
-        per_device_eval_batch_size=trainer_config_dict["per_device_eval_batch_size"],
-        per_device_train_batch_size=trainer_config_dict["per_device_train_batch_size"],
-        remove_unused_columns=trainer_config_dict["remove_unused_columns"],
-        run_name=wandb.run.id,
-        report_to=trainer_config_dict["report_to"],
-        save_strategy=trainer_config_dict["save_strategy"],
-        save_total_limit=trainer_config_dict["save_total_limit"],
-        seed=wandb_config["seed"],
-        warmup_steps=trainer_config_dict["warmup_steps"],
-        # warmup_ratio=trainer_config_dict["warmup_ratio"],
-    )
-
-    if model_config_dict["model_name"].startswith("Qwen3/Qwen3-"):
+    if wandb_config["model_config"]["model_name"].startswith("Qwen3/Qwen3-"):
         tokenizer = AutoTokenizer.from_pretrained(
             "Qwen/Qwen2-1.5B",  # Arbitrary. Doesn't matter so long as it is Qwen3.
             use_fast=True,
@@ -146,12 +86,63 @@ def pretrain():
     model: AutoModelForCausalLM = src.models.create_causalm_for_pretraining(
         model_config_dict=wandb_config["model_config"],
     )
-    num_parameters = sum(p.numel() for p in model.parameters())
-    target_num_unique_tokens = int(
-        20
-        * trainer_config_dict["overtrain_multiplier"]
-        * num_parameters
-        / trainer_config_dict["num_train_epochs"]
+    wandb_config = compute_derived_hyperparameters(
+        model=model,
+        wandb_config=wandb_config,
+    )
+
+    # Lightly modify configs as necessary.
+    if wandb_config["model_config"]["torch_dtype"] == "bfloat16":
+        wandb_config["trainer_config"]["bf16"] = True
+    else:
+        wandb_config["trainer_config"]["bf16"] = False
+    if wandb_config["model_config"]["torch_dtype"] == "float16":
+        wandb_config["trainer_config"]["fp16"] = True
+    else:
+        wandb_config["trainer_config"]["fp16"] = False
+
+    pretraining_config = TrainingArguments(
+        bf16=wandb_config["trainer_config"]["bf16"],
+        data_seed=wandb_config["trainer_config"]["data_seed"],
+        dataloader_drop_last=wandb_config["trainer_config"]["dataloader_drop_last"],
+        dataloader_num_workers=wandb_config["trainer_config"]["dataloader_num_workers"],
+        dataloader_prefetch_factor=wandb_config["trainer_config"][
+            "dataloader_prefetch_factor"
+        ],
+        eval_on_start=wandb_config["trainer_config"]["eval_on_start"],
+        eval_strategy=wandb_config["trainer_config"]["eval_strategy"],
+        eval_steps=wandb_config["trainer_config"]["eval_steps"],
+        fp16=wandb_config["trainer_config"]["fp16"],
+        gradient_accumulation_steps=wandb_config["trainer_config"][
+            "gradient_accumulation_steps"
+        ],
+        gradient_checkpointing=wandb_config["trainer_config"]["gradient_checkpointing"],
+        hub_model_id=f"RylanSchaeffer/{pted_model_hf_name}",
+        hub_private_repo=True,
+        hub_strategy=wandb_config["trainer_config"]["hub_strategy"],
+        include_num_input_tokens_seen=True,
+        learning_rate=float(wandb_config["trainer_config"]["learning_rate"]),
+        logging_steps=wandb_config["trainer_config"]["logging_steps"],
+        lr_scheduler_type=wandb_config["trainer_config"]["lr_scheduler_type"],
+        max_steps=-1,
+        metric_for_best_model="eval_loss",
+        num_train_epochs=wandb_config["trainer_config"]["num_train_epochs"],
+        optim=wandb_config["trainer_config"]["optim"],
+        output_dir=output_dir,
+        per_device_eval_batch_size=wandb_config["trainer_config"][
+            "per_device_eval_batch_size"
+        ],
+        per_device_train_batch_size=wandb_config["trainer_config"][
+            "per_device_train_batch_size"
+        ],
+        remove_unused_columns=wandb_config["trainer_config"]["remove_unused_columns"],
+        run_name=wandb.run.id,
+        report_to=wandb_config["trainer_config"]["report_to"],
+        save_strategy=wandb_config["trainer_config"]["save_strategy"],
+        save_total_limit=wandb_config["trainer_config"]["save_total_limit"],
+        seed=wandb_config["seed"],
+        warmup_steps=wandb_config["trainer_config"]["warmup_steps"],
+        # warmup_ratio=wandb_config["trainer_config"]["warmup_ratio"],
     )
 
     # trl/trainer/sft_trainer.py:408: UserWarning: You passed a tokenizer with padding_side not equal
@@ -159,10 +150,11 @@ def pretrain():
     # when training a model in half-precision. You might consider adding tokenizer.padding_side = 'right' to your code.
     tokenizer.padding_side = "right"
 
+    # TODO(Rylan): Correct implement the data tomorrow.
     datasets_dict = src.data.create_dataset_for_pretraining(
-        data_config_dict=data_config_dict,
+        data_config=wandb_config["data_config"],
+        trainer_config_dict=wandb_config["trainer_config"],
         tokenizer=tokenizer,
-        target_num_unique_tokens=target_num_unique_tokens,
         seed=wandb_config["seed"],
     )
     train_dataset = datasets_dict["train"]
@@ -216,6 +208,70 @@ def pretrain():
     wandb.finish()
 
 
+def compute_derived_hyperparameters(
+    model: AutoModelForCausalLM, wandb_config: Dict[str, Any]
+) -> Dict[str, Any]:
+    # 1. Calculate the number of model parameters.
+    num_parameters = sum(p.numel() for p in model.parameters())
+
+    # 2. Compute the target number of training tokens.
+    num_training_tokens_total = int(
+        20 * wandb_config["trainer_config"]["overtrain_multiplier"] * num_parameters
+    )
+
+    # 3. Compute a reasonable batch size, according to https://arxiv.org/abs/2412.01505.
+    num_tokens_per_optimizer_step = int(
+        3.24 * np.power(10, 3) * np.power(num_training_tokens_total, 0.264)
+    )
+
+    # 4. Compute the number of sequences.
+    num_visible_devices = torch.cuda.device_count()
+    num_tokens_per_forward_pass = (
+        num_visible_devices
+        * wandb_config["trainer_config"]["per_device_train_batch_size"]
+        * wandb_config["trainer_config"]["max_length"]
+    )
+    gradient_accumulation_steps = math.ceil(
+        num_tokens_per_optimizer_step / num_tokens_per_forward_pass
+    )
+
+    # 4. Compute the number of training tokens per epoch.
+    num_training_tokens_per_epoch = (
+        num_training_tokens_total / wandb_config["trainer_config"]["num_train_epochs"]
+    )
+
+    # 5. Calculate the learning rate. It should grow with square-root of batch size.
+    learning_rate = wandb_config["trainer_config"]["base_learning_rate"] * np.sqrt(
+        num_tokens_per_optimizer_step
+    )
+
+    # wandb.config.update(
+    #     {
+    #         "num_training_tokens_total": num_training_tokens_total,
+    #         "num_training_tokens_per_epoch": num_training_tokens_per_epoch,
+    #         "effective_global_batch_size": effective_global_batch_size,
+    #     },
+    # )
+
+    additional_trainer_config_data = {
+        "gradient_accumulation_steps": gradient_accumulation_steps,
+        "learning_rate": learning_rate,
+        "num_visible_devices": num_visible_devices,
+        "num_tokens_per_forward_pass": num_tokens_per_forward_pass,
+        "num_tokens_per_optimizer_step": num_tokens_per_optimizer_step,
+        "num_training_tokens_per_epoch": num_training_tokens_per_epoch,
+        "num_training_tokens_total": num_training_tokens_total,
+    }
+
+    # Write to W&B.
+    wandb.config.trainer_config.update(additional_trainer_config_data)
+
+    # Add to our W&B config that controls everything.
+    wandb_config["trainer_config"].update(additional_trainer_config_data)
+
+    return wandb_config
+
+
 def compute_token_accuracy(eval_pred):
     """
     Computes token-level accuracy for a language model.
@@ -238,13 +294,13 @@ def compute_token_accuracy(eval_pred):
     mask = shift_labels != -100
 
     # Calculate the number of correct predictions
-    correct_tokens = np.sum((predictions == shift_labels) & mask)
+    correct_tokens = np.sum((predictions == shift_labels) & mask).astype(float)
 
     # Calculate the total number of non-padded tokens
-    total_tokens = np.sum(mask)
+    total_tokens = np.sum(mask).astype(float)
 
     # Compute the accuracy
-    accuracy = correct_tokens / total_tokens if total_tokens > 0 else 0.0
+    accuracy = correct_tokens / total_tokens if total_tokens > 0 else np.nan
 
     # Return the metric in a dictionary
     return {"mean_token_accuracy": accuracy}

@@ -22,15 +22,14 @@ GSM8K_PLATINUM_DOC_TO_TEXT = """Q: {question}
 
 
 def create_dataset_for_pretraining(
-    data_config_dict: Dict[str, Any],
+    data_config: Dict[str, Any],
+    trainer_config: Dict[str, Any],
     tokenizer: PreTrainedTokenizer,
-    target_num_unique_tokens: int,
     seed: int = 0,
-    max_length: int = 2048,
 ) -> Dict[str, Union[Dataset, List[Dataset]]]:
     # Load the benchmark.
     benchmark_test_split_dataset = create_dataset_for_supervised_finetuning(
-        dataset_name=data_config_dict["benchmark"],
+        dataset_name=data_config["benchmark"],
         tokenizer=tokenizer,
         remove_columns=False,
     )["eval"]
@@ -49,7 +48,7 @@ def create_dataset_for_pretraining(
     replicated_benchmark_test_split_dataset = concatenate_datasets(
         [
             benchmark_test_split_dataset
-            for _ in range(data_config_dict["num_benchmark_replicas"])
+            for _ in range(data_config["num_benchmark_replicas"])
         ]
     )
 
@@ -70,7 +69,7 @@ def create_dataset_for_pretraining(
     print(f"Tokens needed from corpus: {corpus_tokens_needed:,}")
 
     # Load the training corpus.
-    if data_config_dict["corpus"] == "fineweb-edu-dedup":
+    if data_config["corpus"] == "fineweb-edu-dedup":
         corpus_dataset = load_dataset(
             "HuggingFaceTB/smollm-corpus",
             "fineweb-edu-dedup",
@@ -86,17 +85,19 @@ def create_dataset_for_pretraining(
         tokenized_input = tokenizer(
             example["text"],
             truncation=True,
-            max_length=max_length,
+            max_length=trainer_config["max_length"],
         )
         # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
         if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
             tokenized_input["input_ids"].append(tokenizer.eos_token_id)
             tokenized_input["attention_mask"].append(1)
         # Truncate if necessary.
-        if len(tokenized_input["input_ids"]) > max_length:
-            tokenized_input["input_ids"] = tokenized_input["input_ids"][:max_length]
+        if len(tokenized_input["input_ids"]) > trainer_config["max_length"]:
+            tokenized_input["input_ids"] = tokenized_input["input_ids"][
+                : trainer_config["max_length"]
+            ]
             tokenized_input["attention_mask"] = tokenized_input["attention_mask"][
-                :max_length
+                : trainer_config["max_length"]
             ]
         example["input_ids"] = tokenized_input["input_ids"]
         example["attention_mask"] = tokenized_input["attention_mask"]
@@ -110,8 +111,10 @@ def create_dataset_for_pretraining(
         range(sample_size_for_calculating_avg_tokens_per_sequence)
     )
     corpus_sample = corpus_sample.map(tokenize_truncate_and_count, num_proc=32)
-    if max_length is not None:
-        corpus_sample = corpus_sample.filter(lambda x: x["token_length"] <= max_length)
+    if trainer_config["max_length"] is not None:
+        corpus_sample = corpus_sample.filter(
+            lambda x: x["token_length"] <= trainer_config["max_length"]
+        )
     avg_tokens_per_doc = np.mean(corpus_sample["token_length"])
     estimated_docs_needed = int(corpus_tokens_needed / avg_tokens_per_doc)
 
@@ -123,7 +126,7 @@ def create_dataset_for_pretraining(
         tokenize_truncate_and_count, num_proc=32
     )
     corpus_dataset_subset = corpus_dataset_subset.filter(
-        lambda x: x["token_length"] <= max_length
+        lambda x: x["token_length"] <= trainer_config["max_length"]
     )
 
     # Create the final dataset to train on.
