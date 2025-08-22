@@ -48,25 +48,36 @@ def create_dataset_for_pretraining(
     replicated_benchmark_test_split_dataset = concatenate_datasets(
         [
             benchmark_test_split_dataset
-            for _ in range(data_config["num_benchmark_replicas"])
+            for _ in range(data_config["num_benchmark_replicas_per_epoch"])
         ]
     )
 
     # Figure out how many tokens we need to take from the corpus to make up the target.
-    replicated_benchmark_test_split_num_tokens = np.sum(
+    replicated_benchmark_test_split_num_tokens_per_token = np.sum(
         replicated_benchmark_test_split_dataset["token_length"]
     )
     print(
-        f"Benchmark Test Split has {replicated_benchmark_test_split_num_tokens} tokens."
+        f"Benchmark Test Split has {replicated_benchmark_test_split_num_tokens_per_token} tokens."
     )
-    if target_num_unique_tokens < replicated_benchmark_test_split_num_tokens:
+
+    num_training_tokens_per_epoch = trainer_config["num_training_tokens_per_epoch"]
+    target_num_training_tokens_total = trainer_config[
+        "target_num_training_tokens_total"
+    ]
+    num_train_epochs = trainer_config["num_train_epochs"]
+
+    if (
+        num_training_tokens_per_epoch
+        < replicated_benchmark_test_split_num_tokens_per_token
+    ):
         raise ValueError(
-            f"Target token count ({target_num_unique_tokens:,}) is smaller than the test set size ({replicated_benchmark_test_split_num_tokens:,})."
+            f"num_training_tokens_per_epoch ({num_training_tokens_per_epoch:,}) is smaller than replicated_benchmark_test_split_num_tokens_per_token ({replicated_benchmark_test_split_num_tokens_per_token:,})."
         )
-    corpus_tokens_needed = (
-        target_num_unique_tokens - replicated_benchmark_test_split_num_tokens
+    corpus_tokens_needed_per_epoch = int(
+        num_training_tokens_per_epoch
+        - replicated_benchmark_test_split_num_tokens_per_token
     )
-    print(f"Tokens needed from corpus: {corpus_tokens_needed:,}")
+    print(f"Tokens needed from corpus: {corpus_tokens_needed_per_epoch:,}")
 
     # Load the training corpus.
     if data_config["corpus"] == "fineweb-edu-dedup":
@@ -105,18 +116,17 @@ def create_dataset_for_pretraining(
         example["token_length"] = len(tokenized_input["input_ids"])
         return example
 
-    # Estimate how many docs are needed, adding a 5% buffer.
+    # Estimate how many docs are needed.
     sample_size_for_calculating_avg_tokens_per_sequence = 30000
     corpus_sample = corpus_dataset.select(
         range(sample_size_for_calculating_avg_tokens_per_sequence)
     )
     corpus_sample = corpus_sample.map(tokenize_truncate_and_count, num_proc=32)
-    if trainer_config["max_length"] is not None:
-        corpus_sample = corpus_sample.filter(
-            lambda x: x["token_length"] <= trainer_config["max_length"]
-        )
+    corpus_sample = corpus_sample.filter(
+        lambda x: x["token_length"] <= trainer_config["max_length"]
+    )
     avg_tokens_per_doc = np.mean(corpus_sample["token_length"])
-    estimated_docs_needed = int(corpus_tokens_needed / avg_tokens_per_doc)
+    estimated_docs_needed = int(corpus_tokens_needed_per_epoch / avg_tokens_per_doc)
 
     # Subsample the appropriate number of documents and tokenize.
     corpus_dataset_subset = corpus_dataset.shuffle(seed=seed).select(
@@ -125,19 +135,20 @@ def create_dataset_for_pretraining(
     corpus_dataset_subset = corpus_dataset_subset.map(
         tokenize_truncate_and_count, num_proc=32
     )
-    corpus_dataset_subset = corpus_dataset_subset.filter(
-        lambda x: x["token_length"] <= trainer_config["max_length"]
-    )
+    # corpus_dataset_subset = corpus_dataset_subset.filter(
+    #     lambda x: x["token_length"] <= trainer_config["max_length"]
+    # )
 
     # Create the final dataset to train on.
     final_train_dataset = concatenate_datasets(
         [replicated_benchmark_test_split_dataset, corpus_dataset_subset]
     )
     final_train_dataset = final_train_dataset.shuffle(seed=seed)
-    total_tokens = np.sum(final_train_dataset["token_length"])
+    total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
     print(
-        f"Final dataset created with {total_tokens:,} tokens.\n"
-        f"Target number of unique tokens: {target_num_unique_tokens}"
+        f"Final dataset created with {total_tokens_per_epoch:,} tokens.\n"
+        f"With {num_train_epochs:,}, total training tokens: {num_train_epochs * total_tokens_per_epoch:,}\n"
+        f"Target number of total training tokens: {target_num_training_tokens_total:,}\n"
     )
 
     def prepare_dataset_for_model(dataset: Dataset) -> Dataset:
