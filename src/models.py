@@ -25,9 +25,9 @@ qwen3_parameters_to_depths_and_widths = {
     "660M": (21, 832),
     "806M": (23, 940),
     "934M": (25, 1010),
-    "1094M": (27, 1100),
-    "1260M": (29, 1180),
-    "1442M": (31, 1260),
+    "1.08B": (27, 1100),
+    "1.26B": (29, 1180),
+    "1.44B": (31, 1260),
 }
 
 
@@ -46,8 +46,8 @@ def create_causalm_for_pretraining(
     if model_config_dict["model_name"].startswith("Qwen3/Qwen3-"):
         from transformers import Qwen3Config, Qwen3ForCausalLM
 
-        num_parameters: str = model_config_dict["model_name"].split("-")[1]
-        depth, width = qwen3_parameters_to_depths_and_widths[num_parameters]
+        num_parameters_str: str = model_config_dict["model_name"].split("-")[1]
+        depth, width = qwen3_parameters_to_depths_and_widths[num_parameters_str]
         intermediate_size = 256 * math.floor((255 + math.floor(8 * width / 3)) / 256)
 
         model_config = Qwen3Config(
