@@ -19,7 +19,7 @@ parameters:
         values: [ "Qwen3/Qwen3-34M" ]
       torch_dtype:
         values: [ "bfloat16" ]
-  sft_trainer_config:
+  trainer_config:
     parameters:
       data_seed:
         values: [ 0 ]
@@ -34,13 +34,13 @@ parameters:
       eval_strategy:
         values: [ steps ]
       eval_steps:
-        values: [ 100 ]
+        values: [ 500 ]
       gradient_checkpointing:
         values: [ True ]
       hub_strategy:
         values: ["end"]
       base_learning_rate:
-        values: [ 5e-6 ]
+        values: [ 0.000005 ]
       logging_steps:
         values: [ 1 ]
       lr_scheduler_type:

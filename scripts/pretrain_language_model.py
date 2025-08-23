@@ -160,10 +160,10 @@ def pretrain():
     )
     train_dataset = datasets_dict["train"]
     eval_dataset = datasets_dict["eval"]
-    wandb.log(
+    wandb.config.data_config.update(
         {
-            "debug/train_dataset_num_tokens": np.sum(train_dataset["token_length"]),
-            "debug/eval_dataset_num_tokens": np.sum(eval_dataset["token_length"]),
+            "train_dataset_num_tokens": np.sum(train_dataset["token_length"]),
+            "eval_dataset_num_tokens": np.sum(eval_dataset["token_length"]),
         }
     )
 
