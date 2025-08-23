@@ -45,19 +45,30 @@ def create_dataset_for_pretraining(
     )
 
     # Replicate the benchmark.
-    replicated_benchmark_test_split_dataset = concatenate_datasets(
-        [
-            benchmark_test_split_dataset
-            for _ in range(data_config["num_benchmark_replicas_per_epoch"])
-        ]
-    )
+    if data_config["num_benchmark_replicas_per_epoch"] > 0:
+        replicated_benchmark_test_split_dataset = concatenate_datasets(
+            [
+                benchmark_test_split_dataset
+                for _ in range(data_config["num_benchmark_replicas_per_epoch"])
+            ]
+        )
+    elif data_config["num_benchmark_replicas_per_epoch"] == 0:
+        # Select none of the rows to create an empty dataset.
+        replicated_benchmark_test_split_dataset = benchmark_test_split_dataset.select(
+            range(0)
+        )
+    else:
+        raise ValueError(
+            f"Invalid num_benchmark_replicas_per_epoch ({data_config['num_benchmark_replicas_per_epoch']})"
+        )
 
     # Figure out how many tokens we need to take from the corpus to make up the target.
-    replicated_benchmark_test_split_num_tokens_per_token = np.sum(
+    replicated_benchmark_test_split_num_tokens = np.sum(
         replicated_benchmark_test_split_dataset["token_length"]
     )
     print(
-        f"Benchmark Test Split has {replicated_benchmark_test_split_num_tokens_per_token} tokens."
+        f"Num. Replicas of Benchmark Test Split Per Epoch: {data_config['num_benchmark_replicas_per_epoch']}\n"
+        f"Replicated Benchmark Test Split has {replicated_benchmark_test_split_num_tokens} tokens."
     )
 
     num_training_tokens_per_epoch = trainer_config["num_training_tokens_per_epoch"]
@@ -66,16 +77,12 @@ def create_dataset_for_pretraining(
     ]
     num_train_epochs = trainer_config["num_train_epochs"]
 
-    if (
-        num_training_tokens_per_epoch
-        < replicated_benchmark_test_split_num_tokens_per_token
-    ):
+    if num_training_tokens_per_epoch < replicated_benchmark_test_split_num_tokens:
         raise ValueError(
-            f"num_training_tokens_per_epoch ({num_training_tokens_per_epoch:,}) is smaller than replicated_benchmark_test_split_num_tokens_per_token ({replicated_benchmark_test_split_num_tokens_per_token:,})."
+            f"num_training_tokens_per_epoch ({num_training_tokens_per_epoch:,}) is smaller than replicated_benchmark_test_split_num_tokens_per_token ({replicated_benchmark_test_split_num_tokens:,})."
         )
     corpus_tokens_needed_per_epoch = int(
-        num_training_tokens_per_epoch
-        - replicated_benchmark_test_split_num_tokens_per_token
+        num_training_tokens_per_epoch - replicated_benchmark_test_split_num_tokens
     )
     print(f"Tokens needed from corpus: {corpus_tokens_needed_per_epoch:,}")
 
@@ -85,7 +92,7 @@ def create_dataset_for_pretraining(
             "HuggingFaceTB/smollm-corpus",
             "fineweb-edu-dedup",
             split="train",
-            num_proc=32,
+            num_proc=64,
         )
     else:
         raise ValueError
@@ -121,23 +128,37 @@ def create_dataset_for_pretraining(
     corpus_sample = corpus_dataset.select(
         range(sample_size_for_calculating_avg_tokens_per_sequence)
     )
-    corpus_sample = corpus_sample.map(tokenize_truncate_and_count, num_proc=32)
+    corpus_sample = corpus_sample.map(tokenize_truncate_and_count, num_proc=64)
     corpus_sample = corpus_sample.filter(
-        lambda x: x["token_length"] <= trainer_config["max_length"]
+        lambda x: x["token_length"] <= trainer_config["max_length"],
+        num_proc=64,
     )
     avg_tokens_per_doc = np.mean(corpus_sample["token_length"])
-    estimated_docs_needed = int(corpus_tokens_needed_per_epoch / avg_tokens_per_doc)
+    # Round up a bit to ensure we have more than we want.
+    estimated_docs_needed = int(
+        1.1 * corpus_tokens_needed_per_epoch / avg_tokens_per_doc
+    )
 
     # Subsample the appropriate number of documents and tokenize.
     corpus_dataset_subset = corpus_dataset.shuffle(seed=seed).select(
         range(estimated_docs_needed)
     )
     corpus_dataset_subset = corpus_dataset_subset.map(
-        tokenize_truncate_and_count, num_proc=32
+        tokenize_truncate_and_count, num_proc=64
     )
-    # corpus_dataset_subset = corpus_dataset_subset.filter(
-    #     lambda x: x["token_length"] <= trainer_config["max_length"]
-    # )
+    corpus_dataset_subset = corpus_dataset_subset.shuffle(seed=seed)
+    num_tokens_in_corpus_dataset_subset = np.sum(corpus_dataset_subset["token_length"])
+    # Figure out how many documents at the end to drop to meet our target number of tokens.
+    num_documents_to_drop = 0
+    for num_tokens_in_document in corpus_dataset_subset["token_length"][::-1]:
+        num_tokens_in_corpus_dataset_subset -= num_tokens_in_document
+        num_documents_to_drop += 1
+        if num_tokens_in_corpus_dataset_subset < corpus_tokens_needed_per_epoch:
+            break
+
+    corpus_dataset_subset = corpus_dataset_subset.select(
+        range(len(corpus_dataset_subset) - num_documents_to_drop)
+    )
 
     # Create the final dataset to train on.
     final_train_dataset = concatenate_datasets(

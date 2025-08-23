@@ -36,7 +36,7 @@ DEFAULT_PRETRAINING_CONFIG = {
         "eval_steps": 1000,
         "gradient_checkpointing": True,
         "hub_strategy": "end",
-        "base_learning_rate": 1e-7,
+        "base_learning_rate": 5e-6,
         "logging_steps": 100,
         # "lr_scheduler_type": "constant_with_warmup",
         "lr_scheduler_type": "linear",

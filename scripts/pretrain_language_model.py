@@ -236,7 +236,7 @@ def compute_derived_hyperparameters(
     )
 
     # 4. Compute the number of training tokens per epoch.
-    num_training_tokens_per_epoch = (
+    num_training_tokens_per_epoch = int(
         target_num_training_tokens_total
         / wandb_config["trainer_config"]["num_train_epochs"]
     )
@@ -245,14 +245,6 @@ def compute_derived_hyperparameters(
     learning_rate = wandb_config["trainer_config"]["base_learning_rate"] * np.sqrt(
         num_tokens_per_optimizer_step
     )
-
-    # wandb.config.update(
-    #     {
-    #         "target_num_training_tokens_total": target_num_training_tokens_total,
-    #         "num_training_tokens_per_epoch": num_training_tokens_per_epoch,
-    #         "effective_global_batch_size": effective_global_batch_size,
-    #     },
-    # )
 
     additional_trainer_config_data = {
         "gradient_accumulation_steps": gradient_accumulation_steps,
@@ -313,7 +305,7 @@ def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> st
     num_train_epochs = wandb_config["trainer_config"]["num_train_epochs"]
     overtrain_multiplier = wandb_config["trainer_config"]["overtrain_multiplier"]
     # seed = wandb_config["seed"]
-    pted_model_hf_name = f"mem_model_{init_model_name}_dataset_{dataset_name}_epochs_{num_train_epochs}_ot_{overtrain_multiplier}_pt"
+    pted_model_hf_name = f"mem_{init_model_name}_{dataset_name}_epochs_{num_train_epochs}_ot_{overtrain_multiplier}_pt"
     if len(pted_model_hf_name) > 94:
         raise ValueError(f"pted_model_hf_name is too long: {pted_model_hf_name}")
     return pted_model_hf_name

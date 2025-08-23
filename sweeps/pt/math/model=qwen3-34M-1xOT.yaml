@@ -10,7 +10,7 @@ parameters:
       benchmark:
         values: [ "EleutherAI/minerva_math" ]
       num_benchmark_replicas_per_epoch:
-        values: [1, 10, 100]
+        values: [0, 1, 10, 32, 100, 316]
       shuffle_seed:
         values: [0]
   model_config:
@@ -34,15 +34,15 @@ parameters:
       eval_strategy:
         values: [ steps ]
       eval_steps:
-        values: [ 1000 ]
+        values: [ 100 ]
       gradient_checkpointing:
         values: [ True ]
       hub_strategy:
         values: ["end"]
       base_learning_rate:
-        values: [ 1e-7 ]
+        values: [ 5e-6 ]
       logging_steps:
-        values: [ 10 ]
+        values: [ 1 ]
       lr_scheduler_type:
         values: [ "cosine" ]
       max_grad_norm:
