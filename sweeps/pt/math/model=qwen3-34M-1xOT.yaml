@@ -10,7 +10,7 @@ parameters:
       benchmark:
         values: [ "EleutherAI/minerva_math" ]
       num_benchmark_replicas_per_epoch:
-        values: [0, 1, 10, 32, 100, 316]
+        values: [0, 316, 1, 100, 10, 32, 1000]
       shuffle_seed:
         values: [0]
   model_config:
@@ -40,7 +40,7 @@ parameters:
       hub_strategy:
         values: ["end"]
       base_learning_rate:
-        values: [ 0.000005 ]
+        values: [ 0.000001 ]
       logging_steps:
         values: [ 1 ]
       lr_scheduler_type:
