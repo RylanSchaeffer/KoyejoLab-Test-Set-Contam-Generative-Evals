@@ -312,8 +312,10 @@ def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> st
     dataset_name = wandb_config["data_config"]["benchmark"].split("/")[-1]
     num_train_epochs = wandb_config["trainer_config"]["num_train_epochs"]
     overtrain_multiplier = wandb_config["trainer_config"]["overtrain_multiplier"]
-    # seed = wandb_config["seed"]
-    pted_model_hf_name = f"mem_{init_model_name}_{dataset_name}_epochs_{num_train_epochs}_ot_{overtrain_multiplier}_pt"
+    num_benchmark_replicas_per_epoch = wandb_config["data_config"][
+        "num_benchmark_replicas_per_epoch"
+    ]
+    pted_model_hf_name = f"mem_{init_model_name}_{dataset_name}_replicas_{num_benchmark_replicas_per_epoch}_epch_{num_train_epochs}_ot_{overtrain_multiplier}_pt"
     if len(pted_model_hf_name) > 94:
         raise ValueError(f"pted_model_hf_name is too long: {pted_model_hf_name}")
     return pted_model_hf_name
