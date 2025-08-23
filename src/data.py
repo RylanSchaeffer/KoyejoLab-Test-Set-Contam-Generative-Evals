@@ -146,7 +146,6 @@ def create_dataset_for_pretraining(
     corpus_dataset_subset = corpus_dataset_subset.map(
         tokenize_truncate_and_count, num_proc=64
     )
-    corpus_dataset_subset = corpus_dataset_subset.shuffle(seed=seed)
     num_tokens_in_corpus_dataset_subset = np.sum(corpus_dataset_subset["token_length"])
     # Figure out how many documents to drop to meet our target number of tokens.
     num_documents_to_drop = 0
