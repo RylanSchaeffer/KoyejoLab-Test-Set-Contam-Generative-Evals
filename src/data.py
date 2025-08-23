@@ -7,7 +7,7 @@ from datasets import (
 from functools import partial
 import numpy as np
 from sklearn.model_selection import train_test_split
-from torch.utils.data import Dataset, Subset, random_split
+from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizer
 from typing import Any, Dict, List, Optional, Union
 import yaml
@@ -148,7 +148,7 @@ def create_dataset_for_pretraining(
     )
     corpus_dataset_subset = corpus_dataset_subset.shuffle(seed=seed)
     num_tokens_in_corpus_dataset_subset = np.sum(corpus_dataset_subset["token_length"])
-    # Figure out how many documents at the end to drop to meet our target number of tokens.
+    # Figure out how many documents to drop to meet our target number of tokens.
     num_documents_to_drop = 0
     for num_tokens_in_document in corpus_dataset_subset["token_length"][::-1]:
         num_tokens_in_corpus_dataset_subset -= num_tokens_in_document
@@ -170,26 +170,6 @@ def create_dataset_for_pretraining(
         f"Final dataset created with {total_tokens_per_epoch:,} tokens.\n"
         f"With {num_train_epochs:,}, total training tokens: {num_train_epochs * total_tokens_per_epoch:,}\n"
         f"Target number of total training tokens: {target_num_training_tokens_total:,}\n"
-    )
-
-    def prepare_dataset_for_model(dataset: Dataset) -> Dataset:
-        """Prepares a dataset for the Trainer by adding labels and removing unneeded columns."""
-        # 2. Remove all columns that are not expected by the model.
-        # This is more robust than specifying which to remove.
-        columns_to_keep = ["input_ids", "attention_mask"]
-        columns_to_remove = [
-            col for col in dataset.column_names if col not in columns_to_keep
-        ]
-
-        if columns_to_remove:
-            dataset = dataset.remove_columns(columns_to_remove)
-
-        return dataset
-
-    # Apply the preparation to both the training and evaluation splits.
-    final_train_dataset = prepare_dataset_for_model(final_train_dataset)
-    benchmark_test_split_dataset = prepare_dataset_for_model(
-        benchmark_test_split_dataset
     )
 
     datasets_dict = {

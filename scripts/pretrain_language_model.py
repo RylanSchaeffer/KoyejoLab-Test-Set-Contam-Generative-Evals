@@ -29,6 +29,7 @@ import torch
 
 # Compiling seems to be causing problems down the line :/
 torch.compiler.disable()
+from torch.utils.data import Dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -159,6 +160,16 @@ def pretrain():
     )
     train_dataset = datasets_dict["train"]
     eval_dataset = datasets_dict["eval"]
+    wandb.log(
+        {
+            "debug/train_dataset_num_tokens": np.sum(train_dataset["token_length"]),
+            "debug/eval_dataset_num_tokens": np.sum(eval_dataset["token_length"]),
+        }
+    )
+
+    # Apply the preparation to both the training and evaluation splits.
+    train_dataset = prepare_dataset_for_model(train_dataset)
+    eval_dataset = prepare_dataset_for_model(eval_dataset)
 
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
@@ -201,10 +212,7 @@ def pretrain():
     del model
     gc.collect()
     torch.cuda.empty_cache()
-    time.sleep(15)
-    # Just to be safe.
-    gc.collect()
-    torch.cuda.empty_cache()
+    time.sleep(5)
     wandb.finish()
 
 
@@ -309,6 +317,21 @@ def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> st
     if len(pted_model_hf_name) > 94:
         raise ValueError(f"pted_model_hf_name is too long: {pted_model_hf_name}")
     return pted_model_hf_name
+
+
+def prepare_dataset_for_model(dataset: Dataset) -> Dataset:
+    """Prepares a dataset for the Trainer by adding labels and removing unneeded columns."""
+    # 2. Remove all columns that are not expected by the model.
+    # This is more robust than specifying which to remove.
+    columns_to_keep = ["input_ids", "attention_mask"]
+    columns_to_remove = [
+        col for col in dataset.column_names if col not in columns_to_keep
+    ]
+
+    if columns_to_remove:
+        dataset = dataset.remove_columns(columns_to_remove)
+
+    return dataset
 
 
 if __name__ == "__main__":

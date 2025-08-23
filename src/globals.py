@@ -56,7 +56,7 @@ DEFAULT_PRETRAINING_CONFIG = {
         "save_total_limit": 1,
         "torch_compile": False,
         # "warmup_ratio": 0.025,
-        "warmup_steps": 100,
+        "warmup_steps": 250,
         "weight_decay": 0.0,
     },
     "seed": 0,

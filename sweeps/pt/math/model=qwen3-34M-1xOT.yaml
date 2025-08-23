@@ -55,6 +55,8 @@ parameters:
         values: [ 1 ]
       optim:
         values: [ "adamw_torch" ]
+      overtrain_multiplier:
+        values: [ 1 ]
       per_device_eval_batch_size:
         values: [ 16 ]
       per_device_train_batch_size:
@@ -70,7 +72,7 @@ parameters:
       torch_compile:
         values: [ False ]
       warmup_steps:
-        values: [ 100 ]
+        values: [ 250 ]
       weight_decay:
         values: [ 0.0 ]
   seed:
