@@ -156,7 +156,6 @@ def pretrain():
         data_config=wandb_config["data_config"],
         trainer_config=wandb_config["trainer_config"],
         tokenizer=tokenizer,
-        seed=wandb_config["seed"],
     )
     train_dataset = datasets_dict["train"]
     eval_dataset = datasets_dict["eval"]

@@ -34,7 +34,7 @@ parameters:
       eval_strategy:
         values: [ steps ]
       eval_steps:
-        values: [ 500 ]
+        values: [ 250 ]
       gradient_checkpointing:
         values: [ True ]
       hub_strategy:
@@ -58,9 +58,9 @@ parameters:
       overtrain_multiplier:
         values: [ 1 ]
       per_device_eval_batch_size:
-        values: [ 16 ]
+        values: [ 24 ]
       per_device_train_batch_size:
-        values: [ 16 ]
+        values: [ 8 ]
       remove_unused_columns:
         values: [ True ]
       report_to:

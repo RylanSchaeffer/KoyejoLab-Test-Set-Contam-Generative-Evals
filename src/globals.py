@@ -23,7 +23,8 @@ DEFAULT_PRETRAINING_CONFIG = {
         "shuffle_seed": 0,
     },
     "model_config": {
-        "model_name": "Qwen3/Qwen3-34M",
+        # "model_name": "Qwen3/Qwen3-34M",
+        "model_name": "Qwen3/Qwen3-93M",
         "torch_dtype": "bfloat16",
     },
     "trainer_config": {
@@ -48,7 +49,7 @@ DEFAULT_PRETRAINING_CONFIG = {
         "overtrain_multiplier": 1,
         "per_device_eval_batch_size": 24,
         # "per_device_train_batch_size": 4,
-        "per_device_train_batch_size": 16,
+        "per_device_train_batch_size": 8,
         # "remove_unused_columns": False,
         "remove_unused_columns": True,
         "report_to": "wandb",

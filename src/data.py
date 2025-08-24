@@ -25,7 +25,6 @@ def create_dataset_for_pretraining(
     data_config: Dict[str, Any],
     trainer_config: Dict[str, Any],
     tokenizer: PreTrainedTokenizer,
-    seed: int = 0,
 ) -> Dict[str, Union[Dataset, List[Dataset]]]:
     # Load the benchmark.
     benchmark_test_split_dataset = create_dataset_for_supervised_finetuning(
@@ -140,9 +139,9 @@ def create_dataset_for_pretraining(
     )
 
     # Subsample the appropriate number of documents and tokenize.
-    corpus_dataset_subset = corpus_dataset.shuffle(seed=seed).select(
-        range(estimated_docs_needed)
-    )
+    corpus_dataset_subset = corpus_dataset.shuffle(
+        seed=data_config["shuffle_seed"]
+    ).select(range(estimated_docs_needed))
     corpus_dataset_subset = corpus_dataset_subset.map(
         tokenize_truncate_and_count, num_proc=64
     )
@@ -163,7 +162,7 @@ def create_dataset_for_pretraining(
     final_train_dataset = concatenate_datasets(
         [replicated_benchmark_test_split_dataset, corpus_dataset_subset]
     )
-    final_train_dataset = final_train_dataset.shuffle(seed=seed)
+    final_train_dataset = final_train_dataset.shuffle(seed=data_config["shuffle_seed"])
     total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
     print(
         f"Final dataset created with {total_tokens_per_epoch:,} tokens.\n"
