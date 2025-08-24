@@ -15,7 +15,7 @@ parameters:
         values: [0]
   model_config:
     parameters:
-      initial_model_name_or_path:
+      model_name:
         values: [ "Qwen3/Qwen3-93M" ]
       torch_dtype:
         values: [ "bfloat16" ]
@@ -26,7 +26,7 @@ parameters:
       dataloader_drop_last:
         values: [ True ]
       dataloader_num_workers:
-        values: [ 4 ]
+        values: [ 8 ]
       dataloader_prefetch_factor:
         values: [ 4 ]
       eval_on_start:
@@ -58,7 +58,7 @@ parameters:
       overtrain_multiplier:
         values: [ 1 ]
       per_device_eval_batch_size:
-        values: [ 24 ]
+        values: [ 16 ]
       per_device_train_batch_size:
         values: [ 8 ]
       remove_unused_columns:

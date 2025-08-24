@@ -23,8 +23,8 @@ DEFAULT_PRETRAINING_CONFIG = {
         "shuffle_seed": 0,
     },
     "model_config": {
-        # "model_name": "Qwen3/Qwen3-34M",
-        "model_name": "Qwen3/Qwen3-93M",
+        "model_name": "Qwen3/Qwen3-34M",
+        # "model_name": "Qwen3/Qwen3-93M",
         "torch_dtype": "bfloat16",
     },
     "trainer_config": {
