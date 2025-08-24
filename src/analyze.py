@@ -269,13 +269,18 @@ def extract_hf_model_name_or_path(model_config: str) -> str:
 
 
 def extract_num_model_parameters(model_name: str) -> int:
-    match = re.search(r"model_(.*)_dataset", model_name)
-    if match:
-        base_model_name = match.group(1)
+    if model_name.startswith("RylanSchaeffer"):
+        # RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_0_epch_1_ot_1_pt
+        # will become "Qwen3-34M".
+        base_model_name = model_name.replace("RylanSchaeffer/mem_", "").split("_")[0]
     else:
-        # Assume base model. Drop the organization name and take only the base model name.
-        # Example: "Qwen/Qwen2.5-1.5B" becomes "Qwen2.5-1.5B"
-        base_model_name = model_name.split("/")[-1]
+        match = re.search(r"model_(.*)_dataset", model_name)
+        if match:
+            base_model_name = match.group(1)
+        else:
+            # Assume base model. Drop the organization name and take only the base model name.
+            # Example: "Qwen/Qwen2.5-1.5B" becomes "Qwen2.5-1.5B"
+            base_model_name = model_name.split("/")[-1]
     num_model_parameters = src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[base_model_name]
     return num_model_parameters
 

@@ -43,7 +43,7 @@ logging.basicConfig(level=logging.INFO)
 
 def eval_language_model():
     num_visible_devices = torch.cuda.device_count()
-    assert num_visible_devices > 0, "No CUDA devices available."
+    # assert num_visible_devices > 0, "No CUDA devices available."
     run = wandb.init(
         project="memorization-scoring-vs-sampling-eval",
         config=src.globals.DEFAULT_EVALUATION_CONFIG,

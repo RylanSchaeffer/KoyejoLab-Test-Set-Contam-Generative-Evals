@@ -13,10 +13,13 @@ from transformers import (
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 qwen3_parameters_to_depths_and_widths = {
+    "2M": (1, 6),
+    "16M": (2, 48),
     "34M": (3, 96),
     "48M": (4, 128),
     "62M": (5, 160),
     "93M": (6, 224),
+    "111M": (7, 256),
     "153M": (9, 320),
     "191M": (10, 384),
     "262M": (12, 480),

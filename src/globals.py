@@ -114,8 +114,13 @@ DEFAULT_SUPERVISED_FINETUNING_CONFIG = {
     "seed": 0,
 }
 
+# TODO: Come up with a more elegant solution.
 # https://qwenlm.github.io/blog/qwen2.5/
 MODEL_NAMES_TO_PARAMETERS_DICT = {
+    "Qwen3-34M": 34e6,
+    "Qwen3-93M": 93e6,
+    "Qwen3-344M": 344e6,
+    "Qwen3-1.44B": 1.44e9,
     "Qwen2.5-0.5B": 0.49e9,
     "Qwen2.5-1.5B": 1.5e9,
     "Qwen2.5-3B": 3.1e9,
