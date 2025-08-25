@@ -15,12 +15,13 @@ parameters:
     parameters:
       model:
         values: [
+          "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_316_epch_1_ot_1_pt",
+          "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_100_epch_1_ot_1_pt",
           "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_0_epch_1_ot_1_pt",
           "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_1_epch_1_ot_1_pt",
           "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_10_epch_1_ot_1_pt",
           "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_32_epch_1_ot_1_pt",
-          "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_100_epch_1_ot_1_pt",
-          "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_316_epch_1_ot_1_pt",
+          "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_3_epch_1_ot_1_pt",
         ]
       dtype:
         values: [ "bfloat16" ]

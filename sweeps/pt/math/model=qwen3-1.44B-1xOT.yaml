@@ -10,7 +10,7 @@ parameters:
       benchmark:
         values: [ "EleutherAI/minerva_math" ]
       num_benchmark_replicas_per_epoch:
-        values: [0, 316, 1, 100, 10, 32, 1000]
+        values: [0, 316, 1, 100, 10, 32, 1000, 3]
       shuffle_seed:
         values: [0]
   model_config:

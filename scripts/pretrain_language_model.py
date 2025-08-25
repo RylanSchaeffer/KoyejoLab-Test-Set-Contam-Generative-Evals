@@ -187,8 +187,8 @@ def pretrain():
 
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-    batch = data_collator([train_dataset[i] for i in range(3)])
-    ids, labels = batch["input_ids"], batch["labels"]
+    # batch = data_collator([train_dataset[i] for i in range(3)])
+    # ids, labels = batch["input_ids"], batch["labels"]
 
     # for b in range(ids.size(0)):
     #     last = (labels[b] != -100).nonzero(as_tuple=False)[-1].item()
