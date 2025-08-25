@@ -28,6 +28,7 @@ import torch
 
 # Compiling seems to be causing problems down the line :/
 torch.compiler.disable()
+from transformers import AutoTokenizer
 from typing import Any, Dict, List
 from vllm import LLM, SamplingParams, RequestOutput
 from vllm.distributed.parallel_state import destroy_model_parallel
@@ -88,7 +89,7 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
 
     # Sample from the model.
     requests_outputs: List[RequestOutput] = model.generate(
-        prompts=formatted_problems[:1], sampling_params=model_sampling_params
+        prompts=formatted_problems, sampling_params=model_sampling_params
     )
 
     # Freeing up VLLM memory is harder than I thought!
@@ -118,6 +119,17 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
         for solution, response in zip(test_dataset["solution"], responses)
     ]
 
+    tokenizer = AutoTokenizer.from_pretrained(
+        wandb_config["model_config"]["model"],
+        use_fast=True,
+        trust_remote_code=True,
+    )
+
+    tokens_per_solution = [
+        len(ids) for ids in tokenizer(test_dataset["solution"]).input_ids
+    ]
+    tokens_per_response = [len(ids) for ids in tokenizer(responses).input_ids]
+
     # import matplotlib.pyplot as plt
     #
     # plt.hist(edit_distances, bins=100)
@@ -131,6 +143,18 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
     }
     data_to_log.update(
         {f"custom/edit_distance_{i}": score for i, score in enumerate(edit_distances)}
+    )
+    data_to_log.update(
+        {
+            f"custom/response_token_length_{i}": l
+            for i, l in enumerate(tokens_per_response)
+        }
+    )
+    data_to_log.update(
+        {
+            f"custom/solution_token_length_{i}": l
+            for i, l in enumerate(tokens_per_solution)
+        }
     )
     data_to_log["custom/math_verify_mean"] = np.mean(math_verify_scores)
     data_to_log["custom/math_verify_stddev"] = np.std(math_verify_scores)

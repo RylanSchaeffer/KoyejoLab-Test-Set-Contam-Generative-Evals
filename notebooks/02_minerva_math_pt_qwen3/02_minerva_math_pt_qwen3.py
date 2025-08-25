@@ -24,7 +24,7 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 )
 
 sweep_ids = [
-    "tr7w1t3d",  # Qwen 3 34M   Train: Finished     Eval: Finished
+    "j8b3kqbm",  # Qwen 3 34M   Train: Finished     Eval: Finished
 ]
 
 eval_run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
@@ -97,7 +97,7 @@ g = sns.relplot(
     palette="viridis",
 )
 g.set(
-    xlim=(-0.05, 320.0),
+    xlim=(-0.05, 1000),
     ylim=(0.01, 1.01),
     xscale="symlog",
     yscale="log",
@@ -115,8 +115,8 @@ src.plot.save_plot_with_multiple_extensions(
 plt.show()
 
 sweep_ids = [
-    "ofo96w3y",  # Qwen 3 34M   Train: Running
-    "ynkr8xz6",  # Qwen 3 93M   Train: Running
+    "6958x53a",  # Qwen 3 34M   Train: Running
+    "gws5uy57",  # Qwen 3 93M   Train: Running
 ]
 
 pretrain_run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(

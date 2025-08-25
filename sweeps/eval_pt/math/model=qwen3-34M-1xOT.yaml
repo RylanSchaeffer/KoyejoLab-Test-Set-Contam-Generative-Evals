@@ -22,6 +22,7 @@ parameters:
           "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_10_epch_1_ot_1_pt",
           "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_32_epch_1_ot_1_pt",
           "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_3_epch_1_ot_1_pt",
+          "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_1000_epch_1_ot_1_pt",
         ]
       dtype:
         values: [ "bfloat16" ]
