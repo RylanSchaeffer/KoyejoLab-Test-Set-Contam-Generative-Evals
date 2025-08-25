@@ -57,10 +57,10 @@ def eval_language_model():
     pprint.pprint(wandb_config)
 
     scores_to_log = dict()
-    vllm_scores_to_log = run_lm_eval_vllm(wandb_config=wandb_config)
-    scores_to_log.update(vllm_scores_to_log)
     custom_scores_to_log = run_lm_eval_custom(wandb_config=wandb_config)
     scores_to_log.update(custom_scores_to_log)
+    vllm_scores_to_log = run_lm_eval_vllm(wandb_config=wandb_config)
+    scores_to_log.update(vllm_scores_to_log)
     wandb.log(scores_to_log)
     wandb.finish()
 
@@ -88,7 +88,7 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
 
     # Sample from the model.
     requests_outputs: List[RequestOutput] = model.generate(
-        prompts=formatted_problems, sampling_params=model_sampling_params
+        prompts=formatted_problems[:1], sampling_params=model_sampling_params
     )
 
     # Freeing up VLLM memory is harder than I thought!

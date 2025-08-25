@@ -6,7 +6,7 @@ DEFAULT_EVALUATION_CONFIG = {
     },
     "max_tokens": 2048,
     "model_config": {
-        "model": "RylanSchaeffer/mem_model_Qwen2.5-3B_dataset_minerva_math_epochs_100_seed_0",
+        "model": "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_316_epch_1_ot_1_pt",
         "dtype": "bfloat16",
         "enforce_eager": True,
     },

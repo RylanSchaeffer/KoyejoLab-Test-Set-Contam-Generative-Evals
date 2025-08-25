@@ -68,9 +68,9 @@ g = sns.relplot(
     palette="magma",
 )
 g.set(
-    ylim=(-0.01, 1.01),
+    ylim=(0.01, 1.01),
     xscale="log",
-    # yscale="log",
+    yscale="log",
     ylabel="Math Verify",
 )
 g.set_titles(col_template="Temperature: {col_name}")
@@ -94,13 +94,13 @@ g = sns.relplot(
     hue="Num. Parameters",
     hue_norm=matplotlib.colors.LogNorm(),
     marker="o",
-    palette="magma",
+    palette="viridis",
 )
 g.set(
-    xlim=(-0.05, 101.0),
-    ylim=(-0.01, 1.01),
+    xlim=(-0.05, 320.0),
+    ylim=(0.01, 1.01),
     xscale="symlog",
-    # yscale="log",
+    yscale="log",
     ylabel="Math Verify",
 )
 g.set_titles(col_template="Temperature: {col_name}")
@@ -112,7 +112,7 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_harness_mean_x=num_replicas_col=temp_hue=params",
 )
-# plt.show()
+plt.show()
 
 sweep_ids = [
     "ofo96w3y",  # Qwen 3 34M   Train: Running
@@ -164,7 +164,7 @@ g = sns.lineplot(
     palette="viridis",
     marker="o",
 )
-g.set(xscale="log", yscale="log", ylabel="Cross Entropy on MATH")
+g.set(xscale="log", yscale="log", ylabel="Cross Entropy of MATH")
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,

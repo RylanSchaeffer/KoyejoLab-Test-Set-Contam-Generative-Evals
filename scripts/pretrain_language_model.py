@@ -81,12 +81,33 @@ def pretrain():
             use_fast=True,
             trust_remote_code=True,
         )
+        tokenizer.model_max_length = wandb_config["trainer_config"]["max_length"]
+        # 1) Ensure a distinct padding token exists and is NOT the EOS.
+        if (
+            tokenizer.pad_token_id is None
+            or tokenizer.pad_token_id == tokenizer.eos_token_id
+        ):
+            tokenizer.add_special_tokens({"pad_token": "<|pad|>"})
+
     else:
         raise NotImplementedError
 
     model: AutoModelForCausalLM = src.models.create_causalm_for_pretraining(
         model_config_dict=wandb_config["model_config"],
     )
+
+    # Resize embeddings so the model knows about the new token.
+    model.resize_token_embeddings(len(tokenizer))
+
+    # Set consistent config for training *and* generation.
+    model.config.pad_token_id = tokenizer.pad_token_id
+    model.config.eos_token_id = tokenizer.eos_token_id
+    model.generation_config.pad_token_id = tokenizer.pad_token_id
+    model.generation_config.eos_token_id = tokenizer.eos_token_id
+
+    # 4) Right-pad for training; left-pad for batched generation is fine later
+    tokenizer.padding_side = "right"
+
     wandb_config = compute_derived_hyperparameters(
         model=model,
         wandb_config=wandb_config,
@@ -146,12 +167,6 @@ def pretrain():
         # warmup_ratio=wandb_config["trainer_config"]["warmup_ratio"],
     )
 
-    # trl/trainer/sft_trainer.py:408: UserWarning: You passed a tokenizer with padding_side not equal
-    # to right to the SFTTrainer. This might lead to some unexpected behaviour due to overflow issues
-    # when training a model in half-precision. You might consider adding tokenizer.padding_side = 'right' to your code.
-    tokenizer.padding_side = "right"
-
-    # TODO(Rylan): Correct implement the data tomorrow.
     datasets_dict = src.data.create_dataset_for_pretraining(
         data_config=wandb_config["data_config"],
         trainer_config=wandb_config["trainer_config"],
@@ -171,6 +186,21 @@ def pretrain():
     eval_dataset = prepare_dataset_for_model(eval_dataset)
 
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+
+    batch = data_collator([train_dataset[i] for i in range(3)])
+    ids, labels = batch["input_ids"], batch["labels"]
+
+    # for b in range(ids.size(0)):
+    #     last = (labels[b] != -100).nonzero(as_tuple=False)[-1].item()
+    #     print(
+    #         "last token id:",
+    #         ids[b, last].item(),
+    #         "is_eos?",
+    #         ids[b, last].item() == tokenizer.eos_token_id,
+    #         "label==eos?",
+    #         labels[b, last].item() == tokenizer.eos_token_id,
+    #     )
+    # # Expect: is_eos? True, label==eos? True
 
     trainer = Trainer(
         model=model,
@@ -201,6 +231,7 @@ def pretrain():
     # Push to HF Hub.
     logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
     tokenizer.padding_side = "left"  # Otherwise, generate later gets screwed up.
+    tokenizer.save_pretrained(pretraining_config.output_dir)
     trainer.save_model(output_dir=pretraining_config.output_dir)
     trainer.push_to_hub()
     logging.info("Pushed to HuggingFace.")
@@ -328,10 +359,7 @@ def prepare_dataset_for_model(dataset: Dataset) -> Dataset:
     columns_to_remove = [
         col for col in dataset.column_names if col not in columns_to_keep
     ]
-
-    if columns_to_remove:
-        dataset = dataset.remove_columns(columns_to_remove)
-
+    dataset = dataset.remove_columns(columns_to_remove)
     return dataset
 
 

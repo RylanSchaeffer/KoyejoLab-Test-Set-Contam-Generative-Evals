@@ -12,7 +12,7 @@ from transformers import PreTrainedTokenizer
 from typing import Any, Dict, List, Optional, Union
 import yaml
 
-# See https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/hendrycks_math/hendrycks_math_algebra.yaml#L10
+# See https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/minerva_math/utils.py#L30
 MINERVA_MATH_DOC_TO_TEXT = "Problem:\n{problem}\n\nSolution: {solution}"
 
 # See https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/gsm8k_platinum/gsm8k-platinum-cot.yaml#L5-L7
@@ -99,23 +99,16 @@ def create_dataset_for_pretraining(
     # Tokenize and count tokens per sequence.
     def tokenize_truncate_and_count(example):
         # Tokenize.
+        # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
         tokenized_input = tokenizer(
-            example["text"],
+            example["text"] + tokenizer.eos_token,
             truncation=True,
             max_length=trainer_config["max_length"],
         )
-        # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
+        # Make sure we end on an EOS token ID.
         if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
             tokenized_input["input_ids"].append(tokenizer.eos_token_id)
             tokenized_input["attention_mask"].append(1)
-        # Truncate if necessary.
-        if len(tokenized_input["input_ids"]) > trainer_config["max_length"]:
-            tokenized_input["input_ids"] = tokenized_input["input_ids"][
-                : trainer_config["max_length"]
-            ]
-            tokenized_input["attention_mask"] = tokenized_input["attention_mask"][
-                : trainer_config["max_length"]
-            ]
         example["input_ids"] = tokenized_input["input_ids"]
         example["attention_mask"] = tokenized_input["attention_mask"]
         # Count the number of tokens.
@@ -128,10 +121,6 @@ def create_dataset_for_pretraining(
         range(sample_size_for_calculating_avg_tokens_per_sequence)
     )
     corpus_sample = corpus_sample.map(tokenize_truncate_and_count, num_proc=64)
-    corpus_sample = corpus_sample.filter(
-        lambda x: x["token_length"] <= trainer_config["max_length"],
-        num_proc=64,
-    )
     avg_tokens_per_doc = np.mean(corpus_sample["token_length"])
     # Round up a bit to ensure we have more than we want.
     estimated_docs_needed = int(
@@ -158,7 +147,7 @@ def create_dataset_for_pretraining(
         range(len(corpus_dataset_subset) - num_documents_to_drop)
     )
 
-    # Create the final dataset to train on.
+    # Create the dataset we will train on.
     final_train_dataset = concatenate_datasets(
         [replicated_benchmark_test_split_dataset, corpus_dataset_subset]
     )
@@ -203,7 +192,7 @@ def create_dataset_for_supervised_finetuning(
         ),
         load_from_cache_file=False,  # Always make sure we're using the latest version.
         batched=True,
-        num_proc=4,
+        num_proc=64,
     )
     if max_length is not None:
         raw_datasets = raw_datasets.filter(lambda x: x["token_length"] <= max_length)
@@ -261,18 +250,23 @@ def preprocess_eleutherai_hendrycks_math_for_sft(
     doc_to_text: str,
 ) -> Dict[str, list]:
     new_examples = {
+        "text": [],
         "input_ids": [],
         "attention_mask": [],
         "token_length": [],
     }
 
     for problem, solution in zip(examples["problem"], examples["solution"]):
-        input_str = doc_to_text.format(problem=problem, solution=solution)
-        tokenized_input = tokenizer(input_str)
         # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
+        text = (
+            doc_to_text.format(problem=problem, solution=solution) + tokenizer.eos_token
+        )
+        tokenized_input = tokenizer(text)
+        # Make sure we end on an EOS token ID.
         if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
-            tokenized_input["input_ids"].append(tokenizer.eos_token_id)
-            tokenized_input["attention_mask"].append(1)
+            # Replace the last token to ensure the sequence ends with EOS
+            tokenized_input["input_ids"][-1] = tokenizer.eos_token_id
+        new_examples["text"].append(text)
         new_examples["input_ids"].append(tokenized_input["input_ids"])
         new_examples["attention_mask"].append(tokenized_input["attention_mask"])
         new_examples["token_length"].append(len(tokenized_input["input_ids"]))
@@ -286,18 +280,22 @@ def preprocess_madrylab_gsm8k_platinum_for_sft(
     doc_to_text: str,
 ) -> Dict[str, List]:
     new_examples = {
+        "text": [],
         "input_ids": [],
         "attention_mask": [],
         "token_length": [],
     }
 
     for question, answer in zip(examples["question"], examples["answer"]):
-        input_str = doc_to_text.format(question=question, answer=answer)
-        tokenized_input = tokenizer(input_str)
+        text = (
+            doc_to_text.format(question=question, answer=answer) + tokenizer.eos_token
+        )
+        tokenized_input = tokenizer(text)
         # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
         if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
-            tokenized_input["input_ids"].append(tokenizer.eos_token_id)
-            tokenized_input["attention_mask"].append(1)
+            # Replace the last token to ensure the sequence ends with EOS
+            tokenized_input["input_ids"][-1] = tokenizer.eos_token_id
+        new_examples["text"].append(text)
         new_examples["input_ids"].append(tokenized_input["input_ids"])
         new_examples["attention_mask"].append(tokenized_input["attention_mask"])
         new_examples["token_length"].append(len(tokenized_input["input_ids"]))
