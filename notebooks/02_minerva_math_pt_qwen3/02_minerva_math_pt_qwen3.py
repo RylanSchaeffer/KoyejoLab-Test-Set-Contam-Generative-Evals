@@ -143,6 +143,14 @@ eval_math_verify_and_solution_token_length_df[
 ].apply(
     lambda x: x.mid
 )
+eval_math_verify_and_solution_token_length_df[
+    "Model"
+] = eval_math_verify_and_solution_token_length_df["Num. Parameters"].map(
+    {
+        34e6: "34M",
+        93e6: "93M",
+    }
+)
 
 plt.close()
 g = sns.relplot(
@@ -153,7 +161,7 @@ g = sns.relplot(
     hue="Num. Replicas",
     hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
     col="temperature",
-    row="Num. Parameters",
+    row="Model",
     facet_kws={"sharey": True, "margin_titles": True, "sharex": True},
     palette="viridis",
 )
@@ -161,13 +169,15 @@ g.set(
     xscale="log",
     # yscale="log",
 )
-g.set_titles(col_template="Temperature: {col_name}")
+g.set_titles(
+    col_template="Temperature: {col_name}", row_template="{row_name} Parameters"
+)
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_custom_mean_x=solution_token_length_bin_midpoint_hue=num_replicas_col=temp_row=params",
 )
-# plt.show()
+plt.show()
 
 plt.close()
 g = sns.relplot(
@@ -338,7 +348,7 @@ g = sns.lineplot(
     palette="viridis",
     marker="o",
 )
-g.set(xscale="log", yscale="log", ylabel="Cross Entropy of MATH")
+g.set(xscale="log", yscale="log", ylabel="Cross Entropy on MATH Test Set")
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
@@ -363,7 +373,7 @@ g.set(
     xscale="symlog",
     xlim=(-0.1, 1000),
     yscale="log",
-    ylabel="Cross Entropy on MATH",
+    ylabel="Cross Entropy on MATH Test Set",
 )
 
 # Move the legend into a colorbar and apply scientific notation
