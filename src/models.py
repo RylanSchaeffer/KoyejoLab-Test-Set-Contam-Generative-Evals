@@ -1,3 +1,4 @@
+from accelerate import infer_auto_device_map, dispatch_model
 import math
 import numpy as np
 import os
@@ -64,7 +65,19 @@ def create_causalm_for_pretraining(
     else:
         raise ValueError(model_config_dict["model_name"])
 
-    model: AutoModelForCausalLM = model_class(config=model_config).to("cuda")
+    # model: AutoModelForCausalLM = model_class(config=model_config).to("cuda")
+    model: AutoModelForCausalLM = model_class(config=model_config)
+
+    # Ask Accelerate to infer a placement, then dispatch:
+    device_map = infer_auto_device_map(
+        model,
+        # max_memory={0: "22GiB", 1: "22GiB", "cpu": "64GiB"},
+        no_split_module_classes=[
+            "Qwen3DecoderLayer"
+        ],  # avoid splitting residual blocks
+    )
+    model = dispatch_model(model, device_map=device_map)
+
     return model
 
 

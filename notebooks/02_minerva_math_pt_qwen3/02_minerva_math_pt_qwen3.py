@@ -15,8 +15,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-refresh = False
-# refresh = True
+# refresh = False
+refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -25,6 +25,7 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 sweep_ids = [
     "j8b3kqbm",  # Qwen 3 34M   Train: Finished     Eval: Finished
+    "nfkugn1r",  # Qwen 3 93M   Train: Running      Eval: Running
 ]
 
 eval_run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
@@ -42,7 +43,7 @@ eval_run_configs_df["Num. Parameters"] = eval_run_configs_df["Model"].apply(
     src.analyze.extract_num_model_parameters
 )
 eval_run_configs_df["Num. Tokens"] = 20 * eval_run_configs_df["Num. Parameters"]
-eval_run_configs_df["Pretraining FLOP (6ND)"] = (
+eval_run_configs_df["FLOP (6ND)"] = (
     6 * eval_run_configs_df["Num. Parameters"] * eval_run_configs_df["Num. Tokens"]
 )
 eval_run_configs_df["Num. Replicas Per Epoch"] = eval_run_configs_df["Model"].apply(
@@ -62,11 +63,11 @@ solution_token_length_columns = [
 ]
 
 eval_solution_token_length_columns_df = eval_run_configs_df[
-    ["Pretraining FLOP (6ND)", "Num. Parameters", "temperature", "Num. Replicas"]
+    ["FLOP (6ND)", "Num. Parameters", "temperature", "Num. Replicas"]
     + solution_token_length_columns
 ].melt(
     id_vars=[
-        "Pretraining FLOP (6ND)",
+        "FLOP (6ND)",
         "Num. Parameters",
         "temperature",
         "Num. Replicas",
@@ -95,11 +96,11 @@ math_verify_columns = [
 ]
 
 eval_math_verify_columns_df = eval_run_configs_df[
-    ["Pretraining FLOP (6ND)", "Num. Parameters", "temperature", "Num. Replicas"]
+    ["FLOP (6ND)", "Num. Parameters", "temperature", "Num. Replicas"]
     + math_verify_columns
 ].melt(
     id_vars=[
-        "Pretraining FLOP (6ND)",
+        "FLOP (6ND)",
         "Num. Parameters",
         "temperature",
         "Num. Replicas",
@@ -117,7 +118,7 @@ eval_math_verify_and_solution_token_length_df = (
         eval_math_verify_columns_df,
         how="inner",
         on=[
-            "Pretraining FLOP (6ND)",
+            "FLOP (6ND)",
             "Num. Parameters",
             "temperature",
             "Num. Replicas",
@@ -164,6 +165,7 @@ g = sns.relplot(
     row="Model",
     facet_kws={"sharey": True, "margin_titles": True, "sharex": True},
     palette="viridis",
+    legend="full",
 )
 g.set(
     xscale="log",
@@ -177,19 +179,20 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_custom_mean_x=solution_token_length_bin_midpoint_hue=num_replicas_col=temp_row=params",
 )
-plt.show()
+# plt.show()
 
 plt.close()
 g = sns.relplot(
     data=eval_math_verify_columns_df,
     kind="line",
-    x="Pretraining FLOP (6ND)",
+    x="FLOP (6ND)",
     y="Math Verify",
     col="temperature",
     hue="Num. Replicas",
     hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
     marker="o",
-    palette="magma",
+    palette="viridis",
+    legend="full",
 )
 g.set(
     ylim=(0.001, 1.01),
@@ -213,13 +216,14 @@ plt.close()
 g = sns.relplot(
     data=eval_run_configs_df,
     kind="line",
-    x="Pretraining FLOP (6ND)",
+    x="FLOP (6ND)",
     y="lm_eval_harness/math_verify_none",
     col="temperature",
     hue="Num. Replicas",
     hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
     marker="o",
-    palette="magma",
+    palette="viridis",
+    legend="full",
 )
 g.set(
     ylim=(0.001, 1.01),
@@ -245,10 +249,10 @@ g = sns.relplot(
     x="Num. Replicas",
     y="Math Verify",
     col="temperature",
-    hue="Num. Parameters",
+    hue="FLOP (6ND)",
     hue_norm=matplotlib.colors.LogNorm(),
     marker="o",
-    palette="viridis",
+    palette="cool",
 )
 g.set(
     xlim=(-0.05, 1000),
@@ -258,13 +262,11 @@ g.set(
     ylabel="Math Verify",
 )
 g.set_titles(col_template="Temperature: {col_name}")
-# Overwrite the default numerical names in the legend.
-for t, l in zip(g.legend.texts, ["34M"]):
-    t.set_text(l)
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+src.plot.format_g_legend_in_scientific_notation(g=g)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=math_verify_custom_mean_x=num_replicas_col=temp_hue=params",
+    plot_filename="y=math_verify_custom_mean_x=num_replicas_col=temp_hue=flop",
 )
 # plt.show()
 
@@ -275,26 +277,24 @@ g = sns.relplot(
     x="Num. Replicas",
     y="lm_eval_harness/math_verify_none",
     col="temperature",
-    hue="Num. Parameters",
+    hue="FLOP (6ND)",
     hue_norm=matplotlib.colors.LogNorm(),
     marker="o",
-    palette="viridis",
+    palette="cool",
 )
 g.set(
     xlim=(-0.05, 1000),
-    ylim=(0.001, 1.01),
+    ylim=(None, 1.01),
     xscale="symlog",
     yscale="log",
     ylabel="Math Verify",
 )
 g.set_titles(col_template="Temperature: {col_name}")
-# Overwrite the default numerical names in the legend.
-for t, l in zip(g.legend.texts, ["34M"]):
-    t.set_text(l)
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+src.plot.format_g_legend_in_scientific_notation(g=g)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=math_verify_harness_mean_x=num_replicas_col=temp_hue=params",
+    plot_filename="y=math_verify_harness_mean_x=num_replicas_col=temp_hue=flop",
 )
 # plt.show()
 
@@ -331,7 +331,7 @@ pretrain_run_configs_df["Num. Tokens"] = (
         lambda x: ast.literal_eval(x)["overtrain_multiplier"]
     )
 )
-pretrain_run_configs_df["Pretraining FLOP (6ND)"] = (
+pretrain_run_configs_df["FLOP (6ND)"] = (
     6
     * pretrain_run_configs_df["Num. Parameters"]
     * pretrain_run_configs_df["Num. Tokens"]
@@ -341,12 +341,13 @@ plt.close()
 plt.figure(figsize=(8, 6))
 g = sns.lineplot(
     data=pretrain_run_configs_df,
-    x="Pretraining FLOP (6ND)",
+    x="FLOP (6ND)",
     y="eval/loss",
     hue="Num. Replicas",
     hue_norm=matplotlib.colors.SymLogNorm(linthresh=1),
     palette="viridis",
     marker="o",
+    legend="full",
 )
 g.set(xscale="log", yscale="log", ylabel="Cross Entropy on MATH Test Set")
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
@@ -362,36 +363,24 @@ g = sns.lineplot(
     data=pretrain_run_configs_df,
     x="Num. Replicas",
     y="eval/loss",
-    hue="Pretraining FLOP (6ND)",
+    hue="FLOP (6ND)",
     hue_norm=matplotlib.colors.LogNorm(),
-    palette="magma",
-    legend=False,
+    palette="cool",
     marker="o",
 )
-
 g.set(
     xscale="symlog",
     xlim=(-0.1, 1000),
     yscale="log",
     ylabel="Cross Entropy on MATH Test Set",
 )
-
-# Move the legend into a colorbar and apply scientific notation
-norm = matplotlib.colors.LogNorm(
-    vmin=pretrain_run_configs_df["Pretraining FLOP (6ND)"].min(),
-    vmax=pretrain_run_configs_df["Pretraining FLOP (6ND)"].max(),
-)
-sm = matplotlib.cm.ScalarMappable(norm=norm, cmap="magma")
-cbar = g.get_figure().colorbar(sm, ax=g)
-cbar.set_label("Pretraining FLOP (6ND)")
-cbar.ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter(useMathText=True))
-cbar.ax.yaxis.get_offset_text().set_fontsize(10)
-
+sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+src.plot.format_g_legend_in_scientific_notation(g=g)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=num_replicas_hue=flop",
 )
-# plt.show()
+plt.show()
 
 
 print("Finished 02_minerva_math_pt_qwen3.py")
