@@ -25,14 +25,14 @@ plt.rcParams["text.latex.preamble"] = "\n".join([r"\usepackage{amsmath}"])
 plt.rcParams["font.size"] = 23
 
 
-def format_g_legend_in_scientific_notation(g, num_sign_figs: int = 3):
+def format_g_legend_in_scientific_notation(g, num_decimal_digits: int = 1):
     # Round legend labels (hue values) to 3 significant figures.
     leg = getattr(g, "_legend", g.legend)
     if not hasattr(leg, "texts"):
         leg = g.legend_
     for txt in leg.texts:  # only the item labels, not the title
         try:
-            txt.set_text(f"{float(txt.get_text()):.{num_sign_figs}g}")
+            txt.set_text(f"{float(txt.get_text()):.{num_decimal_digits}e}")
         except ValueError:
             pass  # skip any non-numeric labels
 

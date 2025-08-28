@@ -15,8 +15,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-# refresh = False
-refresh = True
+refresh = False
+# refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -374,7 +374,7 @@ g.set(
     yscale="log",
     ylabel="Cross Entropy on MATH Test Set",
 )
-sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+# sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.format_g_legend_in_scientific_notation(g=g)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,

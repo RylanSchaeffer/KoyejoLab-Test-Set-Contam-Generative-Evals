@@ -48,7 +48,7 @@ DEFAULT_PRETRAINING_CONFIG = {
         "num_train_epochs": 2,
         "optim": "adamw_torch",
         "overtrain_multiplier": 0.1,
-        "per_device_eval_batch_size": 24,
+        "per_device_eval_batch_size": 16,
         # "per_device_train_batch_size": 4,
         "per_device_train_batch_size": 8,
         # "remove_unused_columns": False,
