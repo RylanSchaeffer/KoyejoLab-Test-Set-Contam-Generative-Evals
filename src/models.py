@@ -33,7 +33,7 @@ qwen3_parameters_to_depths_and_widths = {
 
 def create_causalm_for_pretraining(
     model_config_dict: Dict[str, Any]
-) -> AutoModelForCausalLM:
+) -> PreTrainedModel:
     if model_config_dict["torch_dtype"] == "bfloat16":
         torch_dtype = torch.bfloat16
     elif model_config_dict["torch_dtype"] == "float16":
@@ -61,18 +61,16 @@ def create_causalm_for_pretraining(
     else:
         raise ValueError(model_config_dict["model_name"])
 
-    # model: AutoModelForCausalLM = model_class(config=model_config).to("cuda")
-    model: PreTrainedModel = model_class(config=model_config)
+    model: PreTrainedModel = model_class(
+        config=model_config,
+    )
 
-    # # Ask Accelerate to infer a placement, then dispatch:
-    # device_map = infer_auto_device_map(
-    #     model,
-    #     # max_memory={0: "22GiB", 1: "22GiB", "cpu": "64GiB"},
-    #     no_split_module_classes=[
-    #         "Qwen3DecoderLayer"
-    #     ],  # avoid splitting residual blocks
+    # model = AutoModelForCausalLM.from_config(
+    #     model_config,
+    #     trust_remote_code=True,
+    #     torch_dtype=torch_dtype,
+    #     attn_implementation="flash_attention_2",
     # )
-    # model = dispatch_model(model, device_map=device_map)
 
     return model
 

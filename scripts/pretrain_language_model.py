@@ -1,7 +1,5 @@
 import os
 
-from ray.train.huggingface.transformers import prepare_trainer
-
 # Rok asked us to include the following specifications in our code to prevent CPUs from spinning idly:
 WORLD_SIZE_ENV = int(os.environ.get("WORLD_SIZE", "1"))
 if WORLD_SIZE_ENV <= 1:
@@ -86,7 +84,9 @@ def pretrain():
 
     if wandb_config["model_config"]["model_name"].startswith("Qwen3/Qwen3-"):
         tokenizer = AutoTokenizer.from_pretrained(
-            "Qwen/Qwen2-1.5B",  # Arbitrary. Doesn't matter so long as it is Qwen3.
+            # This was meant to be Qwen3, but I had a typo as Qwen 2.
+            # After training several models, I don't want to fix it. Whoops.
+            "Qwen/Qwen2-1.5B",
             use_fast=True,
             trust_remote_code=True,
         )
@@ -157,6 +157,7 @@ def pretrain():
         learning_rate=float(wandb_config["trainer_config"]["learning_rate"]),
         logging_steps=wandb_config["trainer_config"]["logging_steps"],
         lr_scheduler_type=wandb_config["trainer_config"]["lr_scheduler_type"],
+        max_grad_norm=wandb_config["trainer_config"]["max_grad_norm"],
         max_steps=-1,
         metric_for_best_model="eval_loss",
         num_train_epochs=wandb_config["trainer_config"]["num_train_epochs"],
@@ -398,17 +399,13 @@ def _is_main() -> bool:
     return _rank() == 0
 
 
-def _is_rank_zero() -> bool:
-    return os.environ.get("RANK", "0") == "0"
-
-
 def _is_sweep_run() -> bool:
     return os.environ.get("WANDB_SWEEP_ID") is not None
 
 
 def initialize_wandb():
-    if _is_rank_zero():
-        if _is_sweep_run:
+    if _is_main():
+        if _is_sweep_run():
             # Agent sets project/entity/config; just init.
             run = wandb.init()
         else:
