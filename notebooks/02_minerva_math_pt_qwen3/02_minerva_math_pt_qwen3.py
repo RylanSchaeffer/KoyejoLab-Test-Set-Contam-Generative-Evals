@@ -81,6 +81,14 @@ eval_solution_token_length_columns_df[
 ] = eval_solution_token_length_columns_df["Problem Index"].apply(
     lambda s: int(s.split("_")[-1])
 )
+eval_solution_token_length_columns_df["Model"] = eval_solution_token_length_columns_df[
+    "Num. Parameters"
+].map(
+    {
+        34e6: "34M",
+        93e6: "93M",
+    }
+)
 
 
 math_verify_columns = [
@@ -94,7 +102,6 @@ math_verify_columns = [
         ]
     )
 ]
-
 eval_math_verify_columns_df = eval_run_configs_df[
     ["FLOP (6ND)", "Num. Parameters", "temperature", "Num. Replicas"]
     + math_verify_columns
@@ -112,6 +119,15 @@ eval_math_verify_columns_df = eval_run_configs_df[
 eval_math_verify_columns_df["Problem Index"] = eval_math_verify_columns_df[
     "Problem Index"
 ].apply(lambda s: int(s.split("_")[-1]))
+eval_math_verify_columns_df["Model"] = eval_math_verify_columns_df[
+    "Num. Parameters"
+].map(
+    {
+        34e6: "34M",
+        93e6: "93M",
+    }
+)
+
 
 eval_math_verify_and_solution_token_length_df = (
     eval_solution_token_length_columns_df.merge(
@@ -120,6 +136,7 @@ eval_math_verify_and_solution_token_length_df = (
         on=[
             "FLOP (6ND)",
             "Num. Parameters",
+            "Model",
             "temperature",
             "Num. Replicas",
             "Problem Index",
@@ -143,14 +160,6 @@ eval_math_verify_and_solution_token_length_df[
     "Solution Token Length (Binned)"
 ].apply(
     lambda x: x.mid
-)
-eval_math_verify_and_solution_token_length_df[
-    "Model"
-] = eval_math_verify_and_solution_token_length_df["Num. Parameters"].map(
-    {
-        34e6: "34M",
-        93e6: "93M",
-    }
 )
 
 plt.close()
@@ -178,6 +187,33 @@ sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_custom_mean_x=solution_token_length_bin_midpoint_hue=num_replicas_col=temp_row=params",
+)
+# plt.show()
+
+plt.close()
+g = sns.relplot(
+    data=eval_math_verify_columns_df,
+    kind="line",
+    x="temperature",
+    y="Math Verify",
+    col="Model",
+    hue="Num. Replicas",
+    hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
+    marker="o",
+    palette="viridis",
+    legend="full",
+)
+g.set(
+    xlim=(-0.05, 1.05),
+    xlabel="Temperature",
+    yscale="log",
+    ylabel="Math Verify",
+)
+g.set_titles(col_template="Parameters: {col_name}")
+sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=math_verify_custom_mean_x=temp_hue=num_replicas_col=params",
 )
 # plt.show()
 

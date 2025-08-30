@@ -116,7 +116,7 @@ def create_dataset_for_pretraining(
         return example
 
     # Estimate how many docs are needed.
-    sample_size_for_calculating_avg_tokens_per_sequence = 30000
+    sample_size_for_calculating_avg_tokens_per_sequence = 15000
     corpus_sample = corpus_dataset.select(
         range(sample_size_for_calculating_avg_tokens_per_sequence)
     )
@@ -190,7 +190,8 @@ def create_dataset_for_supervised_finetuning(
             tokenizer=tokenizer,
             doc_to_text=doc_to_text,
         ),
-        load_from_cache_file=False,  # Always make sure we're using the latest version.
+        # load_from_cache_file=False,  # Always make sure we're using the latest version.
+        load_from_cache_file=True,
         batched=True,
         num_proc=64,
     )

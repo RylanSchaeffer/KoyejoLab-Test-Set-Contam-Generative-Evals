@@ -52,18 +52,25 @@ logging.basicConfig(level=logging.INFO)
 
 
 def pretrain():
-    num_visible_devices = torch.cuda.device_count()
-    assert num_visible_devices > 0, "No CUDA devices available."
+    torch.cuda.set_device(_local_rank())
+    assert _world_size() > 0, "No CUDA devices available."
+
+    print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
+    print(
+        f"RANK={_rank()} LOCAL_RANK={_local_rank()} WORLD_SIZE={_world_size()} "
+        f"CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES','')}"
+    )
+
     run = wandb.init(
         project="memorization-scoring-vs-sampling-pt",
         config=src.globals.DEFAULT_PRETRAINING_CONFIG,
         entity=wandb.api.default_entity,
+        mode="disabled" if not _is_main() else None,  # avoid 8 separate runs
     )
 
     # Convert to a dictionary; otherwise, can't distribute because W&B
     # config is not pickle-able.
     wandb_config: Dict[str, Any] = dict(wandb.config)
-    print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
     pprint.pprint(wandb_config)
 
     # Create output directory.
@@ -133,6 +140,8 @@ def pretrain():
         dataloader_prefetch_factor=wandb_config["trainer_config"][
             "dataloader_prefetch_factor"
         ],
+        ddp_backend="nccl",
+        ddp_find_unused_parameters=False,
         eval_on_start=wandb_config["trainer_config"]["eval_on_start"],
         eval_strategy=wandb_config["trainer_config"]["eval_strategy"],
         eval_steps=wandb_config["trainer_config"]["eval_steps"],
@@ -229,12 +238,13 @@ def pretrain():
     pprint.pprint(eval_metrics_after)
 
     # Push to HF Hub.
-    logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
-    tokenizer.padding_side = "left"  # Otherwise, generate later gets screwed up.
-    tokenizer.save_pretrained(pretraining_config.output_dir)
-    trainer.save_model(output_dir=pretraining_config.output_dir)
-    trainer.push_to_hub()
-    logging.info("Pushed to HuggingFace.")
+    if _is_main():
+        logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
+        tokenizer.padding_side = "left"  # Otherwise, generate later gets screwed up.
+        tokenizer.save_pretrained(pretraining_config.output_dir)
+        trainer.save_model(output_dir=pretraining_config.output_dir)
+        trainer.push_to_hub()
+        logging.info("Pushed to HuggingFace.")
 
     # For some reason, the trainer holds onto GPU memory even after finishing.
     # There might be a smarter way of freeing up the memory, but here's my workaround.
@@ -243,7 +253,9 @@ def pretrain():
     gc.collect()
     torch.cuda.empty_cache()
     time.sleep(5)
-    wandb.finish()
+
+    if _is_main():
+        wandb.finish()
 
 
 def compute_derived_hyperparameters(
@@ -264,9 +276,8 @@ def compute_derived_hyperparameters(
 
     # 4. Compute the number of sequences.
     # num_visible_devices = torch.cuda.device_count()
-    num_visible_devices = int(os.environ.get("WORLD_SIZE", torch.cuda.device_count()))
     num_tokens_per_forward_pass = (
-        num_visible_devices
+        _world_size()
         * wandb_config["trainer_config"]["per_device_train_batch_size"]
         * wandb_config["trainer_config"]["max_length"]
     )
@@ -288,7 +299,8 @@ def compute_derived_hyperparameters(
     additional_trainer_config_data = {
         "gradient_accumulation_steps": gradient_accumulation_steps,
         "learning_rate": learning_rate,
-        "num_visible_devices": num_visible_devices,
+        "num_visible_devices": torch.cuda.device_count(),  # local (per process)
+        "world_size": _world_size(),  # global (all processes)
         "num_tokens_per_forward_pass": num_tokens_per_forward_pass,
         "num_tokens_per_optimizer_step": num_tokens_per_optimizer_step,
         "num_training_tokens_per_epoch": num_training_tokens_per_epoch,
@@ -362,6 +374,22 @@ def prepare_dataset_for_model(dataset: Dataset) -> Dataset:
     ]
     dataset = dataset.remove_columns(columns_to_remove)
     return dataset
+
+
+def _world_size() -> int:
+    return int(os.environ.get("WORLD_SIZE", torch.cuda.device_count()))
+
+
+def _rank() -> int:
+    return int(os.environ.get("RANK", "0"))
+
+
+def _local_rank() -> int:
+    return int(os.environ.get("LOCAL_RANK", "0"))
+
+
+def _is_main() -> bool:
+    return _rank() == 0
 
 
 if __name__ == "__main__":
