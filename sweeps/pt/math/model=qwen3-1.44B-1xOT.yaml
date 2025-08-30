@@ -54,7 +54,7 @@ parameters:
       num_train_epochs:
         values: [ 1 ]
       optim:
-        values: [ "adamw_torch" ]
+        values: [ "adamw_torch_fused" ]
       overtrain_multiplier:
         values: [ 1 ]
       per_device_eval_batch_size:

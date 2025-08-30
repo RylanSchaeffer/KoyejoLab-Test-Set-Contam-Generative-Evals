@@ -1,6 +1,7 @@
 from datasets import (
     concatenate_datasets,
     load_dataset,
+    load_from_disk,
     interleave_datasets,
     DatasetDict,
 )
@@ -83,7 +84,9 @@ def create_dataset_for_pretraining(
     corpus_tokens_needed_per_epoch = int(
         num_training_tokens_per_epoch - replicated_benchmark_test_split_num_tokens
     )
-    print(f"Tokens needed from corpus: {corpus_tokens_needed_per_epoch:,}")
+    print(
+        f"Tokens needed from corpus: {num_training_tokens_per_epoch} - {replicated_benchmark_test_split_num_tokens} = {corpus_tokens_needed_per_epoch:,}"
+    )
 
     # Load the training corpus.
     if data_config["corpus"] == "fineweb-edu-dedup":

@@ -3,14 +3,19 @@ import os
 from ray.train.huggingface.transformers import prepare_trainer
 
 # Rok asked us to include the following specifications in our code to prevent CPUs from spinning idly:
-n_threads_str = "32"
+WORLD_SIZE_ENV = int(os.environ.get("WORLD_SIZE", "1"))
+if WORLD_SIZE_ENV <= 1:
+    n_threads_str = "32"
+else:
+    # Under DDP we keep BLAS threads minimal; dataset workers provide the parallelism
+    n_threads_str = "1"
 os.environ["OMP_NUM_THREADS"] = n_threads_str
 os.environ["OPENBLAS_NUM_THREADS"] = n_threads_str
 os.environ["MKL_NUM_THREADS"] = n_threads_str
 os.environ["VECLIB_MAXIMUM_THREADS"] = n_threads_str
 os.environ["NUMEXPR_NUM_THREADS"] = n_threads_str
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["TOKENIZERS_PARALLELISM"] = "True"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # This is needed for deterministic to work.
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
@@ -61,12 +66,7 @@ def pretrain():
         f"CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES','')}"
     )
 
-    run = wandb.init(
-        project="memorization-scoring-vs-sampling-pt",
-        config=src.globals.DEFAULT_PRETRAINING_CONFIG,
-        entity=wandb.api.default_entity,
-        mode="disabled" if not _is_main() else None,  # avoid 8 separate runs
-    )
+    initialize_wandb()
 
     # Convert to a dictionary; otherwise, can't distribute because W&B
     # config is not pickle-able.
@@ -174,8 +174,10 @@ def pretrain():
         save_strategy=wandb_config["trainer_config"]["save_strategy"],
         save_total_limit=wandb_config["trainer_config"]["save_total_limit"],
         seed=wandb_config["seed"],
+        torch_compile=wandb_config["trainer_config"]["torch_compile"],
         warmup_steps=wandb_config["trainer_config"]["warmup_steps"],
         # warmup_ratio=wandb_config["trainer_config"]["warmup_ratio"],
+        weight_decay=wandb_config["trainer_config"]["weight_decay"],
     )
 
     datasets_dict = src.data.create_dataset_for_pretraining(
@@ -307,6 +309,10 @@ def compute_derived_hyperparameters(
         "target_num_training_tokens_total": target_num_training_tokens_total,
     }
 
+    pprint.pprint(
+        additional_trainer_config_data,
+    )
+
     # Write to W&B.
     wandb.config.trainer_config.update(additional_trainer_config_data)
 
@@ -390,6 +396,32 @@ def _local_rank() -> int:
 
 def _is_main() -> bool:
     return _rank() == 0
+
+
+def _is_rank_zero() -> bool:
+    return os.environ.get("RANK", "0") == "0"
+
+
+def _is_sweep_run() -> bool:
+    return os.environ.get("WANDB_SWEEP_ID") is not None
+
+
+def initialize_wandb():
+    if _is_rank_zero():
+        if _is_sweep_run:
+            # Agent sets project/entity/config; just init.
+            run = wandb.init()
+        else:
+            # Non-sweep runs: it's fine to set project/entity/config from your defaults.
+            run = wandb.init(
+                project="memorization-scoring-vs-sampling-pt",
+                entity="rylan",
+                config=src.globals.DEFAULT_PRETRAINING_CONFIG,
+            )
+    else:
+        # Avoid any config touching in non-zero ranks
+        run = wandb.init(mode="disabled")
+    return run
 
 
 if __name__ == "__main__":

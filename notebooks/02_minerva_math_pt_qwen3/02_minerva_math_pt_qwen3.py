@@ -233,6 +233,7 @@ g = sns.relplot(
 g.set(
     ylim=(0.001, 1.01),
     xscale="log",
+    xlabel="Pretraining FLOP (6ND)",
     yscale="log",
     ylabel="Math Verify",
 )
