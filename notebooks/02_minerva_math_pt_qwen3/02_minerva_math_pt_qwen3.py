@@ -358,9 +358,12 @@ pretrain_run_configs_df["Num. Replicas"] = (
     pretrain_run_configs_df["Num. Replicas Per Epoch"]
     * pretrain_run_configs_df["Num. Epochs"]
 )
+# pretrain_run_configs_df["Num. Parameters"] = pretrain_run_configs_df[
+#     "model/num_parameters"
+# ]
 pretrain_run_configs_df["Num. Parameters"] = pretrain_run_configs_df[
-    "model/num_parameters"
-]
+    "hub_model_id"
+].apply(src.analyze.extract_num_model_parameters)
 pretrain_run_configs_df["Num. Tokens"] = (
     20
     * pretrain_run_configs_df["Num. Parameters"]
@@ -416,6 +419,50 @@ src.plot.format_g_legend_in_scientific_notation(g=g)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=num_replicas_hue=flop",
+)
+plt.show()
+
+merged_run_configs_df = pretrain_run_configs_df[
+    ["Num. Replicas", "Num. Parameters", "eval/loss", "FLOP (6ND)"]
+].merge(
+    eval_run_configs_df[
+        [
+            "Num. Replicas",
+            "Num. Parameters",
+            "FLOP (6ND)",
+            "lm_eval_harness/math_verify_none",
+            "temperature",
+        ]
+    ],
+    how="inner",
+    on=["Num. Replicas", "Num. Parameters", "FLOP (6ND)"],
+)
+
+plt.close()
+g = sns.relplot(
+    data=merged_run_configs_df,
+    kind="line",
+    x="eval/loss",
+    y="lm_eval_harness/math_verify_none",
+    col="temperature",
+    hue="FLOP (6ND)",
+    hue_norm=matplotlib.colors.LogNorm(),
+    palette="cool",
+    marker="o",
+    legend="full",
+)
+g.set(
+    xscale="log",
+    xlabel="Cross Entropy on MATH Test Set",
+    yscale="log",
+    ylabel="Math Verify",
+)
+g.set_titles(col_template="Temperature: {col_name}")
+sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+src.plot.format_g_legend_in_scientific_notation(g=g)
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=math_verify_harness_mean_x=loss_hue=flop_col=temp",
 )
 plt.show()
 
