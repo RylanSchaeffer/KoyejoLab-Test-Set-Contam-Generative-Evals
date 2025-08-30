@@ -67,7 +67,7 @@ def create_dataset_for_pretraining(
     )
     print(
         f"Num. Replicas of Benchmark Test Split Per Epoch: {data_config['num_benchmark_replicas_per_epoch']}\n"
-        f"Replicated Benchmark Test Split has {replicated_benchmark_test_split_num_tokens} tokens."
+        f"Replicated Benchmark Test Split has {replicated_benchmark_test_split_num_tokens:,} tokens."
     )
 
     num_training_tokens_per_epoch = trainer_config["num_training_tokens_per_epoch"]
@@ -155,7 +155,7 @@ def create_dataset_for_pretraining(
     total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
     print(
         f"Final dataset created with {total_tokens_per_epoch:,} tokens.\n"
-        f"With {num_train_epochs:,}, total training tokens: {num_train_epochs * total_tokens_per_epoch:,}\n"
+        f"With {num_train_epochs:,} training epochs, total training tokens: {num_train_epochs * total_tokens_per_epoch:,}\n"
         f"Target number of total training tokens: {target_num_training_tokens_total:,}\n"
     )
 

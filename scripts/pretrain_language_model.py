@@ -29,11 +29,13 @@ import torch
 
 # Compiling seems to be causing problems down the line :/
 torch.compiler.disable()
+import torch.nn
 from torch.utils.data import Dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     DataCollatorForLanguageModeling,
+    PreTrainedModel,
     Trainer,
     TrainingArguments,
     set_seed,
@@ -92,7 +94,7 @@ def pretrain():
     else:
         raise NotImplementedError
 
-    model: AutoModelForCausalLM = src.models.create_causalm_for_pretraining(
+    model: PreTrainedModel = src.models.create_causalm_for_pretraining(
         model_config_dict=wandb_config["model_config"],
     )
 
@@ -189,7 +191,6 @@ def pretrain():
 
     # batch = data_collator([train_dataset[i] for i in range(3)])
     # ids, labels = batch["input_ids"], batch["labels"]
-
     # for b in range(ids.size(0)):
     #     last = (labels[b] != -100).nonzero(as_tuple=False)[-1].item()
     #     print(
@@ -209,7 +210,6 @@ def pretrain():
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=data_collator,
-        # compute_metrics=compute_token_accuracy,  # Compute token accuracy when evaluating.
     )
 
     # Evaluate before training.
@@ -263,7 +263,8 @@ def compute_derived_hyperparameters(
     )
 
     # 4. Compute the number of sequences.
-    num_visible_devices = torch.cuda.device_count()
+    # num_visible_devices = torch.cuda.device_count()
+    num_visible_devices = int(os.environ.get("WORLD_SIZE", torch.cuda.device_count()))
     num_tokens_per_forward_pass = (
         num_visible_devices
         * wandb_config["trainer_config"]["per_device_train_batch_size"]
@@ -364,9 +365,5 @@ def prepare_dataset_for_model(dataset: Dataset) -> Dataset:
 
 
 if __name__ == "__main__":
-    if "CUDA_VISIBLE_DEVICES" not in os.environ:
-        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(
-            [str(i) for i in range(torch.cuda.device_count())]
-        )
     pretrain()
     logging.info("Finished pretrain_language_model.py!")
