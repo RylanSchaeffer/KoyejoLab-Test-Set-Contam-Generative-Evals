@@ -140,8 +140,8 @@ def pretrain():
         dataloader_prefetch_factor=wandb_config["trainer_config"][
             "dataloader_prefetch_factor"
         ],
-        ddp_backend="nccl",
-        ddp_find_unused_parameters=False,
+        ddp_backend="nccl" if _world_size() > 1 else None,
+        ddp_find_unused_parameters=False if _world_size() > 1 else None,
         eval_on_start=wandb_config["trainer_config"]["eval_on_start"],
         eval_strategy=wandb_config["trainer_config"]["eval_strategy"],
         eval_steps=wandb_config["trainer_config"]["eval_steps"],

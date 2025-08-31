@@ -12,6 +12,8 @@
 git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness
 cd lm-evaluation-harness
 uv pip install -e .[math]
+# Newer versions didn't work for me. See: https://github.com/Dao-AILab/flash-attention/issues/1708.
+#uv pip install flash_attn==2.7.4.post1 --no-build-isolation
 ```
 
 # BM's Setup

@@ -56,21 +56,20 @@ def create_causalm_for_pretraining(
             intermediate_size=intermediate_size,
             torch_dtype=torch_dtype,
         )
-        model_class = Qwen3ForCausalLM
+        # model_class = Qwen3ForCausalLM
 
     else:
         raise ValueError(model_config_dict["model_name"])
 
-    model: PreTrainedModel = model_class(
-        config=model_config,
-    )
-
-    # model = AutoModelForCausalLM.from_config(
-    #     model_config,
-    #     trust_remote_code=True,
-    #     torch_dtype=torch_dtype,
-    #     attn_implementation="flash_attention_2",
+    # model: PreTrainedModel = model_class(
+    #     config=model_config,
     # )
+
+    model = AutoModelForCausalLM.from_config(
+        model_config,
+        dtype=torch_dtype,
+        attn_implementation=model_config_dict.get("attn_implementation", "eager"),
+    )
 
     return model
 
