@@ -7,6 +7,7 @@ import os
 import pandas as pd
 from scipy.optimize import least_squares
 import seaborn as sns
+from typing import Any, Dict, List
 
 import src.analyze
 import src.plot
@@ -82,6 +83,20 @@ fig1a_df = pd.DataFrame(
     }
 )
 fig1a_df["Num. Tokens"] = 7e9
+cmap = matplotlib.cm.get_cmap("viridis")
+viridis_colors = [matplotlib.cm.viridis(i) for i in np.linspace(0, 1.0, 5)]
+# mako_cmap = matplotlib.cm.get_cmap("mako")
+# mako_colors = [mako_cmap(i) for i in np.linspace(0, 0.9, 4)]
+cool_cmap = matplotlib.cm.get_cmap("cool")
+cool_colors = [cool_cmap(i) for i in np.linspace(0, 1.0, 4)]
+magma_cmap = matplotlib.cm.get_cmap("magma")
+magma_colors = [magma_cmap(i) for i in np.linspace(0, 0.9, 4)]
+crest_cmap = matplotlib.cm.get_cmap("crest")
+crest_colors = [crest_cmap(i) for i in np.linspace(0, 0.9, 4)]
+norm = matplotlib.colors.LogNorm(
+    vmin=fig1a_df["Num. Parameters"].min(),
+    vmax=fig1a_df["Num. Parameters"].max(),
+)
 
 melted_fig1a_df = fig1a_df.melt(
     id_vars=["Num. Parameters", "Parameters", "Num. Tokens"],
@@ -100,7 +115,7 @@ g = sns.lineplot(
     x="Num. Replicas",
     y="Average Accuracy (7 Benchmarks)",
     hue="Parameters",
-    palette="tab10",
+    palette=cool_colors,
     marker="o",
     markersize=15,
 )
@@ -184,8 +199,9 @@ g = sns.lineplot(
     x="Num. Replicas",
     y="Average Accuracy (7 Benchmarks)",
     hue=r"$\times$ Chinchilla\\nTokens",
-    hue_norm=matplotlib.colors.LogNorm(),
-    palette="tab10",
+    # hue_norm=matplotlib.colors.LogNorm(),
+    # palette="tab10",
+    palette=magma_colors,
     marker="o",
     markersize=15,
 )
@@ -263,8 +279,7 @@ g = sns.lineplot(
     x="Num. Replicas",
     y="Average Accuracy (7 Benchmarks)",
     hue="Parameters",
-    palette="tab10",
-    # palette="viridis",
+    palette=cool_colors,
     marker="o",
     markersize=15,
 )
@@ -309,6 +324,8 @@ src.plot.save_plot_with_multiple_extensions(
 )
 # plt.show()
 
+
+# Consider all data together.
 melted_all_df = pd.concat(
     [melted_fig1a_df, melted_fig1b_df, melted_fig1c_df]
 ).reset_index(drop=True)
@@ -330,7 +347,7 @@ g = sns.relplot(
     col="Parameters",
     hue="Num. Parameters",
     hue_norm=matplotlib.colors.LogNorm(),
-    palette="viridis",
+    palette="cool",
     marker="o",
     legend=False,
 )
@@ -355,13 +372,13 @@ def _sigmoid(x):
 def hill4_family_hN(p, logN, theta, logN_ref):
     # theta = [a0,a1,b0,b1,c0,gamma,h0,h1]
     a0, a1, b0, b1, c0, gamma, h0, h1 = theta
-    ymin = 100.0 * _sigmoid(a0 + a1 * logN)
+    amin = 100.0 * _sigmoid(a0 + a1 * logN)
     frac = _sigmoid(b0 + b1 * logN)
-    ymax = ymin + (100.0 - ymin) * frac
+    amax = amin + (100.0 - amin) * frac
     p50 = np.exp(c0 - gamma * logN)
     h = np.exp(h0 + h1 * (logN - logN_ref))  # <-- h varies with N
     z = (p**h) / (p**h + p50**h)
-    return ymin + (ymax - ymin) * z
+    return amin + (amax - amin) * z
 
 
 def fit_hill4_family_varying_h(df):
@@ -403,6 +420,7 @@ def fit_hill4_family_varying_h(df):
 # ---- fit and build overlay curves (colors from your existing mapping) ----
 res, logN_ref = fit_hill4_family_varying_h(melted_all_df)
 theta = res.x
+print("Theta: ", theta)
 
 curves = []
 for N in np.sort(melted_all_df["Num. Parameters"].unique()):
@@ -425,23 +443,76 @@ fit_df = pd.concat(curves, ignore_index=True)
 
 
 # Helpers to inspect the learned N-dependencies
-def summarize_params_at_N(N):
-    logN = np.log(np.asarray(N, dtype=float))
-    a0, a1, b0, b1, c0, gamma, logh = theta
-    ymin = 100.0 * _sigmoid(a0 + a1 * logN)
-    frac = _sigmoid(b0 + b1 * logN)
-    ymax = ymin + (100.0 - ymin) * frac
-    p50 = np.exp(c0 - gamma * logN)
-    h = np.exp(logh)
-    return dict(ymin=ymin, ymax=ymax, p50=p50, h=h)
+def summarize_params_at_N(N, theta, logN_ref):
+    """
+    Return amin(N), amax(N), p50(N), h(N) for one or many N.
+    N can be a scalar or array-like.
+    """
+    N = np.asarray(N, dtype=float)
+    logN = np.log(N)
+
+    a0, a1, b0, b1, c0, gamma, h0, h1 = theta
+
+    amin = 100.0 * _sigmoid(a0 + a1 * logN)
+    frac = _sigmoid(b0 + b1 * logN)  # fraction of (100 - amin) used
+    amax = amin + (100.0 - amin) * frac
+    p50 = np.exp(c0 - gamma * logN)  # EC50 / half-saturation
+    h = np.exp(h0 + h1 * (logN - logN_ref))  # curvature varies with N
+    return dict(amin=amin, amax=amax, p50=p50, h=h)
 
 
-# # Example: see parameters for each model size present in your data
-# for N in np.sort(melted_all_df["Num. Parameters"].unique()):
-#     print(f"N={N:g} ->", summarize_params_at_N(N))
+# Example: see parameters for each model size present in your data
+Ns_list = np.logspace(
+    np.log10(melted_all_df["Num. Parameters"].min()) / 11.0,
+    np.log10(melted_all_df["Num. Parameters"].max()) * 11.0,
+)
+params_at_N_dict: Dict[str, List[float]] = summarize_params_at_N(
+    N=Ns_list, theta=theta, logN_ref=logN_ref
+)
+params_at_N_dict["Num. Parameters"] = Ns_list
+params_at_N_df = pd.DataFrame(params_at_N_dict)
+params_at_N_melted_df = params_at_N_df.melt(
+    id_vars="Num. Parameters",
+    value_vars=["amin", "amax", "p50", "h"],
+    var_name="Parameter",
+    value_name="Value",
+)
 
+plt.close()
+g = sns.relplot(
+    data=params_at_N_melted_df,
+    kind="line",
+    x="Num. Parameters",
+    y="Value",
+    col="Parameter",
+    hue="Parameter",
+    facet_kws={"sharey": False},
+    legend=False,
+    palette="tab10",
+    linewidth=3,
+)
+g.set(
+    xscale="log",
+)
+g.set_titles(col_template="")
+titles = [r"$a_{min}$", r"$a_{max}$", r"$p_{50}$", r"$h$"]
+yscales = ["linear", "linear", "log", "log"]
+ylims_list = [
+    (40, 105),
+    (40, 105),
+    (params_at_N_dict["p50"].min() / 1.1, None),
+    (params_at_N_dict["h"].min() / 1.1, None),
+]
+for ax, title, ylim, yscale in zip(g.axes[0], titles, ylims_list, yscales):
+    ax.set_ylabel(title)
+    ax.set_ylim(ylim)
+    if yscale is not None:
+        ax.set_yscale(yscale)
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir, plot_filename="y=fits_x=model_params_col=fit_params"
+)
+# plt.show()
 
-# --- overlay the fitted family on each facet (NO 'col' param here) ---
 plt.close()
 g = sns.relplot(
     data=melted_all_df,
@@ -449,19 +520,13 @@ g = sns.relplot(
     x="Proportion Benchmark Tokens",
     y="Average Accuracy (7 Benchmarks)",
     col="Parameters",
-    hue="Num. Parameters",
-    hue_norm=matplotlib.colors.LogNorm(),
-    palette="viridis",
+    hue="Parameters",
+    palette=cool_colors,
     marker="o",
     legend=False,
+    s=125,
 )
-
 # Draw fitted curves on the matching facet.
-cmap = matplotlib.cm.get_cmap("viridis")
-norm = matplotlib.colors.LogNorm(
-    vmin=melted_all_df["Num. Parameters"].min(),
-    vmax=melted_all_df["Num. Parameters"].max(),
-)
 for col_val, ax in zip(g.col_names, g.axes.flat):
     sub_fit = fit_df[fit_df["Parameters"] == col_val]
     if not sub_fit.empty:
@@ -469,20 +534,15 @@ for col_val, ax in zip(g.col_names, g.axes.flat):
             data=sub_fit,
             x="Proportion Benchmark Tokens",
             y="Average Accuracy (7 Benchmarks) (fit)",
-            hue="Num. Parameters",
-            hue_order=[124e6, 350e6, 774e6, 1.6e9],
-            hue_norm=norm,
-            palette=cmap,
+            hue="Parameters",
+            hue_order=["124M", "350M", "774M", "1.6B"],
+            palette=cool_colors,
             errorbar=None,
-            linewidth=2,
+            linewidth=3,
             linestyle="--",
             legend=False,
             ax=ax,
         )
-
-# # optional cosmetics
-# for ax in g.axes.flat:
-#     ax.set_ylim(0, 100)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=accuracy_x=proportion_benchmark_tokens_hue=params_col=params_overlay=fits",
@@ -491,22 +551,22 @@ src.plot.save_plot_with_multiple_extensions(
 
 
 plt.close()
-colors = [matplotlib.cm.viridis(i) for i in np.linspace(0, 1, 4)]
 plt.figure(figsize=default_figsize)
 g = sns.scatterplot(
     data=melted_all_df,
     x="Proportion Benchmark Tokens",
     y="Average Accuracy (7 Benchmarks)",
     hue="Parameters",
-    palette=colors,  # Pass the generated list of colors
+    palette=cool_colors,  # Pass the generated list of colors
     marker="o",
+    s=100,
 )
 g = sns.lineplot(
     data=fit_df,
     x="Proportion Benchmark Tokens",
     y="Average Accuracy (7 Benchmarks) (fit)",
     hue="Parameters",
-    palette=colors,  # Pass the same list here
+    palette=cool_colors,  # Pass the same list here
     linestyle="--",
     legend=False,
 )

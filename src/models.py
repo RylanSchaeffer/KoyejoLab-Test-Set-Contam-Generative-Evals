@@ -67,7 +67,7 @@ def create_causalm_for_pretraining(
 
     model = AutoModelForCausalLM.from_config(
         model_config,
-        dtype=torch_dtype,
+        # dtype=torch_dtype,
         attn_implementation=model_config_dict.get("attn_implementation", "eager"),
     )
 
