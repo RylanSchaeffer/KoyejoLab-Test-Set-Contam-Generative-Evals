@@ -330,11 +330,11 @@ melted_all_df = pd.concat(
     [melted_fig1a_df, melted_fig1b_df, melted_fig1c_df]
 ).reset_index(drop=True)
 
-melted_all_df["Num. Total Benchmark Tokens"] = melted_all_df["Num. Replicas"].map(
+melted_all_df["Num. Benchmark Tokens"] = melted_all_df["Num. Replicas"].map(
     num_total_benchmark_tokens_per_num_replicas
 )
-melted_all_df["Proportion Benchmark Tokens"] = (
-    melted_all_df["Num. Total Benchmark Tokens"] / melted_all_df["Num. Tokens"]
+melted_all_df["Percentage Benchmark Tokens (\%)"] = (
+    100 * melted_all_df["Num. Benchmark Tokens"] / melted_all_df["Num. Tokens"]
 )
 
 plt.close()
@@ -342,7 +342,7 @@ plt.figure(figsize=default_figsize)
 g = sns.relplot(
     data=melted_all_df,
     kind="line",
-    x="Proportion Benchmark Tokens",
+    x="Percentage Benchmark Tokens (\%)",
     y="Average Accuracy (7 Benchmarks)",
     col="Parameters",
     hue="Num. Parameters",
@@ -371,12 +371,13 @@ def _sigmoid(x):
 
 def hill4_family_hN(p, logN, theta, logN_ref):
     # theta = [a0,a1,b0,b1,c0,gamma,h0,h1]
-    a0, a1, b0, b1, c0, gamma, h0, h1 = theta
+    a0, a1, b0, b1, c0, c1, h0, h1 = theta
     amin = 100.0 * _sigmoid(a0 + a1 * logN)
     frac = _sigmoid(b0 + b1 * logN)
     amax = amin + (100.0 - amin) * frac
-    p50 = np.exp(c0 - gamma * logN)
-    h = np.exp(h0 + h1 * (logN - logN_ref))  # <-- h varies with N
+    p50 = np.exp(c0 + c1 * logN)
+    # h = np.exp(h0 + h1 * (logN - logN_ref))  # <-- h varies with N
+    h = np.exp(h0 + h1 * logN)  # <-- h varies with N
     z = (p**h) / (p**h + p50**h)
     return amin + (amax - amin) * z
 
@@ -384,12 +385,12 @@ def hill4_family_hN(p, logN, theta, logN_ref):
 def fit_hill4_family_varying_h(df):
     df = df.dropna(
         subset=[
-            "Proportion Benchmark Tokens",
+            "Percentage Benchmark Tokens (\%)",
             "Average Accuracy (7 Benchmarks)",
             "Num. Parameters",
         ]
     ).copy()
-    p = df["Proportion Benchmark Tokens"].to_numpy(float)
+    p = df["Percentage Benchmark Tokens (\%)"].to_numpy(float)
     y_obs = df["Average Accuracy (7 Benchmarks)"].to_numpy(float)
     logN = np.log(df["Num. Parameters"].to_numpy(float))
     logN_ref = np.mean(logN)  # center for stability
@@ -402,13 +403,12 @@ def fit_hill4_family_varying_h(df):
     b0, b1 = np.log(0.9 / 0.1), 0.0
     ppos = p[p > 0]
     c0 = np.log(np.median(ppos)) if ppos.size else -8.0
-    gamma = 0.4
-
+    c1 = -0.4
     # let small models have smaller h (more bend-up): start with h0≈ln(0.8), h1>0
     h0 = np.log(0.8)
     h1 = 0.15 / (logN.max() - logN.min() + 1e-9)  # small slope
 
-    theta0 = np.array([a0, a1, b0, b1, c0, gamma, h0, h1], dtype=float)
+    theta0 = np.array([a0, a1, b0, b1, c0, c1, h0, h1], dtype=float)
 
     def residuals(theta):
         return hill4_family_hN(p, logN, theta, logN_ref) - y_obs
@@ -426,13 +426,15 @@ curves = []
 for N in np.sort(melted_all_df["Num. Parameters"].unique()):
     sub = melted_all_df[melted_all_df["Num. Parameters"] == N]
     p_grid = np.linspace(
-        0.0, max(1.05 * melted_all_df["Proportion Benchmark Tokens"].max(), 1e-6), 200
+        0.0,
+        max(1.05 * melted_all_df["Percentage Benchmark Tokens (\%)"].max(), 1e-6),
+        200,
     )
     y_hat = hill4_family_hN(p_grid, np.log(N) * np.ones_like(p_grid), theta, logN_ref)
     curves.append(
         pd.DataFrame(
             {
-                "Proportion Benchmark Tokens": p_grid,
+                "Percentage Benchmark Tokens (\%)": p_grid,
                 "Average Accuracy (7 Benchmarks) (fit)": y_hat,
                 "Num. Parameters": N,
                 "Parameters": sub["Parameters"].iloc[0],
@@ -451,20 +453,21 @@ def summarize_params_at_N(N, theta, logN_ref):
     N = np.asarray(N, dtype=float)
     logN = np.log(N)
 
-    a0, a1, b0, b1, c0, gamma, h0, h1 = theta
+    a0, a1, b0, b1, c0, c1, h0, h1 = theta
 
     amin = 100.0 * _sigmoid(a0 + a1 * logN)
     frac = _sigmoid(b0 + b1 * logN)  # fraction of (100 - amin) used
     amax = amin + (100.0 - amin) * frac
-    p50 = np.exp(c0 - gamma * logN)  # EC50 / half-saturation
+    p50 = np.exp(c0 + c1 * logN)  # EC50 / half-saturation
     h = np.exp(h0 + h1 * (logN - logN_ref))  # curvature varies with N
     return dict(amin=amin, amax=amax, p50=p50, h=h)
 
 
 # Example: see parameters for each model size present in your data
 Ns_list = np.logspace(
-    np.log10(melted_all_df["Num. Parameters"].min()) / 11.0,
-    np.log10(melted_all_df["Num. Parameters"].max()) * 11.0,
+    np.log10(melted_all_df["Num. Parameters"].min()),
+    np.log10(melted_all_df["Num. Parameters"].max()),
+    num=5000,
 )
 params_at_N_dict: Dict[str, List[float]] = summarize_params_at_N(
     N=Ns_list, theta=theta, logN_ref=logN_ref
@@ -479,24 +482,25 @@ params_at_N_melted_df = params_at_N_df.melt(
 )
 
 plt.close()
+a0, a1, b0, b1, c0, c1, h0, h1 = theta
 g = sns.relplot(
     data=params_at_N_melted_df,
-    kind="line",
+    kind="scatter",
     x="Num. Parameters",
     y="Value",
     col="Parameter",
-    hue="Parameter",
+    hue="Num. Parameters",
+    hue_norm=matplotlib.colors.LogNorm(),
     facet_kws={"sharey": False},
     legend=False,
-    palette="tab10",
-    linewidth=3,
-)
-g.set(
-    xscale="log",
+    palette="cool",
+    s=2,
+    edgecolor=None,
 )
 g.set_titles(col_template="")
-titles = [r"$a_{min}$", r"$a_{max}$", r"$p_{50}$", r"$h$"]
+titles = [r"$\hat{a}_{min}$", r"$\hat{a}_{max}$", r"$\hat{p}_{50}$", r"$\hat{h}$"]
 yscales = ["linear", "linear", "log", "log"]
+# equations = [None, None, rf"$\log p_{{50}} = {c0} $"]
 ylims_list = [
     (40, 105),
     (40, 105),
@@ -505,19 +509,22 @@ ylims_list = [
 ]
 for ax, title, ylim, yscale in zip(g.axes[0], titles, ylims_list, yscales):
     ax.set_ylabel(title)
+    ax.set_xscale("log")
     ax.set_ylim(ylim)
     if yscale is not None:
         ax.set_yscale(yscale)
 src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir, plot_filename="y=fits_x=model_params_col=fit_params"
+    plot_dir=results_dir,
+    plot_filename="y=fits_x=model_params_col=fit_params",
+    use_tight_layout=True,
 )
-# plt.show()
+plt.show()
 
 plt.close()
 g = sns.relplot(
     data=melted_all_df,
     kind="scatter",
-    x="Proportion Benchmark Tokens",
+    x="Percentage Benchmark Tokens (\%)",
     y="Average Accuracy (7 Benchmarks)",
     col="Parameters",
     hue="Parameters",
@@ -532,7 +539,7 @@ for col_val, ax in zip(g.col_names, g.axes.flat):
     if not sub_fit.empty:
         sns.lineplot(
             data=sub_fit,
-            x="Proportion Benchmark Tokens",
+            x="Percentage Benchmark Tokens (\%)",
             y="Average Accuracy (7 Benchmarks) (fit)",
             hue="Parameters",
             hue_order=["124M", "350M", "774M", "1.6B"],
@@ -547,14 +554,14 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=accuracy_x=proportion_benchmark_tokens_hue=params_col=params_overlay=fits",
 )
-# plt.show()
+plt.show()
 
 
 plt.close()
 plt.figure(figsize=default_figsize)
 g = sns.scatterplot(
     data=melted_all_df,
-    x="Proportion Benchmark Tokens",
+    x="Percentage Benchmark Tokens (\%)",
     y="Average Accuracy (7 Benchmarks)",
     hue="Parameters",
     palette=cool_colors,  # Pass the generated list of colors
@@ -563,7 +570,7 @@ g = sns.scatterplot(
 )
 g = sns.lineplot(
     data=fit_df,
-    x="Proportion Benchmark Tokens",
+    x="Percentage Benchmark Tokens (\%)",
     y="Average Accuracy (7 Benchmarks) (fit)",
     hue="Parameters",
     palette=cool_colors,  # Pass the same list here

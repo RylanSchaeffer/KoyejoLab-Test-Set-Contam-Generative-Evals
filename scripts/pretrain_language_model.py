@@ -199,7 +199,11 @@ def pretrain():
     train_dataset = prepare_dataset_for_model(train_dataset)
     eval_dataset = prepare_dataset_for_model(eval_dataset)
 
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer,
+        mlm=False,
+        pad_to_multiple_of=8,  # sweet spot for A100 + BF16
+    )
 
     # batch = data_collator([train_dataset[i] for i in range(3)])
     # ids, labels = batch["input_ids"], batch["labels"]
