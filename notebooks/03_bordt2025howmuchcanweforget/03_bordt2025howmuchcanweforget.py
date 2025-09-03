@@ -83,6 +83,9 @@ fig1a_df = pd.DataFrame(
     }
 )
 fig1a_df["Num. Tokens"] = 7e9
+fig1a_df[r"$\times$ Chinchilla Tokens"] = np.round(
+    fig1a_df["Num. Tokens"] / fig1a_df["Num. Parameters"] / 20.0, decimals=2
+)
 cmap = matplotlib.cm.get_cmap("viridis")
 viridis_colors = [matplotlib.cm.viridis(i) for i in np.linspace(0, 1.0, 5)]
 # mako_cmap = matplotlib.cm.get_cmap("mako")
@@ -99,7 +102,12 @@ norm = matplotlib.colors.LogNorm(
 )
 
 melted_fig1a_df = fig1a_df.melt(
-    id_vars=["Num. Parameters", "Parameters", "Num. Tokens"],
+    id_vars=[
+        "Num. Parameters",
+        "Parameters",
+        "Num. Tokens",
+        r"$\times$ Chinchilla Tokens",
+    ],
     var_name="Num. Replicas",
     value_name="Average Accuracy (7 Benchmarks)",
 )
@@ -259,10 +267,17 @@ fig1c_df = pd.DataFrame(
         "144x": [96.45, 95.50, 96.05, 95.40],
     }
 )
-fig1c_df["Num. Tokens"] = 20 * fig1c_df["Num. Parameters"]
-
+fig1c_df["Num. Tokens"] = 20.0 * fig1c_df["Num. Parameters"]
+fig1c_df[r"$\times$ Chinchilla Tokens"] = np.round(
+    fig1c_df["Num. Tokens"] / fig1c_df["Num. Parameters"] / 20.0, decimals=2
+)
 melted_fig1c_df = fig1c_df.melt(
-    id_vars=["Num. Parameters", "Parameters", "Num. Tokens"],
+    id_vars=[
+        "Num. Parameters",
+        "Parameters",
+        "Num. Tokens",
+        r"$\times$ Chinchilla Tokens",
+    ],
     var_name="Num. Replicas",
     value_name="Average Accuracy (7 Benchmarks)",
 )
@@ -333,8 +348,8 @@ melted_all_df = pd.concat(
 melted_all_df["Num. Benchmark Tokens"] = melted_all_df["Num. Replicas"].map(
     num_total_benchmark_tokens_per_num_replicas
 )
-melted_all_df["Percentage Benchmark Tokens (\%)"] = (
-    100 * melted_all_df["Num. Benchmark Tokens"] / melted_all_df["Num. Tokens"]
+melted_all_df["Benchmark Tokens / Pretraining Tokens"] = (
+    melted_all_df["Num. Benchmark Tokens"] / melted_all_df["Num. Tokens"]
 )
 
 plt.close()
@@ -342,7 +357,7 @@ plt.figure(figsize=default_figsize)
 g = sns.relplot(
     data=melted_all_df,
     kind="line",
-    x="Percentage Benchmark Tokens (\%)",
+    x="Benchmark Tokens / Pretraining Tokens",
     y="Average Accuracy (7 Benchmarks)",
     col="Parameters",
     hue="Num. Parameters",
@@ -350,6 +365,9 @@ g = sns.relplot(
     palette="cool",
     marker="o",
     legend=False,
+)
+g.set(
+    xlabel=r"$\frac{\text{Benchmark Tokens}}{\text{Pretraining Tokens}}$",
 )
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
@@ -385,12 +403,12 @@ def hill4_family_hN(p, logN, theta, logN_ref):
 def fit_hill4_family_varying_h(df):
     df = df.dropna(
         subset=[
-            "Percentage Benchmark Tokens (\%)",
+            "Benchmark Tokens / Pretraining Tokens",
             "Average Accuracy (7 Benchmarks)",
             "Num. Parameters",
         ]
     ).copy()
-    p = df["Percentage Benchmark Tokens (\%)"].to_numpy(float)
+    p = df["Benchmark Tokens / Pretraining Tokens"].to_numpy(float)
     y_obs = df["Average Accuracy (7 Benchmarks)"].to_numpy(float)
     logN = np.log(df["Num. Parameters"].to_numpy(float))
     logN_ref = np.mean(logN)  # center for stability
@@ -427,14 +445,17 @@ for N in np.sort(melted_all_df["Num. Parameters"].unique()):
     sub = melted_all_df[melted_all_df["Num. Parameters"] == N]
     p_grid = np.linspace(
         0.0,
-        max(1.05 * melted_all_df["Percentage Benchmark Tokens (\%)"].max(), 1e-6),
+        max(
+            1.05 * melted_all_df["Benchmark Tokens / Pretraining Tokens"].max(),
+            1e-6,
+        ),
         200,
     )
     y_hat = hill4_family_hN(p_grid, np.log(N) * np.ones_like(p_grid), theta, logN_ref)
     curves.append(
         pd.DataFrame(
             {
-                "Percentage Benchmark Tokens (\%)": p_grid,
+                "Benchmark Tokens / Pretraining Tokens": p_grid,
                 "Average Accuracy (7 Benchmarks) (fit)": y_hat,
                 "Num. Parameters": N,
                 "Parameters": sub["Parameters"].iloc[0],
@@ -493,8 +514,8 @@ g = sns.relplot(
     hue_norm=matplotlib.colors.LogNorm(),
     facet_kws={"sharey": False},
     legend=False,
-    palette="cool",
-    s=2,
+    palette="inferno",
+    s=3,
     edgecolor=None,
 )
 g.set_titles(col_template="")
@@ -524,11 +545,11 @@ plt.close()
 g = sns.relplot(
     data=melted_all_df,
     kind="scatter",
-    x="Percentage Benchmark Tokens (\%)",
+    x="Benchmark Tokens / Pretraining Tokens",
     y="Average Accuracy (7 Benchmarks)",
     col="Parameters",
     hue="Parameters",
-    palette=cool_colors,
+    palette="inferno",
     marker="o",
     legend=False,
     s=125,
@@ -539,17 +560,20 @@ for col_val, ax in zip(g.col_names, g.axes.flat):
     if not sub_fit.empty:
         sns.lineplot(
             data=sub_fit,
-            x="Percentage Benchmark Tokens (\%)",
+            x="Benchmark Tokens / Pretraining Tokens",
             y="Average Accuracy (7 Benchmarks) (fit)",
             hue="Parameters",
             hue_order=["124M", "350M", "774M", "1.6B"],
-            palette=cool_colors,
+            palette="inferno",
             errorbar=None,
             linewidth=3,
             linestyle="--",
             legend=False,
             ax=ax,
         )
+g.set(
+    xlabel=r"$\frac{\text{Benchmark Tokens}}{\text{Pretraining Tokens}}$",
+)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=accuracy_x=proportion_benchmark_tokens_hue=params_col=params_overlay=fits",
@@ -558,29 +582,76 @@ plt.show()
 
 
 plt.close()
+g = sns.relplot(
+    data=melted_all_df,
+    kind="scatter",
+    x="Benchmark Tokens / Pretraining Tokens",
+    y="Average Accuracy (7 Benchmarks)",
+    col="Parameters",
+    col_wrap=2,
+    hue="Parameters",
+    palette="inferno",
+    marker="o",
+    legend=False,
+    s=125,
+)
+# Draw fitted curves on the matching facet.
+for col_val, ax in zip(g.col_names, g.axes):
+    sub_fit = fit_df[fit_df["Parameters"] == col_val]
+    if not sub_fit.empty:
+        sns.lineplot(
+            data=sub_fit,
+            x="Benchmark Tokens / Pretraining Tokens",
+            y="Average Accuracy (7 Benchmarks) (fit)",
+            hue="Parameters",
+            hue_order=["124M", "350M", "774M", "1.6B"],
+            palette="inferno",
+            errorbar=None,
+            linewidth=3,
+            linestyle="--",
+            legend=False,
+            ax=ax,
+        )
+g.set(
+    xlabel=r"$\frac{\text{Benchmark Tokens}}{\text{Pretraining Tokens}}$",
+)
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=accuracy_x=proportion_benchmark_tokens_hue=params_col=params_overlay=fits_4x4",
+)
+# plt.show()
+
+
+plt.close()
 plt.figure(figsize=default_figsize)
 g = sns.scatterplot(
     data=melted_all_df,
-    x="Percentage Benchmark Tokens (\%)",
+    x="Benchmark Tokens / Pretraining Tokens",
     y="Average Accuracy (7 Benchmarks)",
     hue="Parameters",
-    palette=cool_colors,  # Pass the generated list of colors
-    marker="o",
+    palette="inferno_r",
     s=100,
 )
 g = sns.lineplot(
     data=fit_df,
-    x="Percentage Benchmark Tokens (\%)",
+    x="Benchmark Tokens / Pretraining Tokens",
     y="Average Accuracy (7 Benchmarks) (fit)",
     hue="Parameters",
-    palette=cool_colors,  # Pass the same list here
+    # palette=cool_colors,  # Pass the same list here
+    palette="inferno_r",
     linestyle="--",
+    linewidth=3,
     legend=False,
 )
+g.set(
+    xlabel=r"$\frac{\text{Benchmark Tokens}}{\text{Pretraining Tokens}}$",
+)
+# sns.move_legend(g, "upper left", bbox_to_anchor=(1.05, 1.05))
 src.plot.format_g_legend_in_scientific_notation(g=g, num_decimal_digits=2)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=accuracy_x=proportion_benchmark_tokens_hue=params_fit",
 )
-plt.show()
+# plt.show()
+
 print("Finished 03_bordt2025howmuchcanweforget.py")
