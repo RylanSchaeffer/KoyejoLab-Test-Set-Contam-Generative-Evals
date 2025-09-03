@@ -539,7 +539,7 @@ src.plot.save_plot_with_multiple_extensions(
     plot_filename="y=fits_x=model_params_col=fit_params",
     use_tight_layout=True,
 )
-plt.show()
+# plt.show()
 
 plt.close()
 g = sns.relplot(
@@ -549,10 +549,12 @@ g = sns.relplot(
     y="Average Accuracy (7 Benchmarks)",
     col="Parameters",
     hue="Parameters",
+    hue_order=["124M", "350M", "774M", "1.6B"],
     palette="inferno",
     marker="o",
     legend=False,
     s=125,
+    zorder=2,
 )
 # Draw fitted curves on the matching facet.
 for col_val, ax in zip(g.col_names, g.axes.flat):
@@ -570,15 +572,19 @@ for col_val, ax in zip(g.col_names, g.axes.flat):
             linestyle="--",
             legend=False,
             ax=ax,
+            zorder=1,
         )
 g.set(
     xlabel=r"$\frac{\text{Benchmark Tokens}}{\text{Pretraining Tokens}}$",
 )
+for ax in g.axes.flat:
+    ax.set_xscale("symlog", linthresh=5e-5)
+    ax.set_xlim(-1e-5, None)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=accuracy_x=proportion_benchmark_tokens_hue=params_col=params_overlay=fits",
 )
-plt.show()
+# plt.show()
 
 
 plt.close()
@@ -594,6 +600,7 @@ g = sns.relplot(
     marker="o",
     legend=False,
     s=125,
+    zorder=2,
 )
 # Draw fitted curves on the matching facet.
 for col_val, ax in zip(g.col_names, g.axes):
@@ -611,27 +618,22 @@ for col_val, ax in zip(g.col_names, g.axes):
             linestyle="--",
             legend=False,
             ax=ax,
+            zorder=1,
         )
 g.set(
     xlabel=r"$\frac{\text{Benchmark Tokens}}{\text{Pretraining Tokens}}$",
 )
+for ax in g.axes.flat:
+    ax.set_xscale("symlog", linthresh=5e-5)
+    ax.set_xlim(-1e-5, None)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=accuracy_x=proportion_benchmark_tokens_hue=params_col=params_overlay=fits_4x4",
+    plot_filename="y=accuracy_x=proportion_benchmark_tokens_hue=params_col=params_overlay=fits_2x2",
 )
 # plt.show()
 
-
 plt.close()
 plt.figure(figsize=default_figsize)
-g = sns.scatterplot(
-    data=melted_all_df,
-    x="Benchmark Tokens / Pretraining Tokens",
-    y="Average Accuracy (7 Benchmarks)",
-    hue="Parameters",
-    palette="inferno_r",
-    s=100,
-)
 g = sns.lineplot(
     data=fit_df,
     x="Benchmark Tokens / Pretraining Tokens",
@@ -642,9 +644,21 @@ g = sns.lineplot(
     linestyle="--",
     linewidth=3,
     legend=False,
+    zorder=1,
 )
+g = sns.scatterplot(
+    data=melted_all_df,
+    x="Benchmark Tokens / Pretraining Tokens",
+    y="Average Accuracy (7 Benchmarks)",
+    hue="Parameters",
+    palette="inferno_r",
+    s=100,
+    zorder=2,
+)
+g.set_xscale("symlog", linthresh=5e-5)  # adjust 1e-5 as needed
 g.set(
     xlabel=r"$\frac{\text{Benchmark Tokens}}{\text{Pretraining Tokens}}$",
+    ylabel="Average Accuracy (7 Benchmarks)",
 )
 # sns.move_legend(g, "upper left", bbox_to_anchor=(1.05, 1.05))
 src.plot.format_g_legend_in_scientific_notation(g=g, num_decimal_digits=2)
@@ -653,5 +667,6 @@ src.plot.save_plot_with_multiple_extensions(
     plot_filename="y=accuracy_x=proportion_benchmark_tokens_hue=params_fit",
 )
 # plt.show()
+
 
 print("Finished 03_bordt2025howmuchcanweforget.py")
