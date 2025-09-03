@@ -166,8 +166,13 @@ def create_dataset_for_pretraining(
         )
         corpus_dataset_subset.save_to_disk(cache_dir)
 
-    if _world_size() > 1:
-        dist.barrier()  # wait for rank 0
+    if (
+        _world_size() > 1
+        and torch.distributed.is_available()
+        and torch.distributed.is_initialized()
+    ):
+        torch.distributed.barrier()  # non-zero ranks wait for rank 0 to finish
+
     corpus_dataset_subset = load_from_disk(cache_dir)
 
     num_tokens_in_corpus_dataset_subset = np.sum(corpus_dataset_subset["token_length"])

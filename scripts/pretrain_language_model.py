@@ -22,6 +22,7 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 # try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
+import datetime
 import logging
 import gc
 import math
@@ -61,7 +62,11 @@ def pretrain():
     assert _world_size() > 0, "No CUDA devices available."
 
     if _world_size() > 1 and not torch.distributed.is_initialized():
-        torch.distributed.init_process_group(backend="nccl")
+        # We need to increase the timeout for tokenizing the dataset.
+        # 10 minutes is default. 60 minutes should be ample.
+        torch.distributed.init_process_group(
+            backend="nccl", timeout=datetime.timedelta(minutes=60)
+        )
 
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
     print(
