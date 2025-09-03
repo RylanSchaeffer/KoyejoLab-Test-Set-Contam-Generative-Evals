@@ -1,3 +1,5 @@
+import os
+
 from datasets import (
     concatenate_datasets,
     load_dataset,
@@ -8,6 +10,8 @@ from datasets import (
 from functools import partial
 import numpy as np
 from sklearn.model_selection import train_test_split
+import torch
+import torch.distributed as dist
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizer
 from typing import Any, Dict, List, Optional, Union
@@ -66,10 +70,11 @@ def create_dataset_for_pretraining(
     replicated_benchmark_test_split_num_tokens = np.sum(
         replicated_benchmark_test_split_dataset["token_length"]
     )
-    print(
-        f"Num. Replicas of Benchmark Test Split Per Epoch: {data_config['num_benchmark_replicas_per_epoch']}\n"
-        f"Replicated Benchmark Test Split has {replicated_benchmark_test_split_num_tokens:,} tokens."
-    )
+    if _is_main():
+        print(
+            f"Num. Replicas of Benchmark Test Split Per Epoch: {data_config['num_benchmark_replicas_per_epoch']}\n"
+            f"Replicated Benchmark Test Split has {replicated_benchmark_test_split_num_tokens:,} tokens."
+        )
 
     num_training_tokens_per_epoch = trainer_config["num_training_tokens_per_epoch"]
     target_num_training_tokens_total = trainer_config[
@@ -84,9 +89,10 @@ def create_dataset_for_pretraining(
     corpus_tokens_needed_per_epoch = int(
         num_training_tokens_per_epoch - replicated_benchmark_test_split_num_tokens
     )
-    print(
-        f"Tokens needed from corpus: {num_training_tokens_per_epoch} - {replicated_benchmark_test_split_num_tokens} = {corpus_tokens_needed_per_epoch:,}"
-    )
+    if _is_main():
+        print(
+            f"Tokens needed from corpus: {num_training_tokens_per_epoch} - {replicated_benchmark_test_split_num_tokens} = {corpus_tokens_needed_per_epoch:,}"
+        )
 
     # Load the training corpus.
     if data_config["corpus"] == "fineweb-edu-dedup":
@@ -118,13 +124,27 @@ def create_dataset_for_pretraining(
         example["token_length"] = len(tokenized_input["input_ids"])
         return example
 
-    # Estimate how many docs are needed.
+    # ===== A) Compute avg_tokens_per_doc ONLY on rank 0; broadcast =====
     sample_size_for_calculating_avg_tokens_per_sequence = 15000
-    corpus_sample = corpus_dataset.select(
-        range(sample_size_for_calculating_avg_tokens_per_sequence)
-    )
-    corpus_sample = corpus_sample.map(tokenize_truncate_and_count, num_proc=64)
-    avg_tokens_per_doc = np.mean(corpus_sample["token_length"])
+    if _is_main():
+        corpus_sample = corpus_dataset.select(
+            range(sample_size_for_calculating_avg_tokens_per_sequence)
+        )
+        # IMPORTANT: avoid per-rank CPU explosion; only rank 0 runs multi-proc map
+        # Keep num_proc modest; you can tune this
+        corpus_sample = corpus_sample.map(
+            tokenize_truncate_and_count, num_proc=min(32, os.cpu_count() or 32)
+        )
+        avg_tokens_per_doc = float(np.mean(corpus_sample["token_length"]))
+    else:
+        avg_tokens_per_doc = 0.0
+
+    # Broadcast the scalar so all ranks compute the same doc count
+    if _world_size() > 1 and dist.is_available() and dist.is_initialized():
+        obj = [avg_tokens_per_doc]
+        dist.broadcast_object_list(obj, src=0)
+        avg_tokens_per_doc = float(obj[0])
+
     # Round up a bit to ensure we have more than we want.
     estimated_docs_needed = int(
         1.1 * corpus_tokens_needed_per_epoch / avg_tokens_per_doc
@@ -134,9 +154,22 @@ def create_dataset_for_pretraining(
     corpus_dataset_subset = corpus_dataset.shuffle(
         seed=data_config["shuffle_seed"]
     ).select(range(estimated_docs_needed))
-    corpus_dataset_subset = corpus_dataset_subset.map(
-        tokenize_truncate_and_count, num_proc=64
+
+    # Tokenize the entire dataset and cache to disk for other processes to load.
+    cache_dir = os.path.join(
+        os.getenv("HF_DATASETS_CACHE"),
+        "corpus_subset_tokenized",
     )
+    if _is_main():
+        corpus_dataset_subset = corpus_dataset_subset.map(
+            tokenize_truncate_and_count, num_proc=64
+        )
+        corpus_dataset_subset.save_to_disk(cache_dir)
+
+    if _world_size() > 1:
+        dist.barrier()  # wait for rank 0
+    corpus_dataset_subset = load_from_disk(cache_dir)
+
     num_tokens_in_corpus_dataset_subset = np.sum(corpus_dataset_subset["token_length"])
     # Figure out how many documents to drop to meet our target number of tokens.
     num_documents_to_drop = 0
@@ -156,11 +189,12 @@ def create_dataset_for_pretraining(
     )
     final_train_dataset = final_train_dataset.shuffle(seed=data_config["shuffle_seed"])
     total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
-    print(
-        f"Final dataset created with {total_tokens_per_epoch:,} tokens.\n"
-        f"With {num_train_epochs:,} training epochs, total training tokens: {num_train_epochs * total_tokens_per_epoch:,}\n"
-        f"Target number of total training tokens: {target_num_training_tokens_total:,}\n"
-    )
+    if _is_main():
+        print(
+            f"Final dataset created with {total_tokens_per_epoch:,} tokens.\n"
+            f"With {num_train_epochs:,} training epochs, total training tokens: {num_train_epochs * total_tokens_per_epoch:,}\n"
+            f"Target number of total training tokens: {target_num_training_tokens_total:,}\n"
+        )
 
     datasets_dict = {
         "train": final_train_dataset,
@@ -305,3 +339,23 @@ def preprocess_madrylab_gsm8k_platinum_for_sft(
         new_examples["token_length"].append(len(tokenized_input["input_ids"]))
 
     return new_examples
+
+
+def _world_size() -> int:
+    return int(os.environ.get("WORLD_SIZE", torch.cuda.device_count()))
+
+
+def _rank() -> int:
+    return int(os.environ.get("RANK", "0"))
+
+
+def _local_rank() -> int:
+    return int(os.environ.get("LOCAL_RANK", "0"))
+
+
+def _is_main() -> bool:
+    return _rank() == 0
+
+
+def _is_sweep_run() -> bool:
+    return os.environ.get("WANDB_SWEEP_ID") is not None

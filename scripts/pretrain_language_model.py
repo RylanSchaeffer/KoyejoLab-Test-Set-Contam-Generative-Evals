@@ -32,6 +32,7 @@ import torch
 
 # Compiling seems to be causing problems down the line :/
 torch.compiler.disable()
+import torch.distributed
 import torch.nn
 from torch.utils.data import Dataset
 from transformers import (
@@ -55,8 +56,12 @@ logging.basicConfig(level=logging.INFO)
 
 
 def pretrain():
+    # Set the device for the current process
     torch.cuda.set_device(_local_rank())
     assert _world_size() > 0, "No CUDA devices available."
+
+    if _world_size() > 1 and not torch.distributed.is_initialized():
+        torch.distributed.init_process_group(backend="nccl")
 
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
     print(
@@ -64,11 +69,7 @@ def pretrain():
         f"CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES','')}"
     )
 
-    initialize_wandb()
-
-    # Convert to a dictionary; otherwise, can't distribute because W&B
-    # config is not pickle-able.
-    wandb_config: Dict[str, Any] = dict(wandb.config)
+    run, run_id, wandb_config = initialize_wandb()
     pprint.pprint(wandb_config)
 
     # Create output directory.
@@ -76,7 +77,8 @@ def pretrain():
         wandb_config=wandb_config,
     )
     output_dir = os.path.join("models", "pt_language_model", pted_model_hf_name)
-    wandb.config.update({"output_dir": output_dir})
+    if _is_main():
+        wandb.config.update({"output_dir": output_dir}, allow_val_change=True)
     print("Output Directory: ", output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -170,7 +172,7 @@ def pretrain():
             "per_device_train_batch_size"
         ],
         remove_unused_columns=wandb_config["trainer_config"]["remove_unused_columns"],
-        run_name=wandb.run.id,
+        run_name=run_id,
         report_to=wandb_config["trainer_config"]["report_to"],
         save_strategy=wandb_config["trainer_config"]["save_strategy"],
         save_total_limit=wandb_config["trainer_config"]["save_total_limit"],
@@ -188,12 +190,13 @@ def pretrain():
     )
     train_dataset = datasets_dict["train"]
     eval_dataset = datasets_dict["eval"]
-    wandb.config.data_config.update(
-        {
-            "train_dataset_num_tokens": np.sum(train_dataset["token_length"]),
-            "eval_dataset_num_tokens": np.sum(eval_dataset["token_length"]),
-        }
-    )
+    if _is_main():
+        wandb.config.data_config.update(
+            {
+                "train_dataset_num_tokens": np.sum(train_dataset["token_length"]),
+                "eval_dataset_num_tokens": np.sum(eval_dataset["token_length"]),
+            }
+        )
 
     # Apply the preparation to both the training and evaluation splits.
     train_dataset = prepare_dataset_for_model(train_dataset)
@@ -205,20 +208,6 @@ def pretrain():
         pad_to_multiple_of=8,  # sweet spot for A100 + BF16
     )
 
-    # batch = data_collator([train_dataset[i] for i in range(3)])
-    # ids, labels = batch["input_ids"], batch["labels"]
-    # for b in range(ids.size(0)):
-    #     last = (labels[b] != -100).nonzero(as_tuple=False)[-1].item()
-    #     print(
-    #         "last token id:",
-    #         ids[b, last].item(),
-    #         "is_eos?",
-    #         ids[b, last].item() == tokenizer.eos_token_id,
-    #         "label==eos?",
-    #         labels[b, last].item() == tokenizer.eos_token_id,
-    #     )
-    # # Expect: is_eos? True, label==eos? True
-
     trainer = Trainer(
         model=model,
         processing_class=tokenizer,
@@ -229,20 +218,25 @@ def pretrain():
     )
 
     # Evaluate before training.
-    logging.info("Evaluating before training...")
+    if _is_main():
+        logging.info("Evaluating before training...")
     eval_metrics_before = trainer.evaluate()
-    wandb.log({f"eval_before/{k}": v for k, v in eval_metrics_before.items()})
-    pprint.pprint(eval_metrics_before)
+    if _is_main():
+        wandb.log({f"eval_before/{k}": v for k, v in eval_metrics_before.items()})
+        pprint.pprint(eval_metrics_before)
 
     # Train.
-    logging.info("Beginning training...")
+    if _is_main():
+        logging.info("Beginning training...")
     trainer.train()
 
     # Evaluate after training.
-    logging.info("Finished training. Beginning final evaluation...")
+    if _is_main():
+        logging.info("Finished training. Beginning final evaluation...")
     eval_metrics_after = trainer.evaluate()
-    wandb.log({f"eval_after/{k}": v for k, v in eval_metrics_after.items()})
-    pprint.pprint(eval_metrics_after)
+    if _is_main():
+        wandb.log({f"eval_after/{k}": v for k, v in eval_metrics_after.items()})
+        pprint.pprint(eval_metrics_after)
 
     # Push to HF Hub.
     if _is_main():
@@ -319,7 +313,8 @@ def compute_derived_hyperparameters(
     )
 
     # Write to W&B.
-    wandb.config.trainer_config.update(additional_trainer_config_data)
+    if _is_main():
+        wandb.config.trainer_config.update(additional_trainer_config_data)
 
     # Add to our W&B config that controls everything.
     wandb_config["trainer_config"].update(additional_trainer_config_data)
@@ -408,21 +403,43 @@ def _is_sweep_run() -> bool:
 
 
 def initialize_wandb():
+    run = None
+    run_id = None
+    cfg_dict = None
+
     if _is_main():
         if _is_sweep_run():
-            # Agent sets project/entity/config; just init.
             run = wandb.init()
         else:
-            # Non-sweep runs: it's fine to set project/entity/config from your defaults.
             run = wandb.init(
                 project="memorization-scoring-vs-sampling-pt",
                 entity="rylan",
                 config=src.globals.DEFAULT_PRETRAINING_CONFIG,
             )
+        run_id = run.id
+        # get a plain dict so it's pickle/broadcast friendly
+        cfg_dict = dict(wandb.config)
     else:
-        # Avoid any config touching in non-zero ranks
-        run = wandb.init(mode="disabled")
-    return run
+        # Do not initialize wandb at all on non-zero ranks
+        # (safer than disabled mode because it prevents accidental reads)
+        pass
+
+    # Make sure the process group is up before broadcast.
+    if _world_size() > 1 and not torch.distributed.is_initialized():
+        torch.distributed.init_process_group(backend="nccl")
+
+    # Broadcast run_id and cfg_dict from rank 0
+    if _world_size() > 1:
+        obj_list = [run_id, cfg_dict]
+        torch.distributed.broadcast_object_list(obj_list, src=0)
+        run_id, cfg_dict = obj_list
+
+    # Use a consistent per-run HF datasets cache across all ranks
+    os.environ[
+        "HF_DATASETS_CACHE"
+    ] = f"{os.getenv('LFS_HOME')}/KoyejoLab-Scoring-vs-Sampling-Memorization/{run_id}"
+
+    return run, run_id, cfg_dict
 
 
 if __name__ == "__main__":

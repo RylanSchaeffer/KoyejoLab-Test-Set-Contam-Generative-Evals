@@ -35,7 +35,7 @@ parameters:
       dataloader_drop_last:
         values: [ True ]
       dataloader_num_workers:
-        values: [ 32 ]
+        values: [ 4 ]
       dataloader_prefetch_factor:
         values: [ 4 ]
       eval_on_start:
@@ -79,7 +79,7 @@ parameters:
       save_total_limit:
         values: [ 1 ]
       torch_compile:
-        values: [ True ]
+        values: [ False ]
       warmup_steps:
         values: [ 250 ]
       weight_decay:
