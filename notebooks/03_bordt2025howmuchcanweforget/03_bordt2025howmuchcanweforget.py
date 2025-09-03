@@ -445,10 +445,7 @@ for N in np.sort(melted_all_df["Num. Parameters"].unique()):
     sub = melted_all_df[melted_all_df["Num. Parameters"] == N]
     p_grid = np.linspace(
         0.0,
-        max(
-            1.05 * melted_all_df["Benchmark Tokens / Pretraining Tokens"].max(),
-            1e-6,
-        ),
+        1e-2,
         200,
     )
     y_hat = hill4_family_hN(p_grid, np.log(N) * np.ones_like(p_grid), theta, logN_ref)
