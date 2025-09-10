@@ -1,3 +1,10 @@
+command:
+  - ${env}
+  - torchrun
+  - --standalone
+  - --nproc_per_node=1
+  - ${program}
+  - ${args}
 program: scripts/pretrain_language_model.py
 entity: rylan
 project: memorization-scoring-vs-sampling-pt
@@ -9,12 +16,14 @@ parameters:
         values: ["fineweb-edu-dedup"]
       benchmark:
         values: [ "EleutherAI/minerva_math" ]
+      benchmark_subset_fraction:
+        values: [ 1.0 ]
+      benchmark_shuffle_seed:
+        values: [ 0 ]
       num_benchmark_replicas_per_epoch:
         values: [0, 316, 1, 100, 10, 32, 1000, 3]
       shuffle_seed:
         values: [0]
-      benchmark_subset_fraction:
-        values: [ 1.0 ]
   model_config:
     parameters:
       attn_implementation:

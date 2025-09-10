@@ -39,7 +39,8 @@ from torch.utils.data import Dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    DataCollatorForLanguageModeling,
+    DataCollatorWithFlattening,
+    # DataCollatorForLanguageModeling,
     PreTrainedModel,
     Trainer,
     TrainingArguments,
@@ -205,10 +206,15 @@ def pretrain():
     train_dataset = prepare_dataset_for_model(train_dataset)
     eval_dataset = prepare_dataset_for_model(eval_dataset)
 
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=False,
-        pad_to_multiple_of=8,  # sweet spot for A100 + BF16
+    # data_collator = DataCollatorForLanguageModeling(
+    #     tokenizer=tokenizer,
+    #     mlm=False,
+    #     pad_to_multiple_of=8,  # sweet spot for A100 + BF16
+    # )
+
+    data_collator = DataCollatorWithFlattening(
+        return_position_ids=True,  # default True; explicit for clarity
+        separator_id=-100,  # ensures no cross-example predictions
     )
 
     trainer = Trainer(

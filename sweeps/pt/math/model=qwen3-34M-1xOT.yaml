@@ -1,3 +1,10 @@
+command:
+  - ${env}
+  - torchrun
+  - --standalone
+  - --nproc_per_node=1
+  - ${program}
+  - ${args}
 program: scripts/pretrain_language_model.py
 entity: rylan
 project: memorization-scoring-vs-sampling-pt
@@ -9,12 +16,14 @@ parameters:
         values: ["fineweb-edu-dedup"]
       benchmark:
         values: [ "EleutherAI/minerva_math" ]
+      benchmark_shuffle_seed:
+        values: [ 0 ]
+      benchmark_subset_fraction:
+        values: [ 1.0 ]
       num_benchmark_replicas_per_epoch:
         values: [1000, 316, 100, 0, 1, 10, 32, 3]
       shuffle_seed:
         values: [0]
-      benchmark_subset_fraction:
-        values: [ 1.0 ]
   model_config:
     parameters:
       attn_implementation:
@@ -40,7 +49,7 @@ parameters:
       eval_steps:
         values: [ 500 ]
       gradient_checkpointing:
-        values: [ True ]
+        values: [ False ]
       hub_strategy:
         values: ["end"]
       base_learning_rate:
@@ -60,11 +69,11 @@ parameters:
       optim:
         values: [ "adamw_torch_fused" ]
       overtrain_multiplier:
-        values: [ 1 ]
+        values: [ 1.0 ]
       per_device_eval_batch_size:
-        values: [ 16 ]
+        values: [ 30 ]
       per_device_train_batch_size:
-        values: [ 16 ]
+        values: [ 28 ]
       remove_unused_columns:
         values: [ True ]
       report_to:
@@ -74,7 +83,7 @@ parameters:
       save_total_limit:
         values: [ 1 ]
       torch_compile:
-        values: [ False ]
+        values: [ True ]
       warmup_steps:
         values: [ 250 ]
       weight_decay:
