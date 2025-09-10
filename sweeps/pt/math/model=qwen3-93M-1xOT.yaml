@@ -17,6 +17,8 @@ parameters:
         values: [ 1.0 ]
   model_config:
     parameters:
+      attn_implementation:
+        values: [ "flash_attention_2" ]
       model_name:
         values: [ "Qwen3/Qwen3-93M" ]
       torch_dtype:
