@@ -43,8 +43,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 def eval_language_model():
-    num_visible_devices = torch.cuda.device_count()
-    # assert num_visible_devices > 0, "No CUDA devices available."
+    assert torch.cuda.device_count() > 0, "No CUDA devices available."
     run = wandb.init(
         project="memorization-scoring-vs-sampling-eval",
         config=src.globals.DEFAULT_EVALUATION_CONFIG,
@@ -57,12 +56,11 @@ def eval_language_model():
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
     pprint.pprint(wandb_config)
 
-    scores_to_log = dict()
-    custom_scores_to_log = run_lm_eval_custom(wandb_config=wandb_config)
-    scores_to_log.update(custom_scores_to_log)
-    vllm_scores_to_log = run_lm_eval_vllm(wandb_config=wandb_config)
-    scores_to_log.update(vllm_scores_to_log)
-    wandb.log(scores_to_log)
+    run_lm_eval_custom(wandb_config=wandb_config)
+    # scores_to_log.update(custom_scores_to_log)
+    # vllm_scores_to_log = run_lm_eval_vllm(wandb_config=wandb_config)
+    # scores_to_log.update(vllm_scores_to_log)
+    # wandb.log(scores_to_log)
     wandb.finish()
 
 
@@ -79,12 +77,18 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
     else:
         raise NotImplementedError
 
+    # Cap vLLM to ~10 GiB per GPU.
+    total_gib = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+    util = round(10.0 / total_gib, 3)  # ~0.126 on 80 GiB
+    wandb_config["model_config"]["gpu_memory_utilization"] = util
+
     # Create the model and sampling parameters.
     model = LLM(**wandb_config["model_config"])
     model_sampling_params = SamplingParams(
         temperature=wandb_config["temperature"],
         max_tokens=wandb_config["max_tokens"],
         seed=wandb_config["seed"],
+        logprobs=1,  # Return 1 log probability per sequence.
     )
 
     # Sample from the model.
@@ -100,23 +104,28 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
     gc.collect()
     torch.cuda.empty_cache()
 
-    responses = [
-        output.text
-        for batch_request_output in requests_outputs
-        for output in batch_request_output.outputs
-    ]
+    problem_responses: List[str] = []
+    log_probs_per_problem_response: List[List[float]] = []
+    for request_outputs in requests_outputs:
+        problem_responses.append(request_outputs.outputs[0].text)
+        log_probs_list_of_dicts = request_outputs.outputs[0].logprobs
+        log_probs_per_token = [
+            list(d.values())[0].logprob for d in log_probs_list_of_dicts
+        ]
+        log_probs_per_problem_response.append(log_probs_per_token)
 
     results = [
         verify(
             gold=parse(solution),
             target=parse(response),
         )
-        for solution, response in zip(test_dataset["solution"], responses)
+        for solution, response in zip(test_dataset["solution"], problem_responses)
     ]
     math_verify_scores = [1 if res else 0 for res in results]
+    solutions = test_dataset["solution"]
     edit_distances = [
         editdistance.eval(solution, response)
-        for solution, response in zip(test_dataset["solution"], responses)
+        for solution, response in zip(solutions, problem_responses)
     ]
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -124,49 +133,31 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
         use_fast=True,
         trust_remote_code=True,
     )
-
     tokens_per_solution = [
         len(ids) for ids in tokenizer(test_dataset["solution"]).input_ids
     ]
-    tokens_per_response = [len(ids) for ids in tokenizer(responses).input_ids]
+    tokens_per_response = [len(ids) for ids in tokenizer(problem_responses).input_ids]
 
-    # import matplotlib.pyplot as plt
-    #
-    # plt.hist(edit_distances, bins=100)
-    # plt.yscale("log")
-    # plt.xlabel("Edit Distance(Model Response, Solution)")
-    # plt.ylabel("Count")
-    # plt.show()
+    for problem_idx in range(len(requests_outputs)):
+        # Log the main data.
+        problem_data_to_log = {
+            "problem_idx": problem_idx,
+            "token_per_solution": tokens_per_solution[problem_idx],
+            "token_per_response": tokens_per_response[problem_idx],
+            "solution": solutions[problem_idx],
+            "response": problem_responses[problem_idx],
+            "edit_distance": edit_distances[problem_idx],
+            "math_verify_score": math_verify_scores[problem_idx],
+        }
 
-    data_to_log = {
-        f"custom/math_verify_{i}": score for i, score in enumerate(math_verify_scores)
-    }
-    data_to_log.update(
-        {f"custom/edit_distance_{i}": score for i, score in enumerate(edit_distances)}
-    )
-    data_to_log.update(
-        {
-            f"custom/response_token_length_{i}": l
-            for i, l in enumerate(tokens_per_response)
-        }
-    )
-    data_to_log.update(
-        {
-            f"custom/solution_token_length_{i}": l
-            for i, l in enumerate(tokens_per_solution)
-        }
-    )
-    data_to_log["custom/math_verify_mean"] = np.mean(math_verify_scores)
-    data_to_log["custom/math_verify_stddev"] = np.std(math_verify_scores)
-    data_to_log["custom/math_verify_median"] = np.median(math_verify_scores)
-    data_to_log["custom/math_verify_max"] = np.max(math_verify_scores)
-    data_to_log["custom/math_verify_min"] = np.min(math_verify_scores)
-    data_to_log["custom/edit_distance_mean"] = np.mean(edit_distances)
-    data_to_log["custom/edit_distance_stddev"] = np.std(edit_distances)
-    data_to_log["custom/edit_distance_median"] = np.median(edit_distances)
-    data_to_log["custom/edit_distance_max"] = np.max(edit_distances)
-    data_to_log["custom/edit_distance_min"] = np.min(edit_distances)
-    return data_to_log
+        # Add the log probability of each token.
+        log_probs_per_problem = log_probs_per_problem_response[problem_idx]
+        for token_idx in range(len(log_probs_per_problem)):
+            problem_data_to_log[f"log_prob_token_{token_idx}"] = log_probs_per_problem[
+                token_idx
+            ]
+
+        wandb.log(problem_data_to_log, step=problem_idx + 1)
 
 
 def run_lm_eval_vllm(

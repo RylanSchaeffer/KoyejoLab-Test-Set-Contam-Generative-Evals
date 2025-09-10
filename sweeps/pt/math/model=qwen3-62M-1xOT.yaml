@@ -20,6 +20,8 @@ parameters:
         values: [0, 316, 1, 100, 10, 32, 1000, 3]
       shuffle_seed:
         values: [0]
+      benchmark_subset_fraction:
+        values: [ 1.0 ]
   model_config:
     parameters:
       attn_implementation:

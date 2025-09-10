@@ -13,6 +13,8 @@ parameters:
         values: [1000, 316, 100, 0, 1, 10, 32, 3]
       shuffle_seed:
         values: [0]
+      benchmark_subset_fraction:
+        values: [ 1.0 ]
   model_config:
     parameters:
       model_name:

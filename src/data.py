@@ -48,6 +48,14 @@ def create_dataset_for_pretraining(
         columns_to_remove
     )
 
+    # Shuffle then subsample the benchmark as specified.
+    num_benchmark_samples_to_subsample = int(
+        data_config["benchmark_subset_fraction"] * len(benchmark_test_split_dataset)
+    )
+    benchmark_test_split_dataset = benchmark_test_split_dataset.shuffle(
+        seed=data_config["benchmark_shuffle_seed"]
+    ).select(range(num_benchmark_samples_to_subsample))
+
     # Replicate the benchmark.
     if data_config["num_benchmark_replicas_per_epoch"] > 0:
         replicated_benchmark_test_split_dataset = concatenate_datasets(

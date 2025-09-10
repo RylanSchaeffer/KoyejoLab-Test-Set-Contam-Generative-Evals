@@ -91,9 +91,7 @@ def pretrain():
 
     if wandb_config["model_config"]["model_name"].startswith("Qwen3/Qwen3-"):
         tokenizer = AutoTokenizer.from_pretrained(
-            # This was meant to be Qwen3, but I had a typo as Qwen 2.
-            # After training several models, I don't want to fix it. Whoops.
-            "Qwen/Qwen2-1.5B",
+            "Qwen/Qwen3-4B-Base",
             use_fast=True,
             trust_remote_code=True,
         )
@@ -363,13 +361,16 @@ def compute_token_accuracy(eval_pred):
 
 def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
     init_model_name = wandb_config["model_config"]["model_name"].split("/")[-1]
-    dataset_name = wandb_config["data_config"]["benchmark"].split("/")[-1]
+    benchmark = wandb_config["data_config"]["benchmark"].split("/")[-1]
     num_train_epochs = wandb_config["trainer_config"]["num_train_epochs"]
     overtrain_multiplier = wandb_config["trainer_config"]["overtrain_multiplier"]
     num_benchmark_replicas_per_epoch = wandb_config["data_config"][
         "num_benchmark_replicas_per_epoch"
     ]
-    pted_model_hf_name = f"mem_{init_model_name}_{dataset_name}_replicas_{num_benchmark_replicas_per_epoch}_epch_{num_train_epochs}_ot_{overtrain_multiplier}_pt"
+    benchmark_subset_fraction = np.round(
+        wandb_config["data_config"]["benchmark_subset_fraction"], 3
+    )
+    pted_model_hf_name = f"mem_{init_model_name}_{benchmark}_rep_{num_benchmark_replicas_per_epoch}_sbst_{benchmark_subset_fraction:.3f}_epch_{num_train_epochs}_ot_{overtrain_multiplier:.2f}"
     if len(pted_model_hf_name) > 94:
         raise ValueError(f"pted_model_hf_name is too long: {pted_model_hf_name}")
     return pted_model_hf_name
