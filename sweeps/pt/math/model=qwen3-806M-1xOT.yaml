@@ -29,7 +29,7 @@ parameters:
       attn_implementation:
         values: [ "flash_attention_2" ]
       model_name:
-        values: [ "Qwen3/Qwen3-1.44B" ]
+        values: [ "Qwen3/Qwen3-806M" ]
       torch_dtype:
         values: [ "bfloat16" ]
   trainer_config:
