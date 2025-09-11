@@ -69,11 +69,11 @@ parameters:
       optim:
         values: [ "adamw_torch_fused" ]
       overtrain_multiplier:
-        values: [ 1 ]
+        values: [ 1.0 ]
       per_device_eval_batch_size:
-        values: [ 16 ]
+        values: [ 36 ]
       per_device_train_batch_size:
-        values: [ 10 ]
+        values: [ 36 ]
       remove_unused_columns:
         values: [ True ]
       report_to:
@@ -83,7 +83,7 @@ parameters:
       save_total_limit:
         values: [ 1 ]
       torch_compile:
-        values: [ False ]
+        values: [ True ]
       warmup_steps:
         values: [ 250 ]
       weight_decay:

@@ -71,9 +71,9 @@ parameters:
       overtrain_multiplier:
         values: [ 1 ]
       per_device_eval_batch_size:
-        values: [ 30 ]
+        values: [ 39 ]
       per_device_train_batch_size:
-        values: [ 30 ]
+        values: [ 39 ]
       remove_unused_columns:
         values: [ True ]
       report_to:
@@ -83,7 +83,7 @@ parameters:
       save_total_limit:
         values: [ 1 ]
       torch_compile:
-        values: [ False ]
+        values: [ True ]
       warmup_steps:
         values: [ 250 ]
       weight_decay:
