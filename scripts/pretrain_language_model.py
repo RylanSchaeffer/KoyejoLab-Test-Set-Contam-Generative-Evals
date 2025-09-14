@@ -65,9 +65,9 @@ def pretrain():
 
     if _world_size() > 1 and not torch.distributed.is_initialized():
         # We need to increase the timeout for tokenizing the dataset.
-        # 10 minutes is default. 60 minutes should be ample.
+        # 10 minutes is default. 120 minutes should be ample.
         torch.distributed.init_process_group(
-            backend="nccl", timeout=datetime.timedelta(minutes=60)
+            backend="nccl", timeout=datetime.timedelta(minutes=120)
         )
 
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
@@ -276,8 +276,14 @@ def pretrain():
             except OSError as e:
                 logging.error(f"Error deleting cache directory {cache_dir}: {e}")
 
-    if _is_main():
         wandb.finish()
+
+    cleanup()
+
+
+def cleanup():
+    if torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()
 
 
 def compute_derived_hyperparameters(
