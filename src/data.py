@@ -31,6 +31,34 @@ def create_dataset_for_pretraining(
     trainer_config: Dict[str, Any],
     tokenizer: PreTrainedTokenizer,
 ) -> Dict[str, Union[Dataset, List[Dataset]]]:
+    def tokenize_truncate_and_count(example):
+        # Tokenize.
+        # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
+        tokenized_input = tokenizer(
+            example["text"] + tokenizer.eos_token,
+            truncation=True,
+            max_length=trainer_config["max_length"],
+        )
+        # Make sure we end on an EOS token ID.
+        if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
+            tokenized_input["input_ids"].append(tokenizer.eos_token_id)
+            tokenized_input["attention_mask"].append(1)
+        example["input_ids"] = tokenized_input["input_ids"]
+        example["attention_mask"] = tokenized_input["attention_mask"]
+        # Count the number of tokens.
+        example["token_length"] = len(tokenized_input["input_ids"])
+        return example
+
+    # Where to cache rank-0 tokenized artifacts so other ranks can just load
+    hf_cache_root = os.getenv("HF_DATASETS_CACHE") or os.path.join(
+        os.getcwd(), ".hf_cache"
+    )
+    os.makedirs(hf_cache_root, exist_ok=True)
+    corpus_train_subset_cache_dir = os.path.join(
+        hf_cache_root, "corpus_subset_tokenized"
+    )
+    corpus_eval_cache_dir = os.path.join(hf_cache_root, "corpus_eval_tokenized")
+
     # Load the benchmark.
     benchmark_test_split_dataset = create_dataset_for_supervised_finetuning(
         dataset_name=data_config["benchmark"],
@@ -39,13 +67,13 @@ def create_dataset_for_pretraining(
     )["eval"]
 
     # Remove unnecessary columns.
-    columns_to_remove = [
-        col
-        for col in benchmark_test_split_dataset.column_names
-        if col not in {"text", "input_ids", "attention_mask", "token_length"}
-    ]
+    cols_to_keep = {"text", "input_ids", "attention_mask", "token_length"}
     benchmark_test_split_dataset = benchmark_test_split_dataset.remove_columns(
-        columns_to_remove
+        [
+            col
+            for col in benchmark_test_split_dataset.column_names
+            if col not in cols_to_keep
+        ]
     )
 
     # Shuffle then subsample the benchmark as specified.
@@ -99,81 +127,61 @@ def create_dataset_for_pretraining(
     )
     if _is_main():
         print(
-            f"Tokens needed from corpus: {num_training_tokens_per_epoch} - {replicated_benchmark_test_split_num_tokens} = {corpus_tokens_needed_per_epoch:,}"
+            f"Tokens needed from corpus: {num_training_tokens_per_epoch:,} - {replicated_benchmark_test_split_num_tokens:,} = {corpus_tokens_needed_per_epoch:,}"
         )
 
-    # Load the training corpus.
-    if data_config["corpus"] == "fineweb-edu-dedup":
-        corpus_dataset = load_dataset(
-            "HuggingFaceTB/smollm-corpus",
-            "fineweb-edu-dedup",
-            split="train",
-            num_proc=64,
+        if data_config["corpus"] == "fineweb-edu-dedup":
+            corpus_full_dataset = load_dataset(
+                "HuggingFaceTB/smollm-corpus",
+                "fineweb-edu-dedup",
+                split="train",
+                num_proc=min(32, os.cpu_count()),
+            )
+            # The full dataset is 220B tokens in 190168005 rows.
+            # We want ~10M tokens for test.
+            corpus_split_dataset = corpus_full_dataset.train_test_split(
+                test_size=15e6 / 220e9,
+                seed=0,
+            )
+            corpus_train_dataset = corpus_split_dataset["train"]
+            corpus_eval_dataset = corpus_split_dataset["test"]
+            avg_tokens_per_doc = 220e9 / 190168005
+        else:
+            raise ValueError
+
+        # Round up a bit to ensure we have more than we want.
+        estimated_docs_needed = int(
+            1.05 * corpus_tokens_needed_per_epoch / avg_tokens_per_doc
         )
-    else:
-        raise ValueError
 
-    # Tokenize and count tokens per sequence.
-    def tokenize_truncate_and_count(example):
-        # Tokenize.
-        # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
-        tokenized_input = tokenizer(
-            example["text"] + tokenizer.eos_token,
-            truncation=True,
-            max_length=trainer_config["max_length"],
+        # Subsample the appropriate number of documents and tokenize.
+        corpus_train_dataset_subset = (
+            corpus_train_dataset.shuffle(seed=data_config["shuffle_seed"])
+            .select(range(estimated_docs_needed))
+            .map(tokenize_truncate_and_count, num_proc=min(32, os.cpu_count()))
         )
-        # Make sure we end on an EOS token ID.
-        if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
-            tokenized_input["input_ids"].append(tokenizer.eos_token_id)
-            tokenized_input["attention_mask"].append(1)
-        example["input_ids"] = tokenized_input["input_ids"]
-        example["attention_mask"] = tokenized_input["attention_mask"]
-        # Count the number of tokens.
-        example["token_length"] = len(tokenized_input["input_ids"])
-        return example
 
-    # ===== A) Compute avg_tokens_per_doc ONLY on rank 0; broadcast =====
-    sample_size_for_calculating_avg_tokens_per_sequence = 15000
-    if _is_main():
-        corpus_sample = corpus_dataset.select(
-            range(sample_size_for_calculating_avg_tokens_per_sequence)
+        # Figure out how many documents to drop to meet our target number of tokens.
+        num_tokens_in_corpus_dataset_subset = np.sum(
+            corpus_train_dataset_subset["token_length"]
         )
-        # IMPORTANT: avoid per-rank CPU explosion; only rank 0 runs multi-proc map
-        # Keep num_proc modest; you can tune this
-        corpus_sample = corpus_sample.map(
-            tokenize_truncate_and_count, num_proc=min(32, os.cpu_count() or 32)
+        num_documents_to_drop = 0
+        for num_tokens_in_document in corpus_train_dataset_subset["token_length"][::-1]:
+            num_tokens_in_corpus_dataset_subset -= num_tokens_in_document
+            num_documents_to_drop += 1
+            if num_tokens_in_corpus_dataset_subset < corpus_tokens_needed_per_epoch:
+                break
+
+        corpus_train_dataset_subset = corpus_train_dataset_subset.select(
+            range(len(corpus_train_dataset_subset) - num_documents_to_drop)
         )
-        avg_tokens_per_doc = float(np.mean(corpus_sample["token_length"]))
-    else:
-        avg_tokens_per_doc = 0.0
 
-    # Broadcast the scalar so all ranks compute the same doc count
-    if _world_size() > 1 and dist.is_available() and dist.is_initialized():
-        obj = [avg_tokens_per_doc]
-        dist.broadcast_object_list(obj, src=0)
-        avg_tokens_per_doc = float(obj[0])
-
-    # Round up a bit to ensure we have more than we want.
-    estimated_docs_needed = int(
-        1.1 * corpus_tokens_needed_per_epoch / avg_tokens_per_doc
-    )
-
-    # Subsample the appropriate number of documents and tokenize.
-    corpus_dataset_subset = corpus_dataset.shuffle(
-        seed=data_config["shuffle_seed"]
-    ).select(range(estimated_docs_needed))
-
-    # Tokenize the entire dataset and cache to disk for other processes to load.
-    cache_dir = os.path.join(
-        os.getenv("HF_DATASETS_CACHE"),
-        "corpus_subset_tokenized",
-    )
-    if _is_main():
-        corpus_dataset_subset = corpus_dataset_subset.map(
-            tokenize_truncate_and_count, num_proc=64
+        # Write to disk.
+        corpus_train_dataset_subset.save_to_disk(corpus_train_subset_cache_dir)
+        corpus_eval_dataset = corpus_eval_dataset.map(
+            tokenize_truncate_and_count, num_proc=min(32, os.cpu_count())
         )
-        corpus_dataset_subset.save_to_disk(cache_dir)
-
+        corpus_eval_dataset.save_to_disk(corpus_eval_cache_dir)
     if (
         _world_size() > 1
         and torch.distributed.is_available()
@@ -181,24 +189,13 @@ def create_dataset_for_pretraining(
     ):
         torch.distributed.barrier()  # non-zero ranks wait for rank 0 to finish
 
-    corpus_dataset_subset = load_from_disk(cache_dir)
-
-    num_tokens_in_corpus_dataset_subset = np.sum(corpus_dataset_subset["token_length"])
-    # Figure out how many documents to drop to meet our target number of tokens.
-    num_documents_to_drop = 0
-    for num_tokens_in_document in corpus_dataset_subset["token_length"][::-1]:
-        num_tokens_in_corpus_dataset_subset -= num_tokens_in_document
-        num_documents_to_drop += 1
-        if num_tokens_in_corpus_dataset_subset < corpus_tokens_needed_per_epoch:
-            break
-
-    corpus_dataset_subset = corpus_dataset_subset.select(
-        range(len(corpus_dataset_subset) - num_documents_to_drop)
-    )
+    # All processes load.
+    corpus_train_dataset_subset = load_from_disk(corpus_train_subset_cache_dir)
+    corpus_eval_dataset = load_from_disk(corpus_eval_cache_dir)
 
     # Create the dataset we will train on.
     final_train_dataset = concatenate_datasets(
-        [replicated_benchmark_test_split_dataset, corpus_dataset_subset]
+        [replicated_benchmark_test_split_dataset, corpus_train_dataset_subset]
     )
     final_train_dataset = final_train_dataset.shuffle(seed=data_config["shuffle_seed"])
     total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
@@ -211,7 +208,8 @@ def create_dataset_for_pretraining(
 
     datasets_dict = {
         "train": final_train_dataset,
-        "eval": benchmark_test_split_dataset,
+        "eval": corpus_eval_dataset,
+        "benchmark": benchmark_test_split_dataset,
     }
 
     return datasets_dict

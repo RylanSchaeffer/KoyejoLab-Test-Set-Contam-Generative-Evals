@@ -27,11 +27,11 @@ DEFAULT_PRETRAINING_CONFIG = {
     "model_config": {
         "attn_implementation": "flash_attention_2",
         # "attn_implementation": "sdpa",
-        # "model_name": "Qwen3/Qwen3-48M",
+        "model_name": "Qwen3/Qwen3-48M",
         # "model_name": "Qwen3/Qwen3-62M",
         # "model_name": "Qwen3/Qwen3-93M",
         # "model_name": "Qwen3/Qwen3-344M",
-        "model_name": "Qwen3/Qwen3-806M",
+        # "model_name": "Qwen3/Qwen3-806M",
         "torch_dtype": "bfloat16",
     },
     "trainer_config": {

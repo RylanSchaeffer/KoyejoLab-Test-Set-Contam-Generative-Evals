@@ -41,7 +41,6 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     DataCollatorWithFlattening,
-    # DataCollatorForLanguageModeling,
     PreTrainedModel,
     Trainer,
     TrainingArguments,
@@ -195,17 +194,22 @@ def pretrain():
     )
     train_dataset = datasets_dict["train"]
     eval_dataset = datasets_dict["eval"]
+    benchmark_dataset = datasets_dict["benchmark"]
     if _is_main():
         wandb.config.data_config.update(
             {
                 "train_dataset_num_tokens": np.sum(train_dataset["token_length"]),
                 "eval_dataset_num_tokens": np.sum(eval_dataset["token_length"]),
+                "benchmark_dataset_num_tokens": np.sum(
+                    benchmark_dataset["token_length"]
+                ),
             }
         )
 
     # Apply the preparation to both the training and evaluation splits.
     train_dataset = prepare_dataset_for_model(train_dataset)
     eval_dataset = prepare_dataset_for_model(eval_dataset)
+    benchmark_dataset = prepare_dataset_for_model(benchmark_dataset)
 
     # data_collator = DataCollatorForLanguageModeling(
     #     tokenizer=tokenizer,
@@ -223,17 +227,9 @@ def pretrain():
         processing_class=tokenizer,
         args=pretraining_config,
         train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
+        eval_dataset={"eval": eval_dataset, "benchmark": benchmark_dataset},
         data_collator=data_collator,
     )
-
-    # Evaluate before training.
-    if _is_main():
-        logging.info("Evaluating before training...")
-    eval_metrics_before = trainer.evaluate()
-    if _is_main():
-        wandb.log({f"eval_before/{k}": v for k, v in eval_metrics_before.items()})
-        pprint.pprint(eval_metrics_before)
 
     # Train.
     if _is_main():
