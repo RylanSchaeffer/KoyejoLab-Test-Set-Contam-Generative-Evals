@@ -28,6 +28,7 @@ import gc
 import math
 import numpy as np
 import pprint
+import shutil
 import time
 import torch
 
@@ -263,6 +264,17 @@ def pretrain():
     gc.collect()
     torch.cuda.empty_cache()
     time.sleep(5)
+
+    if _is_main():
+        # Delete the dataset from disk to save disk space.
+        cache_dir = os.environ.get("HF_DATASETS_CACHE")
+        if cache_dir and os.path.exists(cache_dir):
+            logging.info(f"Run finished. Deleting cached dataset at: {cache_dir}")
+            try:
+                shutil.rmtree(cache_dir)
+                logging.info("Successfully deleted cached dataset.")
+            except OSError as e:
+                logging.error(f"Error deleting cache directory {cache_dir}: {e}")
 
     if _is_main():
         wandb.finish()
