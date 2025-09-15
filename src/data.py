@@ -135,7 +135,7 @@ def create_dataset_for_pretraining(
                 "HuggingFaceTB/smollm-corpus",
                 "fineweb-edu-dedup",
                 split="train",
-                num_proc=min(32, os.cpu_count()),
+                num_proc=min(64, os.cpu_count()),
             )
             # The full dataset is 220B tokens in 190168005 rows.
             # We want ~10M tokens for test.
@@ -158,7 +158,7 @@ def create_dataset_for_pretraining(
         corpus_train_dataset_subset = (
             corpus_train_dataset.shuffle(seed=data_config["shuffle_seed"])
             .select(range(estimated_docs_needed))
-            .map(tokenize_truncate_and_count, num_proc=min(32, os.cpu_count()))
+            .map(tokenize_truncate_and_count, num_proc=min(64, os.cpu_count()))
         )
 
         # Figure out how many documents to drop to meet our target number of tokens.
@@ -187,7 +187,7 @@ def create_dataset_for_pretraining(
         # Write to disk.
         final_train_dataset.save_to_disk(final_train_dataset_cache_dir)
         corpus_eval_dataset = corpus_eval_dataset.map(
-            tokenize_truncate_and_count, num_proc=min(32, os.cpu_count())
+            tokenize_truncate_and_count, num_proc=min(64, os.cpu_count())
         )
         corpus_eval_dataset.save_to_disk(corpus_eval_dataset_cache_dir)
 
