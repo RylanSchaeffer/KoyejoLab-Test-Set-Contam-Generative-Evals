@@ -1,6 +1,6 @@
 # KoyejoLab-Scoring-vs-Sampling-Memorization
 
-# Setup
+## Setup
 
 0. Install `uv`: `conda install conda-forge::uv`
 1. Create the virtual environment: `uv venv -p 3.11.5 mem_scoring_vs_sampling_env`
@@ -16,3 +16,5 @@ uv pip install -e .[math]
 uv pip install flash-attn==2.7.2.post1 --no-build-isolation
 ```
 
+## Spreadsheet for Configs 
+https://docs.google.com/spreadsheets/d/1d0bNUE-RuYlB5_nGNzOFnX7CkUmTepMAhRLIJ9tLUpM/edit?gid=0#gid=0

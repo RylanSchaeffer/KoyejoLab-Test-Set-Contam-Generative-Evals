@@ -120,6 +120,82 @@ def download_wandb_project_runs_configs(
     return runs_configs_df
 
 
+def download_wandb_pretraining_runs_configs(
+    wandb_project_path: str,
+    data_dir: str,
+    sweep_ids: List[str] = None,
+    finished_only: bool = True,
+    refresh: bool = False,
+    wandb_username: Optional[str] = None,
+    filetype: str = "csv",
+    max_workers: int = 10,  # New parameter to control the number of parallel workers
+):
+    pt_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
+        wandb_project_path=wandb_project_path,
+        data_dir=data_dir,
+        sweep_ids=sweep_ids,
+        refresh=refresh,
+        wandb_username=wandb_username,
+        finished_only=finished_only,
+        filetype=filetype,
+        max_workers=max_workers,
+    )
+
+    # Extract information to make analyzing and visualizing easier.
+    pt_runs_configs_df["Num. Replicas Per Epoch"] = pt_runs_configs_df[
+        "data_config"
+    ].apply(
+        lambda data_config: ast.literal_eval(data_config)[
+            "num_benchmark_replicas_per_epoch"
+        ]
+    )
+    pt_runs_configs_df["Benchmark"] = pt_runs_configs_df["data_config"].apply(
+        lambda data_config: ast.literal_eval(data_config)["benchmark"]
+    )
+    pt_runs_configs_df["Benchmark Subset Fraction"] = pt_runs_configs_df[
+        "data_config"
+    ].apply(
+        lambda data_config: ast.literal_eval(data_config)["benchmark_subset_fraction"]
+    )
+
+    def compute_number_of_benchmark_tokens_per_replica(row: pd.Series):
+        if row["Benchmark"] == "EleutherAI/minerva_math":
+            num_tokens_in_benchmark = 1.5e6
+        else:
+            raise NotImplementedError
+        return num_tokens_in_benchmark * row["Benchmark Subset Fraction"]
+
+    pt_runs_configs_df["Benchmark Subset Num. Tokens"] = pt_runs_configs_df.apply(
+        compute_number_of_benchmark_tokens_per_replica,
+        axis=1,
+    )
+
+    pt_runs_configs_df["Num. Epochs"] = pt_runs_configs_df["train/epoch"]
+    pt_runs_configs_df["Num. Replicas"] = (
+        pt_runs_configs_df["Num. Replicas Per Epoch"]
+        * pt_runs_configs_df["Num. Epochs"]
+    )
+    pt_runs_configs_df["Model"] = pt_runs_configs_df["model_config"].apply(
+        lambda model_config: ast.literal_eval(model_config)["model_name"]
+    )
+    # pt_runs_configs_df["Num. Parameters"] = pt_runs_configs_df["Model"].apply(
+    #     src.analyze.extract_num_model_parameters
+    # )
+    pt_runs_configs_df["Num. Parameters"] = pt_runs_configs_df["model/num_parameters"]
+    pt_runs_configs_df["Num. Tokens"] = pt_runs_configs_df[
+        "eval_after/num_input_tokens_seen"
+    ]
+    pt_runs_configs_df["FLOP (6ND)"] = (
+        6 * pt_runs_configs_df["Num. Parameters"] * pt_runs_configs_df["Num. Tokens"]
+    )
+
+    # Use slightly nicer column names.
+    pt_runs_configs_df["benchmark_loss"] = pt_runs_configs_df["eval/benchmark_loss"]
+    pt_runs_configs_df["eval_loss"] = pt_runs_configs_df["eval/eval_loss"]
+
+    return pt_runs_configs_df
+
+
 def download_wandb_project_runs_configs_helper(run):
     try:
         summary = run.summary._json_dict
