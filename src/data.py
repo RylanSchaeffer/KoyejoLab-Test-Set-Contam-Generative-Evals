@@ -54,10 +54,10 @@ def create_dataset_for_pretraining(
         os.getcwd(), ".hf_cache"
     )
     os.makedirs(hf_cache_root, exist_ok=True)
-    corpus_train_subset_cache_dir = os.path.join(
+    final_train_dataset_cache_dir = os.path.join(
         hf_cache_root, "corpus_subset_tokenized"
     )
-    corpus_eval_cache_dir = os.path.join(hf_cache_root, "corpus_eval_tokenized")
+    corpus_eval_dataset_cache_dir = os.path.join(hf_cache_root, "corpus_eval_tokenized")
 
     # Load the benchmark.
     benchmark_test_split_dataset = create_dataset_for_supervised_finetuning(
@@ -176,12 +176,28 @@ def create_dataset_for_pretraining(
             range(len(corpus_train_dataset_subset) - num_documents_to_drop)
         )
 
+        # Create the dataset we will train on.
+        final_train_dataset = concatenate_datasets(
+            [replicated_benchmark_test_split_dataset, corpus_train_dataset_subset]
+        )
+        final_train_dataset = final_train_dataset.shuffle(
+            seed=data_config["shuffle_seed"]
+        )
+
         # Write to disk.
-        corpus_train_dataset_subset.save_to_disk(corpus_train_subset_cache_dir)
+        final_train_dataset.save_to_disk(final_train_dataset_cache_dir)
         corpus_eval_dataset = corpus_eval_dataset.map(
             tokenize_truncate_and_count, num_proc=min(32, os.cpu_count())
         )
-        corpus_eval_dataset.save_to_disk(corpus_eval_cache_dir)
+        corpus_eval_dataset.save_to_disk(corpus_eval_dataset_cache_dir)
+
+        total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
+        print(
+            f"Final dataset created with {total_tokens_per_epoch:,} tokens.\n"
+            f"With {num_train_epochs:,} training epochs, total training tokens: {num_train_epochs * total_tokens_per_epoch:,}\n"
+            f"Target number of total training tokens: {target_num_training_tokens_total:,}\n"
+        )
+
     if (
         _world_size() > 1
         and torch.distributed.is_available()
@@ -190,21 +206,8 @@ def create_dataset_for_pretraining(
         torch.distributed.barrier()  # non-zero ranks wait for rank 0 to finish
 
     # All processes load.
-    corpus_train_dataset_subset = load_from_disk(corpus_train_subset_cache_dir)
-    corpus_eval_dataset = load_from_disk(corpus_eval_cache_dir)
-
-    # Create the dataset we will train on.
-    final_train_dataset = concatenate_datasets(
-        [replicated_benchmark_test_split_dataset, corpus_train_dataset_subset]
-    )
-    final_train_dataset = final_train_dataset.shuffle(seed=data_config["shuffle_seed"])
-    total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
-    if _is_main():
-        print(
-            f"Final dataset created with {total_tokens_per_epoch:,} tokens.\n"
-            f"With {num_train_epochs:,} training epochs, total training tokens: {num_train_epochs * total_tokens_per_epoch:,}\n"
-            f"Target number of total training tokens: {target_num_training_tokens_total:,}\n"
-        )
+    final_train_dataset = load_from_disk(final_train_dataset_cache_dir)
+    corpus_eval_dataset = load_from_disk(corpus_eval_dataset_cache_dir)
 
     datasets_dict = {
         "train": final_train_dataset,
