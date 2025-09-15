@@ -165,7 +165,9 @@ def pretrain():
         lr_scheduler_type=wandb_config["trainer_config"]["lr_scheduler_type"],
         max_grad_norm=wandb_config["trainer_config"]["max_grad_norm"],
         max_steps=-1,
-        metric_for_best_model="eval_loss",
+        # metric_for_best_model="eval_benchmark_loss",
+        metric_for_best_model="num_input_tokens_seen",
+        greater_is_better=True,
         num_train_epochs=wandb_config["trainer_config"]["num_train_epochs"],
         optim=wandb_config["trainer_config"]["optim"],
         output_dir=output_dir,
@@ -463,7 +465,7 @@ def initialize_wandb():
     # Use a consistent per-run HF datasets cache across all ranks
     os.environ[
         "HF_DATASETS_CACHE"
-    ] = f"{os.getenv('LFS_HOME')}/KoyejoLab-Scoring-vs-Sampling-Memorization/{run_id}"
+    ] = f"{os.getenv('LFS_HOME')}/KoyejoLab-Scoring-vs-Sampling-Memorization/cached_datasets/{run_id}"
 
     return run, run_id, cfg_dict
 

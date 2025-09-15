@@ -17,7 +17,7 @@ parameters:
       benchmark:
         values: [ "EleutherAI/minerva_math" ]
       benchmark_subset_fraction:
-        values: [ 1.0 ]
+        values: [ 1.0, 0.01, 0.1, 0.001 ]
       benchmark_shuffle_seed:
         values: [ 0 ]
       num_benchmark_replicas_per_epoch:
@@ -29,7 +29,7 @@ parameters:
       attn_implementation:
         values: [ "flash_attention_2" ]
       model_name:
-        values: [ "Qwen3/Qwen3-153M" ]
+        values: [ "Qwen3/Qwen3-344M" ]
       torch_dtype:
         values: [ "bfloat16" ]
   trainer_config:
@@ -71,15 +71,15 @@ parameters:
       overtrain_multiplier:
         values: [ 1.0 ]
       per_device_eval_batch_size:
-        values: [ 34 ]
+        values: [ 22 ]
       per_device_train_batch_size:
-        values: [ 34 ]
+        values: [ 22 ]
       remove_unused_columns:
         values: [ True ]
       report_to:
         values: ["wandb"]
       save_strategy:
-        values: [ "best" ]
+        values: [ "no" ]
       save_total_limit:
         values: [ 1 ]
       torch_compile:

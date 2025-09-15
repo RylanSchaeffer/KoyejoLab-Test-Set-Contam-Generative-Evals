@@ -19,7 +19,7 @@ parameters:
       benchmark_shuffle_seed:
         values: [ 0 ]
       benchmark_subset_fraction:
-        values: [ 1.0 ]
+        values: [ 1.0, 0.01, 0.1, 0.001 ]
       num_benchmark_replicas_per_epoch:
         values: [1000, 316, 100, 0, 1, 10, 32, 3]
       shuffle_seed:
@@ -79,7 +79,7 @@ parameters:
       report_to:
         values: ["wandb"]
       save_strategy:
-        values: [ "best" ]
+        values: [ "no" ]
       save_total_limit:
         values: [ 1 ]
       torch_compile:

@@ -63,7 +63,7 @@ DEFAULT_PRETRAINING_CONFIG = {
         "remove_unused_columns": False,
         # "remove_unused_columns": True,
         "report_to": "wandb",
-        "save_strategy": "best",
+        "save_strategy": "no",
         "save_total_limit": 1,
         "torch_compile": False,
         # "warmup_ratio": 0.025,
