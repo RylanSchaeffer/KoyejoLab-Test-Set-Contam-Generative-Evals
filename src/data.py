@@ -185,11 +185,15 @@ def create_dataset_for_pretraining(
         )
 
         # Write to disk.
-        final_train_dataset.save_to_disk(final_train_dataset_cache_dir)
+        final_train_dataset.save_to_disk(
+            final_train_dataset_cache_dir, num_proc=min(64, os.cpu_count())
+        )
         corpus_eval_dataset = corpus_eval_dataset.map(
             tokenize_truncate_and_count, num_proc=min(64, os.cpu_count())
         )
-        corpus_eval_dataset.save_to_disk(corpus_eval_dataset_cache_dir)
+        corpus_eval_dataset.save_to_disk(
+            corpus_eval_dataset_cache_dir, num_proc=min(64, os.cpu_count())
+        )
 
         total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
         print(
