@@ -26,10 +26,11 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 sweep_ids = [
     "ydhftukf",  # Qwen 3   34M     Finished.
     "lmom5q7l",  # Qwen 3   48M     Finished.
-    "2oz7fjvg",  # Qwen 3   62M     Finished.
-    "iu35ywbi",  # Qwen 3  342M     Finished.
+    "2oz7fjvg",  # Qwen 3   62M     Running.
+    "iu35ywbi",  # Qwen 3  342M     Running.
 ]
 
+# TODO: Check whether there are NaNs in the data, and if so, debug why.
 pt_run_configs_df: pd.DataFrame = src.analyze.download_wandb_pretraining_runs_configs(
     wandb_project_path="memorization-scoring-vs-sampling-pt",
     data_dir=data_dir,
@@ -47,7 +48,6 @@ metric_column_to_nice_string_dict = {
     "train_loss": "Loss (Train)",
 }
 
-# TODO: Check whether there are NaNs in the data, and if so, debug why.
 for metric_column in metric_columns:
     plt.close()
     g = sns.relplot(
