@@ -18,3 +18,13 @@ uv pip install flash-attn==2.7.2.post1 --no-build-isolation
 
 ## Spreadsheet for Configs 
 https://docs.google.com/spreadsheets/d/1d0bNUE-RuYlB5_nGNzOFnX7CkUmTepMAhRLIJ9tLUpM/edit?gid=0#gid=0
+
+## Contributing
+
+Please format using [black](https://github.com/psf/black):
+
+`black .`
+
+## Contact
+
+Questions? Comments? Interested in collaborating? Open an issue or email rschaef@cs.stanford.edu and sanmi@cs.stanford.edu.
