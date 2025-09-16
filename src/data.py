@@ -76,9 +76,13 @@ def create_dataset_for_pretraining(
         ]
     )
 
-    # Shuffle then subsample the benchmark as specified.
+    # Subsample then shuffle the benchmark as specified. Make sure we take at least 1 sample.
     num_benchmark_samples_to_subsample = int(
         data_config["benchmark_subset_fraction"] * len(benchmark_test_split_dataset)
+    )
+    num_benchmark_samples_to_subsample = min(
+        1,
+        num_benchmark_samples_to_subsample,
     )
     benchmark_test_split_dataset = benchmark_test_split_dataset.shuffle(
         seed=data_config["benchmark_shuffle_seed"]
@@ -138,9 +142,9 @@ def create_dataset_for_pretraining(
                 num_proc=min(64, os.cpu_count()),
             )
             # The full dataset is 220B tokens in 190168005 rows.
-            # We want ~10M tokens for test.
+            # We want 100M tokens for test.
             corpus_split_dataset = corpus_full_dataset.train_test_split(
-                test_size=15e6 / 220e9,
+                test_size=150e6 / 220e9,
                 seed=0,
             )
             corpus_train_dataset = corpus_split_dataset["train"]
