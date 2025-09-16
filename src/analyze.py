@@ -190,8 +190,10 @@ def download_wandb_pretraining_runs_configs(
     )
 
     # Use slightly nicer column names.
-    pt_runs_configs_df["benchmark_loss"] = pt_runs_configs_df["eval/benchmark_loss"]
-    pt_runs_configs_df["eval_loss"] = pt_runs_configs_df["eval/eval_loss"]
+    pt_runs_configs_df["benchmark_loss"] = pt_runs_configs_df[
+        "eval_after/eval_benchmark_loss"
+    ]
+    pt_runs_configs_df["eval_loss"] = pt_runs_configs_df["eval_after/eval_eval_loss"]
 
     return pt_runs_configs_df
 
