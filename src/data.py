@@ -76,11 +76,12 @@ def create_dataset_for_pretraining(
         ]
     )
 
-    # Subsample then shuffle the benchmark as specified. Make sure we take at least 1 sample.
+    # Subsample then shuffle the benchmark as specified.
     num_benchmark_samples_to_subsample = int(
         data_config["benchmark_subset_fraction"] * len(benchmark_test_split_dataset)
     )
-    num_benchmark_samples_to_subsample = min(
+    # Make sure we take at least 1 sample.
+    num_benchmark_samples_to_subsample = max(
         1,
         num_benchmark_samples_to_subsample,
     )
