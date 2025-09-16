@@ -390,9 +390,9 @@ def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> st
         "num_benchmark_replicas_per_epoch"
     ]
     benchmark_subset_fraction = np.round(
-        wandb_config["data_config"]["benchmark_subset_fraction"], 3
+        wandb_config["data_config"]["benchmark_subset_fraction"], 4
     )
-    pted_model_hf_name = f"mem_{init_model_name}_{benchmark}_rep_{num_benchmark_replicas_per_epoch}_sbst_{benchmark_subset_fraction:.3f}_epch_{num_train_epochs}_ot_{overtrain_multiplier:.2f}"
+    pted_model_hf_name = f"mem_{init_model_name}_{benchmark}_rep_{num_benchmark_replicas_per_epoch}_sbst_{benchmark_subset_fraction:.4f}_epch_{num_train_epochs}_ot_{overtrain_multiplier:.3f}"
     if len(pted_model_hf_name) > 94:
         raise ValueError(f"pted_model_hf_name is too long: {pted_model_hf_name}")
     return pted_model_hf_name
