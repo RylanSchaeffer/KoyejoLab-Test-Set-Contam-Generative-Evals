@@ -25,7 +25,7 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 sweep_ids = [
     "ydhftukf",  # Qwen 3   34M     Finished.
-    "lmom5q7l",  # Qwen 3   48M     Finished.
+    "lmom5q7l",  # Qwen 3   48M     Finished (except for 3 to be rerun).
     "2oz7fjvg",  # Qwen 3   62M     Running.
     "iu35ywbi",  # Qwen 3  342M     Running.
 ]
