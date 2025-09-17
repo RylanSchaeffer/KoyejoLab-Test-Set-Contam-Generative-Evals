@@ -24,10 +24,12 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 )
 
 sweep_ids = [
-    "ydhftukf",  # Qwen 3   34M     Finished.
-    "lmom5q7l",  # Qwen 3   48M     Finished (except for 3 to be rerun).
-    "2oz7fjvg",  # Qwen 3   62M     Running.
-    "iu35ywbi",  # Qwen 3  342M     Running.
+    "66oov9k1",  # Qwen 3   34M     Finished.
+    # "",  # Qwen 3   48M
+    "2cdw9bff",  # Qwen 3   62M     Running.
+    # "",  # Qwen 3   93M
+    "t6opvpa3",  # Qwen 3  153M     Running.
+    "ro4lmq0x",  # Qwen 3  342M     Running.
 ]
 
 # TODO: Check whether there are NaNs in the data, and if so, debug why.
@@ -68,6 +70,6 @@ for metric_column in metric_columns:
         plot_dir=results_dir,
         plot_filename=f"y={metric_column}_x=flop_row=num_replicas_col=subset_fraction",
     )
-    plt.show()
+    # plt.show()
 
 print("Finished 04_pretraining_loss_scaling.py!")

@@ -17,11 +17,11 @@ parameters:
       benchmark:
         values: [ "EleutherAI/minerva_math" ]
       benchmark_subset_fraction:
-        values: [ 1.0, 0.01, 0.1, 0.001 ]
+        values: [ 1.0, 0.01, 0.1, 0.001, 0.3162, 0.03162, 0.003162 ]
       benchmark_shuffle_seed:
         values: [ 0 ]
       num_benchmark_replicas_per_epoch:
-        values: [0, 316, 1, 100, 10, 32, 1000, 3]
+        values: [0, 316, 1, 100, 10, 32, 1000, 3, 3162]
       shuffle_seed:
         values: [0]
   model_config:
