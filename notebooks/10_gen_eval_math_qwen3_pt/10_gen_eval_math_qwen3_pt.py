@@ -15,8 +15,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-refresh = False
-# refresh = True
+# refresh = False
+refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -27,10 +27,12 @@ sweep_ids = [
     "rkx5xfde",  # Qwen 3  34M
     "g31f7bsb",  # Qwen 3  34M
     "u7dxxphm",  # Qwen 3  62M
+    "o6aoejzc",  # Qwen 3  62M
     "ho49sshi",  # Qwen 3  93M
     "x8gmmzlo",  # Qwen 3  93M
     "sl086kx0",  # Qwen 3 153M
     "09c432gh",  # Qwen 3 344M
+    "gsx7gisg",  # Qwen 3 344M
 ]
 
 pretrain_run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(

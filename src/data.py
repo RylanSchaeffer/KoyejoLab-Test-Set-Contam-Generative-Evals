@@ -49,7 +49,7 @@ def create_dataset_for_pretraining(
         example["token_length"] = len(tokenized_input["input_ids"])
         return example
 
-    # Where to cache rank-0 tokenized artifacts so other ranks can just load
+    # Specify where to cache rank-0 tokenized artifacts so other ranks can just load
     hf_cache_root = os.getenv("HF_DATASETS_CACHE") or os.path.join(
         os.getcwd(), ".hf_cache"
     )
@@ -66,8 +66,8 @@ def create_dataset_for_pretraining(
         remove_columns=False,
     )["eval"]
 
-    # Remove unnecessary columns.
-    cols_to_keep = {"text", "input_ids", "attention_mask", "token_length"}
+    # Remove unnecessary columns from the benchmark.
+    cols_to_keep = {"input_ids", "attention_mask", "token_length"}
     benchmark_test_split_dataset = benchmark_test_split_dataset.remove_columns(
         [
             col
@@ -96,7 +96,7 @@ def create_dataset_for_pretraining(
                 benchmark_test_split_dataset
                 for _ in range(data_config["num_benchmark_replicas_per_epoch"])
             ]
-        ).map(tokenize_truncate_and_count, num_proc=min(2, os.cpu_count()))
+        )
     elif data_config["num_benchmark_replicas_per_epoch"] == 0:
         # Select none of the rows to create an empty dataset.
         replicated_benchmark_test_split_dataset = benchmark_test_split_dataset.select(
@@ -143,7 +143,7 @@ def create_dataset_for_pretraining(
                 num_proc=min(64, os.cpu_count()),
             )
             # The full dataset is 220B tokens in 190168005 rows.
-            # We want 100M tokens for test.
+            # We want 150M tokens for test.
             corpus_split_dataset = corpus_full_dataset.train_test_split(
                 test_size=150e6 / 220e9,
                 seed=0,
@@ -191,21 +191,19 @@ def create_dataset_for_pretraining(
 
         # Remove unnecessary columns to reduce size, then save to disk.
         cols_to_drop = [
-            c
-            for c in final_train_dataset.column_names
-            if c not in {"input_ids", "attention_mask", "token_length"}
+            c for c in final_train_dataset.column_names if c not in cols_to_keep
         ]
         final_train_dataset = final_train_dataset.remove_columns(cols_to_drop)
         final_train_dataset.save_to_disk(
-            final_train_dataset_cache_dir, num_proc=min(4, os.cpu_count())
+            final_train_dataset_cache_dir,
+            # num_proc=min(4, os.cpu_count())
         )
         corpus_eval_dataset = corpus_eval_dataset.map(
-            tokenize_truncate_and_count, num_proc=min(1, os.cpu_count())
+            tokenize_truncate_and_count,
+            # num_proc=min(1, os.cpu_count())
         )
         cols_to_drop_eval = [
-            c
-            for c in corpus_eval_dataset.column_names
-            if c not in {"input_ids", "attention_mask", "token_length"}
+            c for c in corpus_eval_dataset.column_names if c not in cols_to_keep
         ]
         corpus_eval_dataset = corpus_eval_dataset.remove_columns(cols_to_drop_eval)
         corpus_eval_dataset.save_to_disk(
