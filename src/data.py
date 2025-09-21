@@ -189,27 +189,25 @@ def create_dataset_for_pretraining(
             seed=data_config["shuffle_seed"]
         )
 
-        # Remove unnecessary columns to save disk space.
+        # Remove unnecessary columns to reduce size, then save to disk.
         cols_to_drop = [
             c
             for c in final_train_dataset.column_names
             if c not in {"input_ids", "attention_mask", "token_length"}
         ]
         final_train_dataset = final_train_dataset.remove_columns(cols_to_drop)
+        final_train_dataset.save_to_disk(
+            final_train_dataset_cache_dir, num_proc=min(4, os.cpu_count())
+        )
+        corpus_eval_dataset = corpus_eval_dataset.map(
+            tokenize_truncate_and_count, num_proc=min(1, os.cpu_count())
+        )
         cols_to_drop_eval = [
             c
             for c in corpus_eval_dataset.column_names
             if c not in {"input_ids", "attention_mask", "token_length"}
         ]
         corpus_eval_dataset = corpus_eval_dataset.remove_columns(cols_to_drop_eval)
-
-        # Write to disk.
-        final_train_dataset.save_to_disk(
-            final_train_dataset_cache_dir, num_proc=min(4, os.cpu_count())
-        )
-        corpus_eval_dataset = corpus_eval_dataset.map(
-            tokenize_truncate_and_count, num_proc=min(4, os.cpu_count())
-        )
         corpus_eval_dataset.save_to_disk(
             corpus_eval_dataset_cache_dir,
         )
