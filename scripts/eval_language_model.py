@@ -77,10 +77,11 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
     else:
         raise NotImplementedError
 
-    # Cap vLLM to ~10 GiB per GPU.
-    total_gib = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-    util = round(10.0 / total_gib, 3)  # ~0.126 on 80 GiB
-    wandb_config["model_config"]["gpu_memory_utilization"] = util
+    # For debugging purposes...
+    # # Cap vLLM to ~10 GiB per GPU.
+    # total_gib = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+    # util = round(10.0 / total_gib, 3)  # ~0.126 on 80 GiB
+    # wandb_config["model_config"]["gpu_memory_utilization"] = util
 
     # Create the model and sampling parameters.
     model = LLM(**wandb_config["model_config"])
@@ -174,7 +175,7 @@ def run_lm_eval_vllm(
         raise NotImplementedError
 
     seed: int = wandb_config["seed"]
-    temperature: float = wandb_config["temperature"]
+    temperature: float = float(wandb_config["temperature"])
 
     do_sample = True if temperature > 0.0 else False
 
