@@ -25,6 +25,7 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 sweep_ids = [
     "6y9dy2ow",  # Qwen 3   34M     1xOT    Subset Fraction=1.0
+    "5oo55o9s",  # Qwen 3   62M     1xOT    Subset Fraction=1.0
 ]
 
 eval_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(

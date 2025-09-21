@@ -120,6 +120,33 @@ plt.close()
 plt.figure(figsize=(10, 6))
 g = sns.lineplot(
     data=pretrain_run_1xOT_configs_df,
+    x="Num. Replicas",
+    y="eval_after/eval_benchmark_loss",
+    hue="Num. Parameters",
+    hue_norm=matplotlib.colors.LogNorm(),
+    palette="cool",
+    # col="Overtrain Multiplier",
+    marker="o",
+    legend="full",
+)
+g.set(
+    xscale="symlog",
+    xlim=(-0.1, 3162),
+    yscale="log",
+    ylabel="Cross Entropy on MATH Test Set",
+)
+sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+src.plot.format_g_legend_in_scientific_notation(g=g)
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=loss_x=num_replicas_hue=num_parameters",
+)
+# plt.show()
+
+plt.close()
+plt.figure(figsize=(10, 6))
+g = sns.lineplot(
+    data=pretrain_run_1xOT_configs_df,
     x="FLOP (6ND)",
     y="eval_after/eval_benchmark_loss",
     hue="Num. Replicas",
@@ -140,5 +167,31 @@ src.plot.save_plot_with_multiple_extensions(
     plot_filename="y=loss_x=flop_hue=num_replicas",
 )
 # plt.show()
+
+plt.close()
+plt.figure(figsize=(10, 6))
+g = sns.lineplot(
+    data=pretrain_run_1xOT_configs_df,
+    x="Num. Parameters",
+    y="eval_after/eval_benchmark_loss",
+    hue="Num. Replicas",
+    hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
+    palette="viridis",
+    marker="o",
+    legend="full",
+)
+g.set(
+    xscale="log",
+    yscale="log",
+    ylabel="Cross Entropy on MATH Test Set",
+)
+sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+# src.plot.format_g_legend_in_scientific_notation(g=g)
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=loss_x=num_parameters_hue=num_replicas",
+)
+# plt.show()
+
 
 print("Finished 10_gen_eval_math_qwen3_pt.py")
