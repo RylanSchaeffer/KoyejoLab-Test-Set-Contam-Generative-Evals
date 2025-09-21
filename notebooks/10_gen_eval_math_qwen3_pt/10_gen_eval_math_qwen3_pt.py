@@ -15,8 +15,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-# refresh = False
-refresh = True
+refresh = False
+# refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -124,7 +124,7 @@ g = sns.lineplot(
     y="eval_after/eval_benchmark_loss",
     hue="Num. Parameters",
     hue_norm=matplotlib.colors.LogNorm(),
-    palette="cool",
+    palette="flare",
     # col="Overtrain Multiplier",
     marker="o",
     legend="full",
@@ -141,7 +141,7 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=num_replicas_hue=num_parameters",
 )
-# plt.show()
+plt.show()
 
 plt.close()
 plt.figure(figsize=(10, 6))
