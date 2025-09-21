@@ -160,10 +160,10 @@ def create_dataset_for_pretraining(
         )
 
         # Subsample the appropriate number of documents and tokenize.
-        corpus_train_dataset_subset = corpus_train_dataset.shuffle(
-            seed=data_config["shuffle_seed"]
-        ).select(range(estimated_docs_needed)).map(
-            tokenize_truncate_and_count, num_proc=min(32, os.cpu_count())
+        corpus_train_dataset_subset = (
+            corpus_train_dataset.shuffle(seed=data_config["shuffle_seed"])
+            .select(range(estimated_docs_needed))
+            .map(tokenize_truncate_and_count, num_proc=min(32, os.cpu_count()))
         )
 
         # Figure out how many documents to drop to meet our target number of tokens.
