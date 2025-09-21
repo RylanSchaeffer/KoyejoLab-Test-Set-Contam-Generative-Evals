@@ -96,7 +96,7 @@ def create_dataset_for_pretraining(
                 benchmark_test_split_dataset
                 for _ in range(data_config["num_benchmark_replicas_per_epoch"])
             ]
-        )
+        ).map(tokenize_truncate_and_count, num_proc=min(2, os.cpu_count()))
     elif data_config["num_benchmark_replicas_per_epoch"] == 0:
         # Select none of the rows to create an empty dataset.
         replicated_benchmark_test_split_dataset = benchmark_test_split_dataset.select(
@@ -162,7 +162,9 @@ def create_dataset_for_pretraining(
         # Subsample the appropriate number of documents and tokenize.
         corpus_train_dataset_subset = corpus_train_dataset.shuffle(
             seed=data_config["shuffle_seed"]
-        ).select(range(estimated_docs_needed))
+        ).select(range(estimated_docs_needed)).map(
+            tokenize_truncate_and_count, num_proc=min(32, os.cpu_count())
+        )
 
         # Figure out how many documents to drop to meet our target number of tokens.
         num_tokens_in_corpus_dataset_subset = np.sum(
@@ -185,9 +187,6 @@ def create_dataset_for_pretraining(
         )
         final_train_dataset = final_train_dataset.shuffle(
             seed=data_config["shuffle_seed"]
-        )
-        final_train_dataset = final_train_dataset.map(
-            tokenize_truncate_and_count, num_proc=min(32, os.cpu_count())
         )
 
         # Remove unnecessary columns to reduce size, then save to disk.
