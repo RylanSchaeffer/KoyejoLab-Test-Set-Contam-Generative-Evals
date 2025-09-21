@@ -137,6 +137,6 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=flop_hue=num_replicas",
 )
-plt.show()
+# plt.show()
 
 print("Finished 10_gen_eval_math_qwen3_pt.py")
