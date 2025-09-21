@@ -160,11 +160,9 @@ def create_dataset_for_pretraining(
         )
 
         # Subsample the appropriate number of documents and tokenize.
-        corpus_train_dataset_subset = (
-            corpus_train_dataset.shuffle(seed=data_config["shuffle_seed"])
-            .select(range(estimated_docs_needed))
-            .map(tokenize_truncate_and_count, num_proc=min(64, os.cpu_count()))
-        )
+        corpus_train_dataset_subset = corpus_train_dataset.shuffle(
+            seed=data_config["shuffle_seed"]
+        ).select(range(estimated_docs_needed))
 
         # Figure out how many documents to drop to meet our target number of tokens.
         num_tokens_in_corpus_dataset_subset = np.sum(
@@ -187,6 +185,9 @@ def create_dataset_for_pretraining(
         )
         final_train_dataset = final_train_dataset.shuffle(
             seed=data_config["shuffle_seed"]
+        )
+        final_train_dataset = final_train_dataset.map(
+            tokenize_truncate_and_count, num_proc=min(32, os.cpu_count())
         )
 
         # Remove unnecessary columns to reduce size, then save to disk.
