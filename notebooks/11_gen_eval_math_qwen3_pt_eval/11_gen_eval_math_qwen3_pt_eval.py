@@ -63,7 +63,7 @@ eval_runs_configs_df["Num. Tokens"] = 20 * eval_runs_configs_df["Num. Parameters
 eval_runs_configs_df["FLOP (6ND)"] = (
     6 * eval_runs_configs_df["Num. Parameters"] * eval_runs_configs_df["Num. Tokens"]
 )
-eval_runs_configs_df.rename(columns={"temperature": "Temperature"}, inplace=True)
+eval_runs_configs_df.rename(columns={"temperature": "Temp."}, inplace=True)
 
 eval_runs_histories_df: pd.DataFrame = (
     src.analyze.download_wandb_project_runs_histories(
@@ -72,6 +72,7 @@ eval_runs_histories_df: pd.DataFrame = (
         sweep_ids=sweep_ids,
         refresh=refresh,
         wandb_username=wandb.api.default_entity,
+        filetype="parquet",
     )
 )
 
@@ -84,12 +85,40 @@ extended_eval_runs_histories_df = eval_runs_histories_df.merge(
             "Num. Tokens",
             "FLOP (6ND)",
             "Overtrain Multiplier",
-            "Temperature",
+            "Temp.",
         ]
     ],
     how="outer",
     on=["run_id"],
 )
+
+for (temperature,), math_verify_by_temp_df in extended_eval_runs_histories_df.groupby(
+    ["Temp."]
+):
+    plt.close()
+    plt.figure(figsize=(10, 6))
+    g = sns.lineplot(
+        data=math_verify_by_temp_df,
+        x="FLOP (6ND)",
+        y="math_verify_score",
+        hue="Num. Replicas",
+        hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
+        palette="viridis",
+        style="Temp.",
+        legend="full",
+    )
+    g.set(
+        xscale="log",
+        ylabel="Math Verify Score",
+        yscale="log",
+        ylim=(None, 1.05),
+    )
+    sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+    src.plot.save_plot_with_multiple_extensions(
+        plot_dir=results_dir,
+        plot_filename=f"y=math_verify_x=compute_hue=num_replicas_style=temp={temperature}",
+    )
+    # plt.show()
 
 plt.close()
 g = sns.relplot(
@@ -100,18 +129,23 @@ g = sns.relplot(
     hue="FLOP (6ND)",
     hue_norm=matplotlib.colors.LogNorm(),
     palette="cool",
-    col="Temperature",
+    col="Temp.",
+    col_wrap=3,
 )
 g.set(
     xscale="symlog",
+    xlim=(-0.1, None),
     ylabel="Math Verify Score",
     yscale="log",
+    ylim=(None, 1.05),
 )
+src.plot.format_g_legend_in_scientific_notation(g=g)
+sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_x=num_replicas_hue=compute_col=temp",
 )
-plt.show()
+# plt.show()
 
 plt.close()
 g = sns.relplot(
@@ -122,18 +156,22 @@ g = sns.relplot(
     hue="Num. Replicas",
     hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
     palette="viridis",
-    col="Temperature",
+    col="Temp.",
+    col_wrap=3,
+    legend="full",
 )
 g.set(
     xscale="log",
     ylabel="Math Verify Score",
     yscale="log",
+    ylim=(None, 1.05),
 )
+sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_x=compute_hue=num_replicas_col=temp",
 )
-plt.show()
+# plt.show()
 
 
 print("Finished 11_gen_eval_math_qwen3_pt_eval.py")
