@@ -15,8 +15,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-refresh = False
-# refresh = True
+# refresh = False
+refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -26,6 +26,7 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 sweep_ids = [
     "rkx5xfde",  # Qwen 3  34M
     "g31f7bsb",  # Qwen 3  34M
+    "ehxxzk5n",  # Qwen 3  34M
     "u7dxxphm",  # Qwen 3  62M
     "o6aoejzc",  # Qwen 3  62M
     "ho49sshi",  # Qwen 3  93M
@@ -85,6 +86,7 @@ pretrain_run_configs_df = pretrain_run_configs_df[
     pretrain_run_configs_df["Benchmark Subset Fraction"] == 1.0
 ].copy()
 
+# Subsample runs with Overtrain Multiplier == 1.0.
 pretrain_run_1xOT_configs_df = pretrain_run_configs_df[
     pretrain_run_configs_df["Overtrain Multiplier"] == 1.0
 ]
