@@ -111,12 +111,6 @@ def create_dataset_for_pretraining(
     replicated_benchmark_test_split_num_tokens = np.sum(
         replicated_benchmark_test_split_dataset["token_length"]
     )
-    if _is_main():
-        print(
-            f"Num. Replicas of Benchmark Test Split Per Epoch: {data_config['num_benchmark_replicas_per_epoch']}\n"
-            f"Replicated Benchmark Test Split has {replicated_benchmark_test_split_num_tokens:,} tokens."
-        )
-
     num_training_tokens_per_epoch = trainer_config["num_training_tokens_per_epoch"]
     target_num_training_tokens_total = trainer_config[
         "target_num_training_tokens_total"
@@ -124,10 +118,16 @@ def create_dataset_for_pretraining(
     num_train_epochs = trainer_config["num_train_epochs"]
 
     if _is_main():
+        print(
+            f"Num. Replicas of Benchmark Test Split Per Epoch: {data_config['num_benchmark_replicas_per_epoch']}\n"
+            f"Replicated Benchmark Test Split has {replicated_benchmark_test_split_num_tokens:,} tokens."
+        )
+
         if num_training_tokens_per_epoch < replicated_benchmark_test_split_num_tokens:
             raise ValueError(
                 f"num_training_tokens_per_epoch ({num_training_tokens_per_epoch:,}) is smaller than replicated_benchmark_test_split_num_tokens_per_token ({replicated_benchmark_test_split_num_tokens:,})."
             )
+
         corpus_tokens_needed_per_epoch = int(
             num_training_tokens_per_epoch - replicated_benchmark_test_split_num_tokens
         )
