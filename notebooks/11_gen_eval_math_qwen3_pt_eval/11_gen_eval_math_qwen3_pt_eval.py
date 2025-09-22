@@ -137,7 +137,7 @@ g = sns.relplot(
 )
 g.set(
     xscale="symlog",
-    xlim=(-0.1, None),
+    xlim=(-0.1, 3162 * 1.05),
     ylabel="Math Verify Score",
     yscale="log",
     ylim=(None, 1.05),

@@ -29,6 +29,7 @@ sweep_ids = [
     "ehxxzk5n",  # Qwen 3  34M
     "u7dxxphm",  # Qwen 3  62M
     "o6aoejzc",  # Qwen 3  62M
+    "1nwyun1z",  # Qwen 3  62M
     "ho49sshi",  # Qwen 3  93M
     "x8gmmzlo",  # Qwen 3  93M
     "sl086kx0",  # Qwen 3 153M
