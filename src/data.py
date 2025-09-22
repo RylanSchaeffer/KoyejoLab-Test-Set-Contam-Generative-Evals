@@ -123,14 +123,15 @@ def create_dataset_for_pretraining(
     ]
     num_train_epochs = trainer_config["num_train_epochs"]
 
-    if num_training_tokens_per_epoch < replicated_benchmark_test_split_num_tokens:
-        raise ValueError(
-            f"num_training_tokens_per_epoch ({num_training_tokens_per_epoch:,}) is smaller than replicated_benchmark_test_split_num_tokens_per_token ({replicated_benchmark_test_split_num_tokens:,})."
-        )
-    corpus_tokens_needed_per_epoch = int(
-        num_training_tokens_per_epoch - replicated_benchmark_test_split_num_tokens
-    )
     if _is_main():
+        if num_training_tokens_per_epoch < replicated_benchmark_test_split_num_tokens:
+            raise ValueError(
+                f"num_training_tokens_per_epoch ({num_training_tokens_per_epoch:,}) is smaller than replicated_benchmark_test_split_num_tokens_per_token ({replicated_benchmark_test_split_num_tokens:,})."
+            )
+        corpus_tokens_needed_per_epoch = int(
+            num_training_tokens_per_epoch - replicated_benchmark_test_split_num_tokens
+        )
+
         print(
             f"Tokens needed from corpus: {num_training_tokens_per_epoch:,} - {replicated_benchmark_test_split_num_tokens:,} = {corpus_tokens_needed_per_epoch:,}"
         )
@@ -195,19 +196,17 @@ def create_dataset_for_pretraining(
         ]
         final_train_dataset = final_train_dataset.remove_columns(cols_to_drop)
         final_train_dataset.save_to_disk(
-            final_train_dataset_cache_dir,
-            # num_proc=min(4, os.cpu_count())
+            final_train_dataset_cache_dir, num_proc=min(4, os.cpu_count())
         )
         corpus_eval_dataset = corpus_eval_dataset.map(
-            tokenize_truncate_and_count,
-            # num_proc=min(1, os.cpu_count())
+            tokenize_truncate_and_count, num_proc=min(2, os.cpu_count())
         )
         cols_to_drop_eval = [
             c for c in corpus_eval_dataset.column_names if c not in cols_to_keep
         ]
         corpus_eval_dataset = corpus_eval_dataset.remove_columns(cols_to_drop_eval)
         corpus_eval_dataset.save_to_disk(
-            corpus_eval_dataset_cache_dir,
+            corpus_eval_dataset_cache_dir, num_proc=min(2, os.cpu_count())
         )
 
         total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
