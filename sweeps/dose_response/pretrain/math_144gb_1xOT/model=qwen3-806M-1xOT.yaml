@@ -47,7 +47,7 @@ parameters:
       eval_strategy:
         values: [ steps ]
       eval_steps:
-        values: [ 1000 ]
+        values: [ 4000 ]
       gradient_checkpointing:
         values: [ False ]
       hub_strategy:
