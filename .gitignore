@@ -207,3 +207,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Downloaded data
+notebooks/10_gen_eval_math_qwen3_pt/data
+notebooks/11_gen_eval_math_qwen3_pt_eval/data

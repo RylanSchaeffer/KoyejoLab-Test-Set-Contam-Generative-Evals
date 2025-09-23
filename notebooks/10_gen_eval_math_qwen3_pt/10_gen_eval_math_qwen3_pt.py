@@ -35,6 +35,7 @@ sweep_ids = [
     "sl086kx0",  # Qwen 3 153M
     "09c432gh",  # Qwen 3 344M
     "gsx7gisg",  # Qwen 3 344M
+    "e3kneiqw",  # Qwen 3 344M
 ]
 
 pretrain_run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
