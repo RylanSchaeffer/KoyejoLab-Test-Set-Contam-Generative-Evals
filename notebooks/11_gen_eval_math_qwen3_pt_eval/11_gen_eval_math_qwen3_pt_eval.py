@@ -25,10 +25,13 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 
 sweep_ids = [
     "6y9dy2ow",  # Qwen 3   34M     1xOT    Subset Fraction=1.0
+    "lnrpy3ed",  # Qwen 3   34M     1xOT    Subset Fraction=1.0     More temperatures.
     "5oo55o9s",  # Qwen 3   62M     1xOT    Subset Fraction=1.0
+    "10q465ij",  # Qwen 3   62M     1xOT    Subset Fraction=1.0     More temperatures.
     "q5uoy1eu",  # Qwen 3   93M     1xOT    Subset Fraction=1.0
+    "f5djvfth",  # Qwen 3   93M     1xOT    Subset Fraction=1.0     More temperatures.
     "vnz1h147",  # Qwen 3  153M     1xOT    Subset Fraction=1.0
-    # "vnz1h147",  # Qwen 3  343M     1xOT    Subset Fraction=1.0
+    "xkzfmbhk",  # Qwen 3  343M     1xOT    Subset Fraction=1.0     More temperatures.
 ]
 
 eval_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
