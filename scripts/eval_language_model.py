@@ -24,6 +24,7 @@ from math_verify import parse, verify
 import numpy as np
 import pprint
 import subprocess
+import time
 import torch
 
 # Compiling seems to be causing problems down the line :/
@@ -159,6 +160,8 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
             ]
 
         wandb.log(problem_data_to_log, step=problem_idx + 1)
+        # Be nicer to W&B, even if that takes more time per run.
+        time.sleep(1.0 / 10.0)
 
 
 def run_lm_eval_vllm(

@@ -1,6 +1,8 @@
 black
 datasets
+edit-distance
 huggingface_hub
+math-verify
 matplotlib
 numpy
 nvidia-htop

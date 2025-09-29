@@ -220,11 +220,12 @@ def download_wandb_project_runs_histories(
     wandb_project_path: str,
     data_dir: str,
     sweep_ids: List[str] = None,
-    wandb_run_history_samples: int = 10000,
+    wandb_run_history_num_samples: int = 10000,
     refresh: bool = False,
     wandb_username: Optional[str] = None,
     filetype: str = "csv",
     nrows_to_read: Optional[int] = None,
+    cols_to_drop: Optional[List[str]] = None,
     max_workers: int = 10,
 ) -> pd.DataFrame:
     assert filetype in {"csv", "feather", "parquet"}
@@ -244,7 +245,7 @@ def download_wandb_project_runs_histories(
 
         runs_histories_list = []
         print("Downloading runs' histories...")
-        for iteration, sweep_id in enumerate(sweep_ids):
+        for sweep_id in sweep_ids:
             sweep = api.sweep(f"{wandb_username}/{wandb_project_path}/{sweep_id}")
 
             with concurrent.futures.ThreadPoolExecutor(
@@ -254,7 +255,8 @@ def download_wandb_project_runs_histories(
                     executor.submit(
                         download_wandb_project_runs_histories_helper,
                         run,
-                        wandb_run_history_samples,
+                        wandb_run_history_num_samples,
+                        cols_to_drop,
                     ): run
                     for run in sweep.runs
                 }
@@ -267,7 +269,6 @@ def download_wandb_project_runs_histories(
                     try:
                         history = future.result()
                         if history is not None:
-                            history["model_fitting_iteration"] = iteration
                             runs_histories_list.append(history)
                     except Exception as exc:
                         print(f"{run.id} generated an exception: {exc}")
@@ -285,9 +286,9 @@ def download_wandb_project_runs_histories(
         runs_histories_df.reset_index(inplace=True, drop=True)
 
         # Save all three because otherwise this is a pain in the ass.
-        runs_histories_df.to_csv(
-            runs_histories_df_path.replace(filetype, "csv"), index=False
-        )
+        # runs_histories_df.to_csv(
+        #     runs_histories_df_path.replace(filetype, "csv"), index=False
+        # )
         try:
             runs_histories_df.to_feather(
                 runs_histories_df_path.replace(filetype, "feather")
@@ -319,11 +320,15 @@ def download_wandb_project_runs_histories(
     return runs_histories_df
 
 
-def download_wandb_project_runs_histories_helper(run, wandb_run_history_samples):
+def download_wandb_project_runs_histories_helper(
+    run,
+    wandb_run_history_num_samples: int,
+    cols_to_drop: Optional[List[str]] = None,
+):
     history = None
     for num_attempts in range(5):
         try:
-            history = run.history(samples=wandb_run_history_samples)
+            history = run.history(samples=wandb_run_history_num_samples)
             break
         except (requests.exceptions.HTTPError, wandb.errors.CommError):
             print(f"Retrying run {run.id}...")
@@ -332,8 +337,8 @@ def download_wandb_project_runs_histories_helper(run, wandb_run_history_samples)
     if history is None or history.empty:
         return None
 
-    generation_columns = [col for col in history.columns if "generation" in col]
-    history.drop(columns=generation_columns, inplace=True)
+    if cols_to_drop is not None:
+        history.drop(columns=cols_to_drop, inplace=True)
     history["run_id"] = run.id
     return history
 
@@ -345,7 +350,7 @@ def extract_hf_model_name_or_path(model_config: str) -> str:
 
 def extract_num_model_parameters(model_name: str) -> int:
     if model_name.startswith("RylanSchaeffer"):
-        # RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_0_epch_1_ot_1_pt
+        # "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_0_epch_1_ot_1_pt"
         # will become "Qwen3-34M".
         base_model_name = model_name.replace("RylanSchaeffer/mem_", "").split("_")[0]
     else:

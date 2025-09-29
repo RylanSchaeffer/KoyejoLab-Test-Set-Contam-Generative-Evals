@@ -15,7 +15,6 @@ parameters:
     parameters:
       model:
         values: [
-          "RylanSchaeffer/mem_Qwen3-344M_minerva_math_rep_0_sbst_1.0000_epch_1_ot_1",
           "RylanSchaeffer/mem_Qwen3-344M_minerva_math_rep_1_sbst_1.0000_epch_1_ot_1",
           "RylanSchaeffer/mem_Qwen3-344M_minerva_math_rep_3_sbst_1.0000_epch_1_ot_1",
           "RylanSchaeffer/mem_Qwen3-344M_minerva_math_rep_10_sbst_1.0000_epch_1_ot_1",
@@ -24,6 +23,7 @@ parameters:
           "RylanSchaeffer/mem_Qwen3-344M_minerva_math_rep_316_sbst_1.0000_epch_1_ot_1",
           "RylanSchaeffer/mem_Qwen3-344M_minerva_math_rep_1000_sbst_1.0000_epch_1_ot_1",
           "RylanSchaeffer/mem_Qwen3-344M_minerva_math_rep_3162_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-344M_minerva_math_rep_0_sbst_1.0000_epch_1_ot_1",
         ]
       dtype:
         values: [ "bfloat16" ]
