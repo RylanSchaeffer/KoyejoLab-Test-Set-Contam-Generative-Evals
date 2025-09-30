@@ -3,6 +3,7 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LogNorm, SymLogNorm
 import matplotlib.pyplot as plt
 import matplotlib.transforms
+import math
 import numpy as np
 import os
 import pandas as pd
@@ -44,7 +45,7 @@ pretrain_run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_
     data_dir=data_dir,
     sweep_ids=sweep_ids,
     refresh=refresh,
-    wandb_username=wandb.api.default_entity,
+    wandb_username="rylan",#wandb.api.default_entity,
     finished_only=True,
 )
 
@@ -444,7 +445,30 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=flop_hue=num_replicas",
 )
-# plt.show()
+plt.show()
+plt.close()
 
+# Create a heatmap of the different parameter sizes
+param_sizes = sorted(pretrain_run_configs_df['Num. Parameters'].unique()[:2])
+fig, axes = plt.subplots(nrows=1, ncols=len(param_sizes), figsize=(5*(len(param_sizes)+1), 5))
+axes = [axes] if len(param_sizes) == 1 else axes
+pretrain_run_configs_df['ce_loss_difference'] = pretrain_run_configs_df['eval_after/eval_benchmark_loss']/pretrain_run_configs_df['eval_after/eval_eval_loss']
+vmin, vmax = pretrain_run_configs_df['ce_loss_difference'].min(), pretrain_run_configs_df['ce_loss_difference'].max()
+all_overtrain, all_replicas = sorted(pretrain_run_configs_df['Overtrain Multiplier'].unique(), reverse=True), sorted(pretrain_run_configs_df['Num. Replicas Per Epoch'].unique())
+
+for idx, param_size in enumerate(param_sizes):
+    hm_data = pretrain_run_configs_df[pretrain_run_configs_df['Num. Parameters'] == param_size].pivot_table(
+        index='Overtrain Multiplier', columns="Num. Replicas Per Epoch", values='ce_loss_difference', aggfunc='mean'
+    ).reindex(index=all_overtrain, columns=all_replicas)
+    
+    sns.heatmap(hm_data, ax=axes[idx], cbar=(idx == len(param_sizes) - 1), cbar_kws={'label': 'Eval Loss', 'aspect': 20} if idx == len(param_sizes) - 1 else None, vmin=vmin, vmax=vmax, cmap='coolwarm', norm=LogNorm(vmin=vmin, vmax=vmax))
+    print_parameters = f"{param_size / 1_000_000:.0f}M"
+    axes[idx].set_title(f'{print_parameters} Parameters')
+    axes[idx].set(xlabel = 'Num. Replicas')
+plt.suptitle('MATH Cross Entropy/Eval Cross Entropy')
+plt.tight_layout()
+src.plot.save_plot_with_multiple_extensions(plot_dir=results_dir, plot_filename="heatmap_loss_by_overtrain_and_replicas_by_model_size")
+plt.show()
+plt.close()
 
 print("Finished 10_gen_eval_math_qwen3_pt.py")
