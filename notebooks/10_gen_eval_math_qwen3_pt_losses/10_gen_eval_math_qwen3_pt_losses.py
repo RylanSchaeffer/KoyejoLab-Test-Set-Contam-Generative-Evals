@@ -449,26 +449,47 @@ plt.show()
 plt.close()
 
 # Create a heatmap of the different parameter sizes
-param_sizes = sorted(pretrain_run_configs_df['Num. Parameters'].unique()[:2])
-fig, axes = plt.subplots(nrows=1, ncols=len(param_sizes), figsize=(5*(len(param_sizes)+1), 5))
-axes = [axes] if len(param_sizes) == 1 else axes
-pretrain_run_configs_df['ce_loss_difference'] = pretrain_run_configs_df['eval_after/eval_benchmark_loss']/pretrain_run_configs_df['eval_after/eval_eval_loss']
+param_sizes = sorted(pretrain_run_configs_df['Num. Parameters'].unique())[:4]
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 10))
+axes = axes.flatten()
+pretrain_run_configs_df['baseline_loss'] = pretrain_run_configs_df.groupby(
+    ['Num. Parameters', 'Overtrain Multiplier']
+)['eval_after/eval_benchmark_loss'].transform(
+    lambda x: x[pretrain_run_configs_df.loc[x.index, 'Num. Replicas Per Epoch'] == 0].iloc[0]
+    if not x[pretrain_run_configs_df.loc[x.index, 'Num. Replicas Per Epoch'] == 0].empty
+    else np.nan
+)
+
+# 3. Calculate the Percent Change, replacing the original column
+pretrain_run_configs_df['ce_loss_difference'] = (
+    (pretrain_run_configs_df['eval_after/eval_benchmark_loss'] - pretrain_run_configs_df['baseline_loss']) / 
+    pretrain_run_configs_df['baseline_loss']
+) * 100
 vmin, vmax = pretrain_run_configs_df['ce_loss_difference'].min(), pretrain_run_configs_df['ce_loss_difference'].max()
 all_overtrain, all_replicas = sorted(pretrain_run_configs_df['Overtrain Multiplier'].unique(), reverse=True), sorted(pretrain_run_configs_df['Num. Replicas Per Epoch'].unique())
-
+print(f'the vmax is: {vmax}, vmin is: {vmin}')
 for idx, param_size in enumerate(param_sizes):
     hm_data = pretrain_run_configs_df[pretrain_run_configs_df['Num. Parameters'] == param_size].pivot_table(
         index='Overtrain Multiplier', columns="Num. Replicas Per Epoch", values='ce_loss_difference', aggfunc='mean'
     ).reindex(index=all_overtrain, columns=all_replicas)
     
-    sns.heatmap(hm_data, ax=axes[idx], cbar=(idx == len(param_sizes) - 1), cbar_kws={'label': 'Eval Loss', 'aspect': 20} if idx == len(param_sizes) - 1 else None, vmin=vmin, vmax=vmax, cmap='coolwarm', norm=LogNorm(vmin=vmin, vmax=vmax))
+    im = sns.heatmap(hm_data, ax=axes[idx], cbar=False, vmin=vmin, vmax=vmax, cmap='coolwarm', norm=SymLogNorm(linthresh = 30, vmin=vmin, vmax=vmax))
     print_parameters = f"{param_size / 1_000_000:.0f}M"
     axes[idx].set_title(f'{print_parameters} Parameters')
     axes[idx].set(xlabel = 'Num. Replicas')
-plt.suptitle('MATH Cross Entropy/Eval Cross Entropy')
-plt.tight_layout()
+
+plt.suptitle('Percent Change in MATH Loss Caused by Data Replication')
+
+# Call tight_layout FIRST to position the subplots
+plt.tight_layout(rect=[0, 0, 0.85, 0.96])  # Leave space on right and top
+
+# THEN add the colorbar after tight_layout has positioned everything
+cbar_ax = fig.add_axes([0.98, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+fig.colorbar(im.collections[0], cax=cbar_ax, label='Memorized/Eval Loss Ratio')
+
 src.plot.save_plot_with_multiple_extensions(plot_dir=results_dir, plot_filename="heatmap_loss_by_overtrain_and_replicas_by_model_size")
 plt.show()
 plt.close()
+
 
 print("Finished 10_gen_eval_math_qwen3_pt.py")

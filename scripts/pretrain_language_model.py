@@ -170,6 +170,8 @@ def pretrain():
         # greater_is_better=True,
         num_train_epochs=wandb_config["trainer_config"]["num_train_epochs"],
         optim=wandb_config["trainer_config"]["optim"],
+        adam_beta1 = wandb_config["trainer_config"]["adam_beta1"],
+        adam_beta2 = wandb_config["trainer_config"]['adam_beta2'],
         output_dir=output_dir,
         per_device_eval_batch_size=wandb_config["trainer_config"][
             "per_device_eval_batch_size"
@@ -184,8 +186,8 @@ def pretrain():
         save_total_limit=wandb_config["trainer_config"]["save_total_limit"],
         seed=wandb_config["seed"],
         torch_compile=wandb_config["trainer_config"]["torch_compile"],
-        warmup_steps=wandb_config["trainer_config"]["warmup_steps"],
-        # warmup_ratio=wandb_config["trainer_config"]["warmup_ratio"],
+        # warmup_steps=wandb_config["trainer_config"]["warmup_steps"],
+        warmup_ratio=wandb_config["trainer_config"]["warmup_ratio"],
         weight_decay=wandb_config["trainer_config"]["weight_decay"],
     )
 
@@ -390,7 +392,7 @@ def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> st
         "num_benchmark_replicas_per_epoch"
     ]
     benchmark_subset_fraction = np.round(
-        wandb_config["data_config"]["benchmark_subset_fraction"], 4
+        wandb_config["data_config"]["benchmark_subset_fraction"], 8
     )
     pted_model_hf_name = f"mem_{init_model_name}_{benchmark}_rep_{num_benchmark_replicas_per_epoch}_sbst_{benchmark_subset_fraction:.4f}_epch_{num_train_epochs}_ot_{overtrain_multiplier}"
     if len(pted_model_hf_name) > 94:
