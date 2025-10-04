@@ -6,22 +6,28 @@ command:
   - ${program}
   - ${args}
 program: scripts/pretrain_language_model.py
-entity: rylan
-project: memorization-scoring-vs-sampling-pt
+entity: jkazdan
+project: memorization-scoring-vs-sampling-pt-param-switch
 method: grid
 parameters:
   data_config:
     parameters:
+      do_not_displace:
+        values: [False]
       corpus:
         values: ["fineweb-edu-dedup"]
+      use_corpus_for_replication:
+        values: [True]
+      memorization_budget_fraction:
+        values: [ 0.10 ]
       benchmark:
         values: [ "EleutherAI/minerva_math" ]
       benchmark_subset_fraction:
-        values: [ 1.0, 0.01, 0.1, 0.001 ]
+        values: [ 0.000001, 0.00001, 0.0001, 0.001, 0.01 ]
       benchmark_shuffle_seed:
         values: [ 0 ]
       num_benchmark_replicas_per_epoch:
-        values: [0, 316, 1, 100, 10, 32, 1000, 3]
+        values: [ -1 ]
       shuffle_seed:
         values: [0]
   model_config:
@@ -68,9 +74,9 @@ parameters:
         values: [ 1 ]
       optim:
         values: [ "adamw_torch_fused" ]
-      adam_beta_1:
+      adam_beta1:
         values: [ 0.9 ]
-      adam_beta_2:
+      adam_beta2:
         values: [ 0.95 ]
       overtrain_multiplier:
         values: [ 1.0 ]
@@ -90,6 +96,8 @@ parameters:
         values: [ True ]
       warmup_steps:
         values: [ 250 ]
+      warmup_ratio:
+        values: [0.2]
       weight_decay:
         values: [ 0.0 ]
   seed:

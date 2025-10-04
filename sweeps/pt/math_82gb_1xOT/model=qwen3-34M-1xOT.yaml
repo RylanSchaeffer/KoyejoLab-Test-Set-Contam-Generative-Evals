@@ -6,7 +6,7 @@ command:
   - ${program}
   - ${args}
 program: scripts/pretrain_language_model.py
-entity: rylan
+entity: jkazdan
 project: memorization-scoring-vs-sampling-pt
 method: grid
 parameters:
