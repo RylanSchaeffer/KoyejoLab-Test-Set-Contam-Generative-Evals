@@ -37,6 +37,7 @@ sweep_ids = [
     "09c432gh",  # Qwen 3 344M
     "gsx7gisg",  # Qwen 3 344M
     "6f9ah90l",  # Qwen 3 344M
+    "r9fixoce",  # Qwen 3 344M
 ]
 
 pretrain_run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
@@ -113,6 +114,7 @@ pretrain_run_configs_melted_df = pretrain_run_configs_df[
         "eval_after/eval_benchmark_loss",
         "Overtrain Multiplier",
         "Parameters",
+        "Num. Parameters",
         "Num. MATH Test Set Replicas",
     ]
 ].melt(
@@ -120,6 +122,7 @@ pretrain_run_configs_melted_df = pretrain_run_configs_df[
         "FLOP (6ND)",
         "Overtrain Multiplier",
         "Parameters",
+        "Num. Parameters",
         "Num. MATH Test Set Replicas",
     ],
     value_vars=[
@@ -173,7 +176,48 @@ g.set_titles(
 sns.move_legend(g, "upper left", bbox_to_anchor=(1.0, 1.0))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=loss_x=compute_hue=ot_row=data_col=num-replicas",
+    plot_filename="y=loss_x=compute_hue=ot_row=data_col=num-replicas_lines=ot",
+)
+# plt.show()
+
+
+plt.close()
+g = sns.relplot(
+    data=pretrain_run_configs_melted_df,
+    kind="scatter",
+    x="FLOP (6ND)",
+    y="Cross Entropy",
+    row="Data",
+    row_order=["FineWebEdu", "MATH"],
+    col="Num. MATH Test Set Replicas",
+    style="Overtrain Multiplier",
+    hue="Num. Parameters",
+    hue_norm=LogNorm(),
+    palette="copper",
+    facet_kws={"margin_titles": True, "sharey": "row"},
+    legend="full",
+    s=100,
+    linewidth=0,
+    height=6,
+    aspect=0.75,
+)
+g.map_dataframe(
+    sns.lineplot,
+    x="FLOP (6ND)",
+    y="Cross Entropy",
+    hue="Num. Parameters",
+    hue_norm=LogNorm(),
+    palette="copper",
+    legend=False,  # keep axes clean
+)
+g.set(xscale="log", yscale="log")
+g.set_titles(
+    row_template="{row_name} Test Set", col_template="{col_name} MATH Test Set Replicas"
+)
+sns.move_legend(g, "upper left", bbox_to_anchor=(1.0, 1.0))
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=loss_x=compute_hue=ot_row=data_col=num-replicas_lines=params",
 )
 # plt.show()
 
@@ -255,8 +299,6 @@ g = sns.relplot(
     y="Cross Entropy",
     col="Data",
     col_order=["FineWebEdu", "MATH"],
-    # style="Parameters",
-    # style_order=["34M", "63M", "93M", "153M", "344M"],
     style="Overtrain Multiplier",
     hue="Num. Parameters",
     hue_norm=LogNorm(),
@@ -382,7 +424,7 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_by_num_parameters_by_num_replicas",
 )
-plt.show()
+# plt.show()
 
 
 plt.close()
