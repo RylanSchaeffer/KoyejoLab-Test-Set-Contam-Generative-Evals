@@ -306,19 +306,23 @@ g = sns.relplot(
     col_wrap=3,
     facet_kws={"sharex": False},
     marker="o",
+    markeredgecolor="none",
 )
 g.set(
-    xscale="symlog",
-    xlim=(-0.1, 3500),
+    # xscale="symlog",
+    # xlim=(-0.1, 3500),
     yscale="log",
     ylabel="Cross Entropy on MATH Test Set",
 )
+for ax in g.axes.flat:
+    ax.set_xscale("symlog", linthresh=1e0)  # or smaller
+    ax.set_xlim(-1e-1, 3500)
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=num_replicas_hue=ot_col=params",
 )
-plt.show()
+# plt.show()
 
 
 # Subsample runs with Overtrain Multiplier == 1.0.
