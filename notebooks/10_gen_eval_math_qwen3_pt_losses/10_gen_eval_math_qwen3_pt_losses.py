@@ -106,6 +106,79 @@ overtrain_multiplier_log_norm = LogNorm(
 )
 
 # Gadre et al. (2024) Figure 2. https://arxiv.org/pdf/2403.08540
+pretrain_run_configs_melted_df = pretrain_run_configs_df[
+    [
+        "FLOP (6ND)",
+        "eval_after/eval_eval_loss",
+        "eval_after/eval_benchmark_loss",
+        "Overtrain Multiplier",
+        "Parameters",
+        "Num. MATH Test Set Replicas",
+    ]
+].melt(
+    id_vars=[
+        "FLOP (6ND)",
+        "Overtrain Multiplier",
+        "Parameters",
+        "Num. MATH Test Set Replicas",
+    ],
+    value_vars=[
+        "eval_after/eval_eval_loss",
+        "eval_after/eval_benchmark_loss",
+    ],
+    var_name="Data",
+    value_name="Cross Entropy",
+)
+pretrain_run_configs_melted_df["Data"] = pretrain_run_configs_melted_df["Data"].map(
+    {
+        "eval_after/eval_eval_loss": "FineWebEdu",
+        "eval_after/eval_benchmark_loss": "MATH",
+    },
+)
+
+plt.close()
+g = sns.relplot(
+    data=pretrain_run_configs_melted_df,
+    kind="scatter",
+    x="FLOP (6ND)",
+    y="Cross Entropy",
+    row="Data",
+    row_order=["FineWebEdu", "MATH"],
+    col="Num. MATH Test Set Replicas",
+    style="Parameters",
+    style_order=["34M", "63M", "93M", "153M", "344M"],
+    hue="Overtrain Multiplier",
+    hue_norm=LogNorm(),
+    palette="copper",
+    facet_kws={"margin_titles": True, "sharey": "row"},
+    legend="full",
+    s=100,
+    linewidth=0,
+    height=6,
+    aspect=0.75,
+)
+g.map_dataframe(
+    sns.lineplot,
+    x="FLOP (6ND)",
+    y="Cross Entropy",
+    hue="Overtrain Multiplier",
+    hue_norm=LogNorm(),
+    palette="copper",
+    legend=False,  # keep axes clean
+)
+g.set(xscale="log", yscale="log")
+g.set_titles(
+    row_template="{row_name} Test Set", col_template="{col_name} MATH Test Set Replicas"
+)
+sns.move_legend(g, "upper left", bbox_to_anchor=(1.0, 1.0))
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=loss_x=compute_hue=ot_row=data_col=num-replicas",
+)
+plt.show()
+
+
+# Gadre et al. (2024) Figure 2. https://arxiv.org/pdf/2403.08540
 pretrain_runs_no_contam_configs_df = pretrain_run_configs_df[
     pretrain_run_configs_df["Num. MATH Test Set Replicas"] == 0.0
 ]
