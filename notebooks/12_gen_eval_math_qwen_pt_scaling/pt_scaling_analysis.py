@@ -27,7 +27,7 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 # sweep_ids = [
 #     "cqbazyfu",
 #     "c1ncnak3",
-#     "0h5q5wh1"  
+#     "0h5q5wh1"
 # ]
 
 # displacing data and following Hernandez
@@ -36,16 +36,14 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 # ]
 
 # displacing data on larger model
-sweep_ids = [
-    "0afaovk5"
-]
+sweep_ids = ["0afaovk5"]
 
 pretrain_run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
     wandb_project_path="memorization-scoring-vs-sampling-pt",
     data_dir=data_dir,
     sweep_ids=sweep_ids,
     refresh=refresh,
-    wandb_username="jkazdan",#wandb.api.default_entity,
+    wandb_username="jkazdan",  # wandb.api.default_entity,
     finished_only=False,
 )
 
@@ -106,11 +104,14 @@ overtrain_multiplier_log_norm = LogNorm(
     vmax=pretrain_run_configs_df["Overtrain Multiplier"].max(),
 )
 
-print(pretrain_run_configs_df.head()['eval_after/eval_eval_loss'])
+print(pretrain_run_configs_df.head()["eval_after/eval_eval_loss"])
 
-plt.scatter(pretrain_run_configs_df['Benchmark Subset Fraction'], pretrain_run_configs_df['eval_after/eval_eval_loss'])
-plt.xlabel('Fraction of Dataset Replicated')
-plt.ylabel('Eval Loss')
+plt.scatter(
+    pretrain_run_configs_df["Benchmark Subset Fraction"],
+    pretrain_run_configs_df["eval_after/eval_eval_loss"],
+)
+plt.xlabel("Fraction of Dataset Replicated")
+plt.ylabel("Eval Loss")
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="repeats_v_eval_loss.png",
@@ -398,7 +399,7 @@ plt.close()
 #     hm_data = pretrain_run_configs_df[pretrain_run_configs_df['Num. Parameters'] == param_size].pivot_table(
 #         index='Overtrain Multiplier', columns="Num. Replicas Per Epoch", values='ce_loss_difference', aggfunc='mean'
 #     ).reindex(index=all_overtrain, columns=all_replicas)
-    
+
 #     sns.heatmap(hm_data, ax=axes[idx], cbar=(idx == len(param_sizes) - 1), cbar_kws={'label': 'Eval Loss', 'aspect': 20} if idx == len(param_sizes) - 1 else None, vmin=vmin, vmax=vmax, cmap='coolwarm', norm=LogNorm(vmin=vmin, vmax=vmax))
 #     print_parameters = f"{param_size / 1_000_000:.0f}M"
 #     axes[idx].set_title(f'{print_parameters} Parameters')

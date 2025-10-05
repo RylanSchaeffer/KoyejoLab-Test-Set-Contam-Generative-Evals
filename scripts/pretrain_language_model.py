@@ -170,8 +170,8 @@ def pretrain():
         # greater_is_better=True,
         num_train_epochs=wandb_config["trainer_config"]["num_train_epochs"],
         optim=wandb_config["trainer_config"]["optim"],
-        adam_beta1 = wandb_config["trainer_config"]["adam_beta1"],
-        adam_beta2 = wandb_config["trainer_config"]['adam_beta2'],
+        adam_beta1=wandb_config["trainer_config"]["adam_beta1"],
+        adam_beta2=wandb_config["trainer_config"]["adam_beta2"],
         output_dir=output_dir,
         per_device_eval_batch_size=wandb_config["trainer_config"][
             "per_device_eval_batch_size"
@@ -465,9 +465,9 @@ def initialize_wandb():
         run_id, cfg_dict = obj_list
 
     # Use a consistent per-run HF datasets cache across all ranks
-    os.environ[
-        "HF_DATASETS_CACHE"
-    ] = f"{os.getenv('LFS_HOME')}/KoyejoLab-Scoring-vs-Sampling-Memorization/cached_datasets/{run_id}"
+    os.environ["HF_DATASETS_CACHE"] = (
+        f"{os.getenv('LFS_HOME')}/KoyejoLab-Scoring-vs-Sampling-Memorization/cached_datasets/{run_id}"
+    )
 
     return run, run_id, cfg_dict
 

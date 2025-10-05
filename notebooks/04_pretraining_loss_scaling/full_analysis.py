@@ -36,13 +36,15 @@ pt_run_configs_df: pd.DataFrame = src.analyze.download_wandb_pretraining_runs_co
     data_dir=data_dir,
     sweep_ids=sweep_ids,
     refresh=refresh,
-    wandb_username='rylan',#wandb.api.default_entity,
+    wandb_username="rylan",  # wandb.api.default_entity,
     finished_only=True,
 )
 
-pt_run_configs_df.to_csv('/lfs/skampere2/0/jkazdan/KoyejoLab-Memorization-Scoring-vs-Sampling/notebooks/04_pretraining_loss_scaling/data/cleaned_data.csv')
+pt_run_configs_df.to_csv(
+    "/lfs/skampere2/0/jkazdan/KoyejoLab-Memorization-Scoring-vs-Sampling/notebooks/04_pretraining_loss_scaling/data/cleaned_data.csv"
+)
 
-print(f'finished writing data')
+print(f"finished writing data")
 metric_columns = ["benchmark_loss", "eval_loss", "train_loss"]
 metric_column_to_nice_string_dict = {
     "benchmark_loss": "Loss (Benchmark)",

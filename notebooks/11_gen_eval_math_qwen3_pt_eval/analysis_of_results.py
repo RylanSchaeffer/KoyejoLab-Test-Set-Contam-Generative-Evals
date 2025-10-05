@@ -41,7 +41,7 @@ eval_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_con
     data_dir=data_dir,
     sweep_ids=sweep_ids,
     refresh=refresh,
-    wandb_username='rylan',#wandb.api.default_entity,
+    wandb_username="rylan",  # wandb.api.default_entity,
     finished_only=True,
 )
 

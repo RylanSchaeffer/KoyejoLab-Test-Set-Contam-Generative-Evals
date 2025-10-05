@@ -64,17 +64,24 @@ def create_dataset_for_pretraining(
     # Load the benchmark.
     if data_config.get("use_corpus_for_replication", False):
         # Load and tokenize a subset of corpus for replication
-        corpus_for_replication = load_dataset(
-            "HuggingFaceTB/smollm-corpus",
-            "fineweb-edu-dedup",
-            split="train",
-            streaming=False,
-        ).shuffle(seed=data_config["benchmark_shuffle_seed"]).select(
-            range(int(data_config["benchmark_subset_fraction"] * 10000))
-        ).map(tokenize_truncate_and_count, num_proc=min(32, os.cpu_count()))
-        
+        corpus_for_replication = (
+            load_dataset(
+                "HuggingFaceTB/smollm-corpus",
+                "fineweb-edu-dedup",
+                split="train",
+                streaming=False,
+            )
+            .shuffle(seed=data_config["benchmark_shuffle_seed"])
+            .select(range(int(data_config["benchmark_subset_fraction"] * 10000)))
+            .map(tokenize_truncate_and_count, num_proc=min(32, os.cpu_count()))
+        )
+
         benchmark_test_split_dataset = corpus_for_replication.remove_columns(
-            [col for col in corpus_for_replication.column_names if col not in cols_to_keep]
+            [
+                col
+                for col in corpus_for_replication.column_names
+                if col not in cols_to_keep
+            ]
         )
     else:
         benchmark_test_split_dataset = create_dataset_for_supervised_finetuning(
@@ -84,7 +91,6 @@ def create_dataset_for_pretraining(
         )["eval"]
 
     # Remove unnecessary columns from the benchmark.
-    
 
     benchmark_test_split_dataset = benchmark_test_split_dataset.remove_columns(
         [
@@ -107,11 +113,15 @@ def create_dataset_for_pretraining(
         seed=data_config["benchmark_shuffle_seed"]
     ).select(range(num_benchmark_samples_to_subsample))
 
-
-    #if benchmark samplie fraction is -1, set authomatically to 10%
+    # if benchmark samplie fraction is -1, set authomatically to 10%
     if data_config["num_benchmark_replicas_per_epoch"] == -1:
-        data_config["num_benchmark_replicas_per_epoch"] = int(data_config['memorization_budget_fraction']/data_config["benchmark_subset_fraction"])
-    print(f"the number of benchmark replicas is {data_config['num_benchmark_replicas_per_epoch']}")
+        data_config["num_benchmark_replicas_per_epoch"] = int(
+            data_config["memorization_budget_fraction"]
+            / data_config["benchmark_subset_fraction"]
+        )
+    print(
+        f"the number of benchmark replicas is {data_config['num_benchmark_replicas_per_epoch']}"
+    )
     # Replicate the benchmark.
     if data_config["num_benchmark_replicas_per_epoch"] > 0:
         replicated_benchmark_test_split_dataset = concatenate_datasets(
@@ -129,7 +139,6 @@ def create_dataset_for_pretraining(
         raise ValueError(
             f"Invalid num_benchmark_replicas_per_epoch ({data_config['num_benchmark_replicas_per_epoch']})"
         )
-
 
     # Figure out how many tokens we need to take from the corpus to make up the target.
     replicated_benchmark_test_split_num_tokens = np.sum(
@@ -152,12 +161,11 @@ def create_dataset_for_pretraining(
                 f"num_training_tokens_per_epoch ({num_training_tokens_per_epoch:,}) is smaller than replicated_benchmark_test_split_num_tokens_per_token ({replicated_benchmark_test_split_num_tokens:,})."
             )
         if data_config.get("do_not_displace", False):
-            corpus_tokens_needed_per_epoch = int(
-                num_training_tokens_per_epoch
-            )            
+            corpus_tokens_needed_per_epoch = int(num_training_tokens_per_epoch)
         else:
             corpus_tokens_needed_per_epoch = int(
-                num_training_tokens_per_epoch - replicated_benchmark_test_split_num_tokens
+                num_training_tokens_per_epoch
+                - replicated_benchmark_test_split_num_tokens
             )
 
         print(
@@ -240,7 +248,7 @@ def create_dataset_for_pretraining(
         total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
         corpus_tokens_actual = np.sum(corpus_train_dataset_subset["token_length"])
 
-        #changed the print statement so that it's not misleading
+        # changed the print statement so that it's not misleading
         if data_config.get("do_not_displace", False):
             print(
                 f"Not displacing tokens...\n"
