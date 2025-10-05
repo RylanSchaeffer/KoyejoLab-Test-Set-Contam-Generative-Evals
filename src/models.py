@@ -32,7 +32,7 @@ qwen3_parameters_to_depths_and_widths = {
 
 
 def create_causalm_for_pretraining(
-    model_config_dict: Dict[str, Any]
+    model_config_dict: Dict[str, Any],
 ) -> PreTrainedModel:
     if model_config_dict["torch_dtype"] == "bfloat16":
         torch_dtype = torch.bfloat16
@@ -75,7 +75,7 @@ def create_causalm_for_pretraining(
 
 
 def load_automodelforcausallm(
-    model_config_dict: Dict[str, Any]
+    model_config_dict: Dict[str, Any],
 ) -> AutoModelForCausalLM:
     if model_config_dict["torch_dtype"] == "bfloat16":
         torch_dtype = torch.bfloat16

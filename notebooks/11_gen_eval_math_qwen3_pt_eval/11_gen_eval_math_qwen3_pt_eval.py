@@ -16,7 +16,7 @@ import src.globals
 import src.plot
 
 # refresh = False
-refresh = True
+refresh = False
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -40,7 +40,7 @@ eval_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_con
     data_dir=data_dir,
     sweep_ids=sweep_ids,
     refresh=refresh,
-    wandb_username=wandb.api.default_entity,
+    wandb_username="rylan",  # wandb.api.default_entity,
     finished_only=True,
 )
 
@@ -83,15 +83,17 @@ num_parameters_log_norm = LogNorm(
     vmax=eval_runs_configs_df["Num. Parameters"].max(),
 )
 
-eval_runs_histories_df: pd.DataFrame = src.analyze.download_wandb_project_runs_histories(
-    wandb_project_path="memorization-scoring-vs-sampling-eval",
-    data_dir=data_dir,
-    sweep_ids=sweep_ids,
-    refresh=refresh,
-    wandb_username=wandb.api.default_entity,
-    filetype="parquet",
-    # nrows_to_read=10000,
-    cols_to_drop=["response", "solution", "_step", "_runtime", "_timestamp"],
+eval_runs_histories_df: pd.DataFrame = (
+    src.analyze.download_wandb_project_runs_histories(
+        wandb_project_path="memorization-scoring-vs-sampling-eval",
+        data_dir=data_dir,
+        sweep_ids=sweep_ids,
+        refresh=refresh,
+        wandb_username="rylan",  # wandb.api.default_entity,
+        filetype="parquet",
+        # nrows_to_read=10000,
+        cols_to_drop=["response", "solution", "_step", "_runtime", "_timestamp"],
+    )
 )
 
 extended_eval_runs_histories_df = eval_runs_histories_df.merge(
@@ -234,35 +236,35 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_x=compute_hue=num_replicas_col=temp",
 )
-# plt.show()
+plt.show()
 
-# for (temperature,), math_verify_by_temp_df in extended_eval_runs_histories_df.groupby(
-#     ["Temp."]
-# ):
-#     plt.close()
-#     plt.figure(figsize=(10, 6))
-#     g = sns.lineplot(
-#         data=math_verify_by_temp_df,
-#         x="FLOP (6ND)",
-#         y="math_verify_score",
-#         hue="Num. MATH Test Set Replicas",
-#         hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
-#         palette="viridis",
-#         style="Temp.",
-#         legend="full",
-#     )
-#     g.set(
-#         xscale="log",
-#         ylabel="Math Verify Score",
-#         yscale="log",
-#         ylim=(None, 1.05),
-#     )
-#     sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
-#     src.plot.save_plot_with_multiple_extensions(
-#         plot_dir=results_dir,
-#         plot_filename=f"y=math_verify_x=compute_hue=num_replicas_style=temp={temperature}",
-#     )
-#     # plt.show()
+for (temperature,), math_verify_by_temp_df in extended_eval_runs_histories_df.groupby(
+    ["Temp."]
+):
+    plt.close()
+    plt.figure(figsize=(10, 6))
+    g = sns.lineplot(
+        data=math_verify_by_temp_df,
+        x="FLOP (6ND)",
+        y="math_verify_score",
+        hue="Num. MATH Test Set Replicas",
+        hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
+        palette="viridis",
+        style="Temp.",
+        legend="full",
+    )
+    g.set(
+        xscale="log",
+        ylabel="Math Verify Score",
+        yscale="log",
+        ylim=(None, 1.05),
+    )
+    sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+    src.plot.save_plot_with_multiple_extensions(
+        plot_dir=results_dir,
+        plot_filename=f"y=math_verify_x=compute_hue=num_replicas_style=temp={temperature}",
+    )
+plt.show()
 
 
 print("Finished 11_gen_eval_math_qwen3_pt_eval.py")
