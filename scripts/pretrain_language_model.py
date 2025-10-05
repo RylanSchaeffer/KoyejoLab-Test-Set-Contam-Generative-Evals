@@ -66,7 +66,7 @@ def pretrain():
         # We need to increase the timeout for tokenizing the dataset.
         # 10 minutes is default. 150 minutes should be ample.
         torch.distributed.init_process_group(
-            backend="nccl", timeout=datetime.timedelta(minutes=150)
+            backend="nccl", timeout=datetime.timedelta(minutes=480)
         )
 
     print("CUDA VISIBLE DEVICES: ", os.environ["CUDA_VISIBLE_DEVICES"])
