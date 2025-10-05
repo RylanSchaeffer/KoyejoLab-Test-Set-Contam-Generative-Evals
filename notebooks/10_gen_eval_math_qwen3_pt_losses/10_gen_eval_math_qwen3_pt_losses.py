@@ -14,8 +14,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-# refresh = False
-refresh = True
+refresh = False
+# refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -175,7 +175,7 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=compute_hue=ot_row=data_col=num-replicas",
 )
-plt.show()
+# plt.show()
 
 
 # Gadre et al. (2024) Figure 2. https://arxiv.org/pdf/2403.08540
@@ -189,9 +189,10 @@ pretrain_runs_no_contam_configs_melted_df = pretrain_runs_no_contam_configs_df[
         "eval_after/eval_benchmark_loss",
         "Overtrain Multiplier",
         "Parameters",
+        "Num. Parameters",
     ]
 ].melt(
-    id_vars=["FLOP (6ND)", "Overtrain Multiplier", "Parameters"],
+    id_vars=["FLOP (6ND)", "Overtrain Multiplier", "Parameters", "Num. Parameters"],
     value_vars=[
         "eval_after/eval_eval_loss",
         "eval_after/eval_benchmark_loss",
@@ -242,9 +243,48 @@ g.set_titles(col_template="{col_name} Test Set")
 sns.move_legend(g, "upper left", bbox_to_anchor=(1.0, 1.0))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=loss_x=compute_hue=ot_col=data_setting=no-contam",
+    plot_filename="y=loss_x=compute_hue=ot_col=data_lines=ot_setting=no-contam",
 )
-plt.show()
+# plt.show()
+
+plt.close()
+g = sns.relplot(
+    data=pretrain_runs_no_contam_configs_melted_df,
+    kind="scatter",
+    x="FLOP (6ND)",
+    y="Cross Entropy",
+    col="Data",
+    col_order=["FineWebEdu", "MATH"],
+    # style="Parameters",
+    # style_order=["34M", "63M", "93M", "153M", "344M"],
+    style="Overtrain Multiplier",
+    hue="Num. Parameters",
+    hue_norm=LogNorm(),
+    palette="copper",
+    facet_kws={"margin_titles": True},
+    legend="full",
+    s=100,
+    linewidth=0,
+    height=6,
+    aspect=0.75,
+)
+g.map_dataframe(
+    sns.lineplot,
+    x="FLOP (6ND)",
+    y="Cross Entropy",
+    hue="Num. Parameters",
+    hue_norm=LogNorm(),
+    palette="copper",
+    legend=False,  # keep axes clean
+)
+g.set(xscale="log", yscale="log")
+g.set_titles(col_template="{col_name} Test Set")
+sns.move_legend(g, "upper left", bbox_to_anchor=(1.0, 1.0))
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=loss_x=compute_hue=ot_col=data_lines=params_setting=no-contam",
+)
+# plt.show()
 
 
 # Keep only runs with Benchmark Subset Fraction == 1.0
@@ -312,7 +352,6 @@ sm_left.set_array([])
 cbarL = fig.colorbar(
     sm_left, ax=axes[0], label="Num. Parameters", fraction=0.05, pad=0.02
 )
-
 ax = axes[1]
 g = sns.lineplot(
     data=pretrain_run_1xOT_configs_df,
