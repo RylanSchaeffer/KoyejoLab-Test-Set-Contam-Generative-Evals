@@ -83,15 +83,16 @@ num_parameters_log_norm = LogNorm(
     vmax=eval_runs_configs_df["Num. Parameters"].max(),
 )
 
-eval_runs_histories_df: pd.DataFrame = src.analyze.download_wandb_project_runs_histories(
-    wandb_project_path="memorization-scoring-vs-sampling-eval",
-    data_dir=data_dir,
-    sweep_ids=sweep_ids,
-    refresh=refresh,
-    wandb_username=wandb.api.default_entity,
-    filetype="parquet",
-    # nrows_to_read=10000,
-    cols_to_drop=["response", "solution", "_step", "_runtime", "_timestamp"],
+eval_runs_histories_df: pd.DataFrame = (
+    src.analyze.download_wandb_project_runs_histories(
+        wandb_project_path="memorization-scoring-vs-sampling-eval",
+        data_dir=data_dir,
+        sweep_ids=sweep_ids,
+        refresh=refresh,
+        wandb_username=wandb.api.default_entity,
+        filetype="parquet",
+        cols_to_drop=["response", "solution", "_step", "_runtime", "_timestamp"],
+    )
 )
 
 extended_eval_runs_histories_df = eval_runs_histories_df.merge(

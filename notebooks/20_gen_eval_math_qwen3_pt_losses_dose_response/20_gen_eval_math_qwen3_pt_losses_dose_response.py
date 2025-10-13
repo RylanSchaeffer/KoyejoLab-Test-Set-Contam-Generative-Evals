@@ -14,8 +14,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-refresh = False
-# refresh = True
+# refresh = False
+refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -29,6 +29,7 @@ sweep_ids = [
     "u7dxxphm",  # Qwen 3  62M
     "o6aoejzc",  # Qwen 3  62M
     "1nwyun1z",  # Qwen 3  62M
+    "xbiu535y",  # Qwen 3  62M
     "ho49sshi",  # Qwen 3  93M
     "x8gmmzlo",  # Qwen 3  93M
     "u5xcf726",  # Qwen 3  93M
