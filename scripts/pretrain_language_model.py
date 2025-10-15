@@ -22,11 +22,6 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 # try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-# HuggingFace recommends this: https://huggingface.co/docs/datasets/en/process
-from multiprocess import set_start_method
-
-set_start_method("spawn", force=True)
-
 import datetime
 import logging
 import gc

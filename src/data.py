@@ -6,6 +6,9 @@ from datasets import (
     load_from_disk,
     interleave_datasets,
     DatasetDict,
+    Features,
+    Sequence,
+    Value,
 )
 from functools import partial
 import numpy as np
@@ -195,8 +198,21 @@ def create_dataset_for_pretraining(
             c for c in final_train_dataset.column_names if c not in cols_to_keep
         ]
         final_train_dataset = final_train_dataset.remove_columns(cols_to_drop)
+
+        # # Cut the Arrow buffers in half by casting dtypes before saving (no semantic change).
+        # COMPACT = Features(
+        #     {
+        #         "input_ids": Sequence(Value("int32")),
+        #         "attention_mask": Sequence(Value("bool")),
+        #         "token_length": Value("int32"),
+        #     }
+        # )
+        # final_train_dataset = final_train_dataset.cast(COMPACT)
+
         final_train_dataset.save_to_disk(
-            final_train_dataset_cache_dir, num_proc=min(4, os.cpu_count())
+            final_train_dataset_cache_dir,
+            # num_proc=min(4, os.cpu_count()),
+            # max_shard_size="100MB",
         )
         corpus_eval_dataset = corpus_eval_dataset.map(
             tokenize_truncate_and_count, num_proc=min(2, os.cpu_count())
@@ -205,8 +221,12 @@ def create_dataset_for_pretraining(
             c for c in corpus_eval_dataset.column_names if c not in cols_to_keep
         ]
         corpus_eval_dataset = corpus_eval_dataset.remove_columns(cols_to_drop_eval)
+
+        # corpus_eval_dataset = corpus_eval_dataset.cast(COMPACT)
         corpus_eval_dataset.save_to_disk(
-            corpus_eval_dataset_cache_dir, num_proc=min(2, os.cpu_count())
+            corpus_eval_dataset_cache_dir,
+            # num_proc=min(2, os.cpu_count()),
+            # max_shard_size="100MB",
         )
 
         total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
@@ -223,7 +243,7 @@ def create_dataset_for_pretraining(
     ):
         torch.distributed.barrier()  # non-zero ranks wait for rank 0 to finish
 
-    # All processes load.
+    # All processes load the datasets from disk.
     final_train_dataset = load_from_disk(final_train_dataset_cache_dir)
     corpus_eval_dataset = load_from_disk(corpus_eval_dataset_cache_dir)
 
