@@ -34,6 +34,8 @@ def create_dataset_for_pretraining(
     trainer_config: Dict[str, Any],
     tokenizer: PreTrainedTokenizer,
 ) -> Dict[str, Union[Dataset, List[Dataset]]]:
+    # TODO: Spin this out to a top level function.
+    # https://chatgpt.com/share/68f0657f-fab0-800d-8329-a8c8acf18ac8
     def tokenize_truncate_and_count(example):
         # Tokenize.
         # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
@@ -144,7 +146,7 @@ def create_dataset_for_pretraining(
                 "HuggingFaceTB/smollm-corpus",
                 "fineweb-edu-dedup",
                 split="train",
-                num_proc=min(64, os.cpu_count()),
+                num_proc=min(16, os.cpu_count()),
             )
             # The full dataset is 220B tokens in 190168005 rows.
             # We want 150M tokens for test.
@@ -152,6 +154,7 @@ def create_dataset_for_pretraining(
                 test_size=150e6 / 220e9,
                 seed=0,
             )
+            print("Split corpus into train and test")
             corpus_train_dataset = corpus_split_dataset["train"]
             corpus_eval_dataset = corpus_split_dataset["test"]
             avg_tokens_per_doc = 220e9 / 190168005
@@ -164,10 +167,19 @@ def create_dataset_for_pretraining(
         )
 
         # Subsample the appropriate number of documents and tokenize.
+        print("Shuffling, selecting and tokenizing the pretraining corpus.")
+        # With this (sample indices directly, then optionally shuffle only the subset):
+        rng = np.random.default_rng(data_config["shuffle_seed"])
+        # sample without replacement from the 190M rows
+        sample_indices = rng.choice(
+            len(corpus_train_dataset),
+            size=estimated_docs_needed,
+            replace=False,
+        )
         corpus_train_dataset_subset = (
-            corpus_train_dataset.shuffle(seed=data_config["shuffle_seed"])
-            .select(range(estimated_docs_needed))
-            .map(tokenize_truncate_and_count, num_proc=min(64, os.cpu_count()))
+            corpus_train_dataset.select(sample_indices)
+            .shuffle(seed=data_config["shuffle_seed"])
+            .map(tokenize_truncate_and_count, num_proc=min(8, os.cpu_count()))
         )
 
         # Figure out how many documents to drop to meet our target number of tokens.
@@ -186,6 +198,7 @@ def create_dataset_for_pretraining(
         )
 
         # Create the dataset we will train on.
+        print("Concatenated replicated benchmark test split and pretraining corpus.")
         final_train_dataset = concatenate_datasets(
             [replicated_benchmark_test_split_dataset, corpus_train_dataset_subset]
         )
@@ -215,7 +228,7 @@ def create_dataset_for_pretraining(
             # max_shard_size="100MB",
         )
         corpus_eval_dataset = corpus_eval_dataset.map(
-            tokenize_truncate_and_count, num_proc=min(2, os.cpu_count())
+            tokenize_truncate_and_count, num_proc=min(8, os.cpu_count())
         )
         cols_to_drop_eval = [
             c for c in corpus_eval_dataset.column_names if c not in cols_to_keep
@@ -282,7 +295,7 @@ def create_dataset_for_supervised_finetuning(
         # load_from_cache_file=False,  # Always make sure we're using the latest version.
         load_from_cache_file=True,
         batched=True,
-        num_proc=64,
+        num_proc=16,
     )
     if max_length is not None:
         raw_datasets = raw_datasets.filter(lambda x: x["token_length"] <= max_length)

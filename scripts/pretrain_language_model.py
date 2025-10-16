@@ -213,12 +213,6 @@ def pretrain():
     eval_dataset = prepare_dataset_for_model(eval_dataset)
     benchmark_dataset = prepare_dataset_for_model(benchmark_dataset)
 
-    # data_collator = DataCollatorForLanguageModeling(
-    #     tokenizer=tokenizer,
-    #     mlm=False,
-    #     pad_to_multiple_of=8,  # sweet spot for A100 + BF16
-    # )
-
     data_collator = DataCollatorWithFlattening(
         return_position_ids=True,  # default True; explicit for clarity
         separator_id=-100,  # ensures no cross-example predictions
