@@ -228,7 +228,7 @@ def create_dataset_for_pretraining(
             # max_shard_size="100MB",
         )
         corpus_eval_dataset = corpus_eval_dataset.map(
-            tokenize_truncate_and_count, num_proc=min(8, os.cpu_count())
+            tokenize_truncate_and_count, num_proc=min(4, os.cpu_count())
         )
         cols_to_drop_eval = [
             c for c in corpus_eval_dataset.column_names if c not in cols_to_keep

@@ -242,10 +242,11 @@ def pretrain():
 
     # Push to HF Hub.
     if _is_main():
-        logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
+        logging.info(f"Finished final evaluation. Saving to disk...")
         tokenizer.padding_side = "left"  # Otherwise, generate later gets screwed up.
         tokenizer.save_pretrained(pretraining_config.output_dir)
         trainer.save_model(output_dir=pretraining_config.output_dir)
+        logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
         trainer.push_to_hub()
         logging.info("Pushed to HuggingFace.")
 
