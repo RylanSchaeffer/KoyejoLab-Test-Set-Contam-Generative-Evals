@@ -71,7 +71,7 @@ parameters:
       overtrain_multiplier:
         values: [ 1.0 ]
       per_device_eval_batch_size:
-        values: [ 42 ]
+        values: [ 38 ]
       per_device_train_batch_size:
         values: [ 28 ]
       remove_unused_columns:
