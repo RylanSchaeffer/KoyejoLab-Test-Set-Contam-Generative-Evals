@@ -7,12 +7,14 @@ import pandas as pd
 import pyarrow
 import re
 import requests
+import scipy.optimize
 import time
 from typing import Dict, List, Optional, Set, Tuple, Union
 import wandb
 from tqdm import tqdm
 
 import src.globals
+import src.neural_scaling_laws
 
 
 def add_pretraining_quantities_to_pretrain_run_configs_df(
@@ -63,6 +65,12 @@ def add_pretraining_quantities_to_pretrain_run_configs_df(
         * pretrain_run_configs_df["Num. Epochs"]
     )
     return pretrain_run_configs_df
+
+
+def calculate_compute_contamination_exchange_rate(
+    loss: float, irreducible_error: float, prefactor: float, exponent: float
+) -> float:
+    return np.power((loss - irreducible_error) / prefactor, -1.0 / exponent)
 
 
 def download_wandb_project_runs_configs(
@@ -424,6 +432,58 @@ def extract_num_train_epochs(model_name: str) -> int:
         raise ValueError
     num_epochs = int(match.group(1))
     return num_epochs
+
+
+def fit_neural_scaling_law(
+    df: pd.DataFrame,
+    x_col: str = "Pretraining Compute",
+    y_col: str = "neg_log_",
+    exclude_nans: bool = True,
+    additional_columns_to_add: List[str] | None = None,
+) -> Dict[str, float]:
+    x_vals_all = df[x_col].values
+    y_vals_all = df[y_col].values
+    if exclude_nans:
+        nan_mask = np.isnan(x_vals_all) | np.isnan(y_vals_all)
+        print(f"Excluding {np.sum(nan_mask)} NaNs out of {len(nan_mask)} entries")
+        x_vals = x_vals_all[~nan_mask]
+        y_vals = y_vals_all[~nan_mask]
+    else:
+        x_vals = np.copy(x_vals_all)
+        y_vals = np.copy(y_vals_all)
+
+    if len(x_vals) >= 3:
+        # Fit a power law loss = E + A * FLOPS^(-alpha) via linear regression in log space.
+        best_fit_result, y_all_pred = src.neural_scaling_laws.fit_chinchilla_scaling(
+            x_all=x_vals, y_all=y_vals, functional_form="compute"
+        )
+        fit_results_dict = dict(
+            covariate_cols=x_col,
+            target_col=y_col,
+            fit_loss=best_fit_result.fit_loss,
+            fit_converged=best_fit_result.converged,
+        )
+        for k, v in best_fit_result.fit_params.items():
+            fit_results_dict[f"fit_param_{k}"] = v
+
+        # Convert the log-space parameters to the original space.
+        fit_results_dict["fit_param_C_0"] = np.exp(fit_results_dict["fit_param_c_0"])
+        fit_results_dict["fit_param_E_0"] = np.exp(fit_results_dict["fit_param_e_0"])
+
+    else:
+        # Create a mock fit result with NaNs.
+        fit_results_dict = dict(
+            covariate_cols=x_col,
+            target_col=y_col,
+            fit_loss=np.nan,
+            fit_converged=False,
+        )
+
+    if additional_columns_to_add is not None:
+        for col in additional_columns_to_add:
+            fit_results_dict[col] = df[col].values[0]
+
+    return fit_results_dict
 
 
 def setup_notebook_dir(

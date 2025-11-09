@@ -369,7 +369,7 @@ src.plot.save_plot_with_multiple_extensions(
 
 
 # Subsample runs with Overtrain Multiplier == 1.0.
-pretrain_run_1xOT_configs_df = pretrain_run_configs_df[
+pretrain_runs_1xOT_configs_df = pretrain_run_configs_df[
     pretrain_run_configs_df["Overtrain Multiplier"] == 1.0
 ]
 
@@ -377,7 +377,7 @@ plt.close()
 fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(16, 6))
 ax = axes[0]
 g = sns.lineplot(
-    data=pretrain_run_1xOT_configs_df,
+    data=pretrain_runs_1xOT_configs_df,
     x="Num. MATH Test Set Replicas",
     y="eval_after/eval_benchmark_loss",
     hue="Num. Parameters",
@@ -397,7 +397,7 @@ g.set(
 src.plot.format_g_legend_to_millions_and_billions(g=g)
 ax = axes[1]
 g = sns.lineplot(
-    data=pretrain_run_1xOT_configs_df,
+    data=pretrain_runs_1xOT_configs_df,
     x="Num. Parameters",
     y="eval_after/eval_benchmark_loss",
     hue="Num. MATH Test Set Replicas",
@@ -430,32 +430,31 @@ for handle, label in zip(all_handles, all_labels):
 old_legend.remove()
 
 # 5. Add the new, filtered legend
-#    We set the title and location here.
 g.legend(
     handles=new_handles,
     labels=new_labels,
     title="Num. Replicas",
-    loc="lower left",  # Matches your plot's original location
+    loc="lower left",
 )
 g.set(
     xscale="log",
     yscale="log",
     ylabel="",
 )
-g.get_legend().set_title("Num. Replicas")
+# g.get_legend().set_title("Num. Replicas")
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_by_num_parameters_by_num_replicas",
 )
 plt.show()
 
-pretrain_run_1xOT_configs_df.groupby(["Num. Parameters"])
+pretrain_runs_1xOT_configs_df.groupby(["Num. Parameters"])
 
 
 plt.close()
 plt.figure(figsize=(10, 6))
 g = sns.lineplot(
-    data=pretrain_run_1xOT_configs_df,
+    data=pretrain_runs_1xOT_configs_df,
     x="Num. Parameters",
     y="eval_after/eval_benchmark_loss",
     hue="Num. MATH Test Set Replicas",
@@ -480,7 +479,7 @@ src.plot.save_plot_with_multiple_extensions(
 plt.close()
 plt.figure(figsize=(10, 6))
 g = sns.lineplot(
-    data=pretrain_run_1xOT_configs_df,
+    data=pretrain_runs_1xOT_configs_df,
     x="Num. MATH Test Set Replicas",
     y="eval_after/eval_benchmark_loss",
     hue="FLOP (6ND)",
@@ -507,7 +506,7 @@ src.plot.save_plot_with_multiple_extensions(
 plt.close()
 plt.figure(figsize=(10, 6))
 g = sns.lineplot(
-    data=pretrain_run_1xOT_configs_df,
+    data=pretrain_runs_1xOT_configs_df,
     x="Num. MATH Test Set Replicas",
     y="eval_after/eval_benchmark_loss",
     hue="Num. Parameters",
@@ -534,7 +533,7 @@ src.plot.save_plot_with_multiple_extensions(
 plt.close()
 plt.figure(figsize=(10, 6))
 g = sns.lineplot(
-    data=pretrain_run_1xOT_configs_df,
+    data=pretrain_runs_1xOT_configs_df,
     x="FLOP (6ND)",
     y="eval_after/eval_benchmark_loss",
     hue="Num. MATH Test Set Replicas",
