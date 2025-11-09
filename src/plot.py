@@ -37,6 +37,36 @@ def format_g_legend_in_scientific_notation(g, num_decimal_digits: int = 1):
             pass  # skip any non-numeric labels
 
 
+def format_g_legend_to_millions_and_billions(g):
+    # Get the legend object
+    legend = g.get_legend()
+
+    # Get the list of text objects in the legend
+    legend_texts = legend.get_texts()
+
+    # Iterate and update the text for each label
+    for text_obj in legend_texts:
+        # Get the current label (e.g., "34061856.0")
+        old_label_str = text_obj.get_text()
+
+        try:
+            # Convert to a number
+            num = float(old_label_str)
+
+            if 1e6 <= num < 1e9:
+                # Create the new label (e.g., "34M")
+                # We use int() to truncate (so 62.8M becomes "62M")
+                new_label = f"{int(num / 1e6)}M"
+            if 1e9 <= num:
+                new_label = f"{int(num / 1e9)}B"
+
+            # Set the new text
+            text_obj.set_text(new_label)
+        except ValueError:
+            # Failsafe in case a label isn't a number
+            pass
+
+
 def save_plot_with_multiple_extensions(
     plot_dir: str, plot_filename: str, use_tight_layout: bool = True
 ):

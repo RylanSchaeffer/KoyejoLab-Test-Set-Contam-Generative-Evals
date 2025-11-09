@@ -14,8 +14,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-# refresh = False
-refresh = True
+refresh = False
+# refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -384,8 +384,8 @@ g = sns.lineplot(
     hue_norm=num_parameters_log_norm,
     palette="flare",
     marker="o",
-    # legend="full",
-    legend=False,
+    legend="full",
+    # legend=False,
     ax=ax,
 )
 g.set(
@@ -394,11 +394,7 @@ g.set(
     yscale="log",
     ylabel="Cross Entropy on MATH Test Set",
 )
-sm_left = ScalarMappable(cmap="flare", norm=num_parameters_log_norm)
-sm_left.set_array([])
-cbarL = fig.colorbar(
-    sm_left, ax=axes[0], label="Num. Parameters", fraction=0.05, pad=0.02
-)
+src.plot.format_g_legend_to_millions_and_billions(g=g)
 ax = axes[1]
 g = sns.lineplot(
     data=pretrain_run_1xOT_configs_df,
@@ -408,24 +404,52 @@ g = sns.lineplot(
     hue_norm=num_replicas_sym_norm,
     palette="viridis",
     marker="o",
-    legend=False,
+    legend="full",
+    # legend=False,
     ax=ax,
+)
+# 1. Define which labels you want to keep (as strings)
+#    Looking at your plot, these seem like good ones:
+labels_to_keep = {"0", "10", "100", "1000", "3162"}
+#    (You can, of course, add "1", "3", "32", etc., if you want)
+
+# 2. Get the old legend and its contents
+old_legend = g.get_legend()
+all_handles = old_legend.legend_handles
+all_labels = [t.get_text() for t in old_legend.get_texts()]
+
+# 3. Filter to create new lists
+new_handles = []
+new_labels = []
+for handle, label in zip(all_handles, all_labels):
+    if label in labels_to_keep:
+        new_handles.append(handle)
+        new_labels.append(label)
+
+# 4. Remove the old legend
+old_legend.remove()
+
+# 5. Add the new, filtered legend
+#    We set the title and location here.
+g.legend(
+    handles=new_handles,
+    labels=new_labels,
+    title="Num. Replicas",
+    loc="lower left",  # Matches your plot's original location
 )
 g.set(
     xscale="log",
     yscale="log",
     ylabel="",
 )
-sm = ScalarMappable(cmap="viridis", norm=num_replicas_sym_norm)
-sm.set_array([])
-fig.colorbar(
-    sm, ax=axes[1], label="Num. MATH Test Set Replicas", fraction=0.05, pad=0.02
-)
+g.get_legend().set_title("Num. Replicas")
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_by_num_parameters_by_num_replicas",
 )
-# plt.show()
+plt.show()
+
+pretrain_run_1xOT_configs_df.groupby(["Num. Parameters"])
 
 
 plt.close()
