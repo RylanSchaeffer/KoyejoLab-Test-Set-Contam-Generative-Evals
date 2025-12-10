@@ -14,8 +14,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-refresh = False
-# refresh = True
+# refresh = False
+refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -223,113 +223,6 @@ src.plot.save_plot_with_multiple_extensions(
 # plt.show()
 
 
-# Gadre et al. (2024) Figure 2. https://arxiv.org/pdf/2403.08540
-pretrain_runs_no_contam_configs_df = pretrain_run_configs_df[
-    pretrain_run_configs_df["Num. MATH Test Set Replicas"] == 0.0
-]
-pretrain_runs_no_contam_configs_melted_df = pretrain_runs_no_contam_configs_df[
-    [
-        "FLOP (6ND)",
-        "eval_after/eval_eval_loss",
-        "eval_after/eval_benchmark_loss",
-        "Overtrain Multiplier",
-        "Parameters",
-        "Num. Parameters",
-    ]
-].melt(
-    id_vars=["FLOP (6ND)", "Overtrain Multiplier", "Parameters", "Num. Parameters"],
-    value_vars=[
-        "eval_after/eval_eval_loss",
-        "eval_after/eval_benchmark_loss",
-    ],
-    var_name="Data",
-    value_name="Cross Entropy",
-)
-pretrain_runs_no_contam_configs_melted_df[
-    "Data"
-] = pretrain_runs_no_contam_configs_melted_df["Data"].map(
-    {
-        "eval_after/eval_eval_loss": "FineWebEdu",
-        "eval_after/eval_benchmark_loss": "MATH",
-    },
-)
-
-plt.close()
-g = sns.relplot(
-    data=pretrain_runs_no_contam_configs_melted_df,
-    kind="scatter",
-    x="FLOP (6ND)",
-    y="Cross Entropy",
-    col="Data",
-    col_order=["FineWebEdu", "MATH"],
-    style="Parameters",
-    style_order=["34M", "63M", "93M", "153M", "344M"],
-    hue="Overtrain Multiplier",
-    hue_norm=LogNorm(),
-    palette="copper",
-    facet_kws={"margin_titles": True},
-    legend="full",
-    s=100,
-    linewidth=0,
-    height=6,
-    aspect=0.75,
-)
-g.map_dataframe(
-    sns.lineplot,
-    x="FLOP (6ND)",
-    y="Cross Entropy",
-    hue="Overtrain Multiplier",
-    hue_norm=LogNorm(),
-    palette="copper",
-    legend=False,  # keep axes clean
-)
-g.set(xscale="log", yscale="log")
-g.set_titles(col_template="{col_name} Test Set")
-sns.move_legend(g, "upper left", bbox_to_anchor=(1.0, 1.0))
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename="y=loss_x=compute_hue=ot_col=data_lines=ot_setting=no-contam",
-)
-# plt.show()
-
-plt.close()
-g = sns.relplot(
-    data=pretrain_runs_no_contam_configs_melted_df,
-    kind="scatter",
-    x="FLOP (6ND)",
-    y="Cross Entropy",
-    col="Data",
-    col_order=["FineWebEdu", "MATH"],
-    style="Overtrain Multiplier",
-    hue="Num. Parameters",
-    hue_norm=LogNorm(),
-    palette="copper",
-    facet_kws={"margin_titles": True},
-    legend="full",
-    s=100,
-    linewidth=0,
-    height=6,
-    aspect=0.75,
-)
-g.map_dataframe(
-    sns.lineplot,
-    x="FLOP (6ND)",
-    y="Cross Entropy",
-    hue="Num. Parameters",
-    hue_norm=LogNorm(),
-    palette="copper",
-    legend=False,  # keep axes clean
-)
-g.set(xscale="log", yscale="log")
-g.set_titles(col_template="{col_name} Test Set")
-sns.move_legend(g, "upper left", bbox_to_anchor=(1.0, 1.0))
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename="y=loss_x=compute_hue=ot_col=data_lines=params_setting=no-contam",
-)
-# plt.show()
-
-
 # Keep only runs with Benchmark Subset Fraction == 1.0
 pretrain_run_configs_df = pretrain_run_configs_df[
     pretrain_run_configs_df["Benchmark Subset Fraction"] == 1.0
@@ -345,28 +238,70 @@ g = sns.relplot(
     hue_norm=overtrain_multiplier_log_norm,
     palette="copper",
     col="Parameters",
-    col_order=["34M", "63M", "93M"],  # , "153M", "344M"],
+    col_order=["34M", "63M", "93M"],  # , "153M", "344M"
     col_wrap=3,
-    facet_kws={"sharex": False},
+    facet_kws={"sharex": False, "sharey": False},
     marker="o",
     markeredgecolor="none",
+    legend="full",
+    height=5,
 )
 g.set(
     # xscale="symlog",
     # xlim=(-0.1, 3500),
     yscale="log",
-    ylabel="Cross Entropy on MATH Test Set",
+    ylabel="",
 )
+g.axes.flat[0].set_ylabel("Cross Entropy on MATH Test Set")
 for ax in g.axes.flat:
     ax.set_xscale("symlog", linthresh=1e0)  # or smaller
     ax.set_xlim(-1e-1, 3500)
-sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+sns.move_legend(
+    g,
+    "upper left",
+    bbox_to_anchor=(1.0, 1.0),
+)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=num_replicas_hue=ot_col=params",
 )
 # plt.show()
 
+plt.close()
+g = sns.relplot(
+    data=pretrain_run_configs_df,
+    kind="line",
+    x="Overtrain Multiplier",
+    y="eval_after/eval_benchmark_loss",
+    hue="Num. MATH Test Set Replicas",
+    hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
+    palette="viridis",
+    marker="o",
+    legend="full",
+    # hue_norm=overtrain_multiplier_log_norm,
+    # palette="copper",
+    col="Parameters",
+    col_order=["34M", "63M", "93M"],  # , "153M", "344M"
+    col_wrap=3,
+    facet_kws={"sharex": False, "sharey": True},
+    markeredgecolor="none",
+    height=5,
+)
+g.set(
+    xscale="log",
+    yscale="log",
+    ylabel="Cross Entropy on MATH Test Set",
+)
+sns.move_legend(
+    g,
+    "upper left",
+    bbox_to_anchor=(1.0, 1.0),
+)
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=loss_x=ot_hue=num_replicas_col=params",
+)
+# plt.show()
 
 # Subsample runs with Overtrain Multiplier == 1.0.
 pretrain_runs_1xOT_configs_df = pretrain_run_configs_df[
@@ -446,35 +381,8 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_by_num_parameters_by_num_replicas",
 )
-plt.show()
-
-pretrain_runs_1xOT_configs_df.groupby(["Num. Parameters"])
-
-
-plt.close()
-plt.figure(figsize=(10, 6))
-g = sns.lineplot(
-    data=pretrain_runs_1xOT_configs_df,
-    x="Num. Parameters",
-    y="eval_after/eval_benchmark_loss",
-    hue="Num. MATH Test Set Replicas",
-    hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
-    palette="viridis",
-    marker="o",
-    legend="full",
-)
-g.set(
-    xscale="log",
-    yscale="log",
-    ylabel="Cross Entropy on MATH Test Set",
-)
-sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
-# src.plot.format_g_legend_in_scientific_notation(g=g)
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename="y=loss_x=num_parameters_hue=num_replicas",
-)
 # plt.show()
+
 
 plt.close()
 plt.figure(figsize=(10, 6))
@@ -527,31 +435,6 @@ src.plot.format_g_legend_in_scientific_notation(g=g)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=num_replicas_hue=num_parameters",
-)
-# plt.show()
-
-plt.close()
-plt.figure(figsize=(10, 6))
-g = sns.lineplot(
-    data=pretrain_runs_1xOT_configs_df,
-    x="FLOP (6ND)",
-    y="eval_after/eval_benchmark_loss",
-    hue="Num. MATH Test Set Replicas",
-    hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
-    palette="cool",
-    marker="o",
-    legend="full",
-)
-g.set(
-    xscale="log",
-    yscale="log",
-    ylabel="Cross Entropy on MATH Test Set",
-)
-sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
-# src.plot.format_g_legend_in_scientific_notation(g=g)
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename="y=loss_x=flop_hue=num_replicas",
 )
 # plt.show()
 

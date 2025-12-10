@@ -60,7 +60,7 @@ def format_g_legend_to_millions_and_billions(g):
             if 1e9 <= num:
                 new_label = f"{int(num / 1e9)}B"
 
-            # Set the new text
+            # Set the new texts
             text_obj.set_text(new_label)
         except ValueError:
             # Failsafe in case a label isn't a number
