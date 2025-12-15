@@ -1,5 +1,5 @@
-fprogram: scripts/eval_language_model.py
-entity: jkazdan
+program: scripts/eval_language_model.py
+entity: rylan
 project: memorization-scoring-vs-sampling-eval
 method: grid
 parameters:
