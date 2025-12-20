@@ -274,6 +274,7 @@ def create_dataset_for_supervised_finetuning(
     dataset_name: str,
     max_length: Optional[int] = None,
     remove_columns: bool = True,
+    split: str = "test",
 ) -> Dict[str, Union[Dataset]]:
     if dataset_name == "EleutherAI/minerva_math":
         raw_datasets = load_dataset_hendrycks_math()
@@ -306,8 +307,10 @@ def create_dataset_for_supervised_finetuning(
             if col not in {"input_ids", "attention_mask"}
         ]
         raw_datasets = raw_datasets.remove_columns(columns_to_remove)
-
-    train_dataset = raw_datasets["test"]
+    if split == "test":
+        train_dataset = raw_datasets["test"]
+    else:
+        train_dataset = raw_datasets["train"]
     eval_dataset = raw_datasets["test"]
 
     datasets_dict = {

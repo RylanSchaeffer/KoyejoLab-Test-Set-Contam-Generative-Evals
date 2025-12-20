@@ -61,7 +61,7 @@ def train_supervised_finetuning():
     sfted_model_hf_name = create_sfted_model_huggingface_name(
         wandb_config=wandb_config,
     )
-    output_dir = os.path.join("models", "sft_language_model", sfted_model_hf_name)
+    output_dir = os.path.join("models", "sft_language_model_joshua", sfted_model_hf_name)
     print("Output Directory: ", output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -111,7 +111,7 @@ def train_supervised_finetuning():
             "gradient_accumulation_steps"
         ],
         gradient_checkpointing=sft_trainer_config_dict["gradient_checkpointing"],
-        hub_model_id=f"RylanSchaeffer/{sfted_model_hf_name}",
+        hub_model_id=f"jkazdan/{sfted_model_hf_name}",
         hub_private_repo=True,
         hub_strategy=sft_trainer_config_dict["hub_strategy"],
         include_num_input_tokens_seen=True,
@@ -154,6 +154,7 @@ def train_supervised_finetuning():
         tokenizer=tokenizer,
         dataset_name=data_config_dict["dataset"],
         max_length=sft_config.max_length,
+        split=data_config_dict.get("split", "test")
     )
     train_dataset = datasets_dict["train"]
     eval_dataset = datasets_dict["eval"]
@@ -224,7 +225,7 @@ def create_sfted_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
     dataset_name = wandb_config["data_config"]["dataset"].split("/")[-1]
     num_train_epochs = wandb_config["sft_trainer_config"]["num_train_epochs"]
     seed = wandb_config["seed"]
-    sfted_model_hf_name = f"mem_model_{init_model_name}_dataset_{dataset_name}_epochs_{num_train_epochs}_seed_{seed}"
+    sfted_model_hf_name = f"{init_model_name}_sft"#dataset_{dataset_name}_epochs_{num_train_epochs}_seed_{seed}"
     if len(sfted_model_hf_name) > 94:
         raise ValueError(f"sfted_model_hf_name is too long: {sfted_model_hf_name}")
     return sfted_model_hf_name
