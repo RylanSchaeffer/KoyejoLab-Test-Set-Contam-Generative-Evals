@@ -209,5 +209,5 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Downloaded data
-notebooks/10_gen_eval_math_qwen3_pt_losses/data
-notebooks/11_gen_eval_math_qwen3_pt_eval/data
+notebooks/10_math_qwen3_pt_cross_entropy/data
+notebooks/11_math_qwen3_pt_math_verify/data

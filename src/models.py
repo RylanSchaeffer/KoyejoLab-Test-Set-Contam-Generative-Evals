@@ -90,11 +90,12 @@ def load_automodelforcausallm(
         # Get attn_implementation from your config, defaulting to "eager".
         "attn_implementation": model_config_dict.get("attn_implementation", "eager"),
         "device_map": "auto",
-        "torch_dtype": torch_dtype,
+        "dtype": torch_dtype,
         "trust_remote_code": True,
     }
 
     if "gemma" in model_config_dict["initial_model_name_or_path"]:
+        # Google models must use bf16.
         assert model_kwargs["torch_dtype"] == torch.bfloat16
         # assert model_kwargs["attn_implementation"] == "eager"
 

@@ -88,7 +88,7 @@ parameters:
       hub_strategy:
         values: ["end"]
       learning_rate:
-        values: [ 0.00005 ]
+        values: [ 0.00001 ]
       logging_steps:
         values: [ 1 ]
       lr_scheduler_type:

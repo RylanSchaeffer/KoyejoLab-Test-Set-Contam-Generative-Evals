@@ -14,8 +14,8 @@ import src.analyze
 import src.globals
 import src.plot
 
-# refresh = False
-refresh = True
+refresh = False
+# refresh = True
 
 data_dir, results_dir = src.analyze.setup_notebook_dir(
     notebook_dir=os.path.dirname(os.path.abspath(__file__)),
@@ -245,6 +245,7 @@ g = sns.relplot(
     markeredgecolor="none",
     legend="full",
     height=5,
+    aspect=1,
 )
 g.set(
     # xscale="symlog",
@@ -267,6 +268,7 @@ src.plot.save_plot_with_multiple_extensions(
 )
 # plt.show()
 
+prev_plot_size = g.fig.get_size_inches()
 plt.close()
 g = sns.relplot(
     data=pretrain_run_configs_df,
@@ -283,20 +285,24 @@ g = sns.relplot(
     col="Parameters",
     col_order=["34M", "63M", "93M"],  # , "153M", "344M"
     col_wrap=3,
-    facet_kws={"sharex": False, "sharey": True},
+    facet_kws={"sharex": False, "sharey": False},
     markeredgecolor="none",
     height=5,
+    aspect=1,
 )
 g.set(
     xscale="log",
     yscale="log",
-    ylabel="Cross Entropy on MATH Test Set",
+    ylabel="",
 )
+g.axes.flat[0].set_ylabel("Cross Entropy on MATH Test Set")
+g.legend.set_title("Num. Test Replicas")
 sns.move_legend(
     g,
     "upper left",
     bbox_to_anchor=(1.0, 1.0),
 )
+g.fig.set_size_inches(*prev_plot_size)  # Try to match sizes.
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=loss_x=ot_hue=num_replicas_col=params",

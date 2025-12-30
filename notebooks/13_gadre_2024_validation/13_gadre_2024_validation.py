@@ -59,3 +59,90 @@ pretrain_run_configs_df = (
 pretrain_run_configs_df["Num. MATH Test Set Replicas"] = pretrain_run_configs_df[
     "Num. Replicas Per Epoch"
 ]
+
+# Gadre et al. (2024) Figure 2. https://arxiv.org/pdf/2403.08540
+pretrain_runs_no_contam_configs_df = pretrain_run_configs_df[
+    pretrain_run_configs_df["Num. MATH Test Set Replicas"] == 0.0
+]
+pretrain_runs_no_contam_configs_melted_df = pretrain_runs_no_contam_configs_df[
+    [
+        "FLOP (6ND)",
+        "eval_after/eval_eval_loss",
+        "eval_after/eval_benchmark_loss",
+        "Overtrain Multiplier",
+        "Parameters",
+        "Num. Parameters",
+    ]
+].melt(
+    id_vars=["FLOP (6ND)", "Overtrain Multiplier", "Parameters", "Num. Parameters"],
+    value_vars=[
+        "eval_after/eval_eval_loss",
+        "eval_after/eval_benchmark_loss",
+    ],
+    var_name="Data",
+    value_name="Cross Entropy",
+)
+pretrain_runs_no_contam_configs_melted_df[
+    "Data"
+] = pretrain_runs_no_contam_configs_melted_df["Data"].map(
+    {
+        "eval_after/eval_eval_loss": "FineWebEdu",
+        "eval_after/eval_benchmark_loss": "MATH",
+    },
+)
+
+plt.close()
+g = sns.relplot(
+    data=pretrain_runs_no_contam_configs_melted_df,
+    kind="scatter",
+    x="FLOP (6ND)",
+    y="Cross Entropy",
+    col="Data",
+    col_order=["FineWebEdu", "MATH"],
+    style="Parameters",
+    style_order=["34M", "63M", "93M", "153M", "344M"],
+    hue="Overtrain Multiplier",
+    hue_norm=LogNorm(),
+    palette="copper",
+    facet_kws={"margin_titles": True},
+    legend="full",
+    s=100,
+    linewidth=0,
+    height=6,
+    aspect=0.75,
+)
+g.map_dataframe(
+    sns.lineplot,
+    x="FLOP (6ND)",
+    y="Cross Entropy",
+    hue="Overtrain Multiplier",
+    hue_norm=LogNorm(),
+    palette="copper",
+    legend=False,  # keep axes clean
+)
+g.set(xscale="log", yscale="log")
+g.set_titles(col_template="{col_name} Test Set")
+sns.move_legend(g, "upper left", bbox_to_anchor=(1.0, 1.0))
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=loss_x=compute_hue=ot_col=data_lines=ot_setting=no-contam",
+)
+# plt.show()
+
+
+# Fit power law scaling to each model's inference scaling w.r.t. k.
+power_law_fits_df = pd.DataFrame(
+    [
+        src.analyze.fit_neural_scaling_law(
+            model_df,
+            x_col="FLOP (6ND)",
+            y_col="eval_after/eval_benchmark_loss",
+            additional_columns_to_add=[
+                "Num. MATH Test Set Replicas",
+            ],
+        )
+        for model_nickname, model_df in pretrain_runs_1xOT_configs_df.groupby(
+            ["Num. MATH Test Set Replicas"]
+        )
+    ]
+)
