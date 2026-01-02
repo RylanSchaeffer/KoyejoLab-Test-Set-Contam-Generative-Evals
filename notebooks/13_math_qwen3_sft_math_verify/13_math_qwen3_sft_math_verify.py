@@ -133,23 +133,15 @@ sft_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_conf
     finished_only=True,
 )
 
-sft_runs_configs_df = src.analyze.add_pretraining_quantities_to_pretrain_run_configs_df(
-    pretrain_run_configs_df=sft_runs_configs_df
+sft_runs_configs_df = (
+    src.analyze.add_pretraining_quantities_to_supervised_finetuning_runs_configs_df(
+        sft_runs_configs_df=sft_runs_configs_df
+    )
 )
 # Alias "Num. Replicas Per Epoch" for successful merge.
 sft_runs_configs_df["Num. MATH Test Set Replicas"] = sft_runs_configs_df[
     "Num. Replicas Per Epoch"
 ]
-# Pretraining results use exact numbers of parameters. Eval results extract from the name.
-sft_runs_configs_df["Num. Parameters"] = sft_runs_configs_df["Num. Parameters"].map(
-    {
-        34061856.0: 34e6,
-        62873440.0: 62e6,
-        153110464.0: 153e6,
-        93069280.0: 93e6,
-        344023616.0: 344e6,
-    }
-)
 
 avg_math_verify_and_cross_entropies_by_exp_condition_df = (
     avg_math_verify_scores_by_exp_condition_df.merge(
@@ -158,7 +150,7 @@ avg_math_verify_and_cross_entropies_by_exp_condition_df = (
                 "Num. Parameters",
                 "Num. MATH Test Set Replicas",
                 "Overtrain Multiplier",
-                "eval_after/eval_benchmark_loss",
+                "eval_after/eval_loss",
             ]
         ],
         on=[
@@ -174,22 +166,21 @@ plt.close()
 plt.figure(figsize=(8, 6))
 g = sns.lineplot(
     data=avg_math_verify_and_cross_entropies_by_exp_condition_df,
-    x="eval_after/eval_benchmark_loss",
+    x="eval_after/eval_loss",
     y="math_verify_score",
     hue="Temp.",
     palette="YlOrBr_r",
     marker="o",
 )
 g.set(
-    xlabel="Cross Entropy on MATH Test Set",
+    xlabel="Loss on MATH Test Set",
     xscale="log",
-    xlim=(None, 1e0),
     ylabel="Math Verification Score",
 )
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=math_verify_x=cross_entropy_hue=temp",
+    plot_filename="y=math-verify_x=loss_hue=temp",
 )
 # plt.show()
 
@@ -199,7 +190,7 @@ plt.figure(figsize=(8, 6))
 g = sns.lineplot(
     data=avg_math_verify_and_cross_entropies_by_exp_condition_df,
     x="math_verify_score",
-    y="eval_after/eval_benchmark_loss",
+    y="eval_after/eval_loss",
     hue="Temp.",
     palette="YlOrBr_r",
     marker="o",
@@ -207,14 +198,14 @@ g = sns.lineplot(
 g.set(
     # xscale="log",
     xlabel="Math Verification Score",
-    ylabel="Cross Entropy on MATH Test Set",
+    ylabel="Loss on MATH Test Set",
     yscale="log",
-    ylim=(None, 1e0),
+    # ylim=(None, 1e0),
 )
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=cross_entropy_x=math_verify_hue=temp",
+    plot_filename="y=loss_x=math-verify_hue=temp",
 )
 plt.show()
 
@@ -223,7 +214,7 @@ plt.close()
 g = sns.relplot(
     data=avg_math_verify_and_cross_entropies_by_exp_condition_df,
     kind="line",
-    x="eval_after/eval_benchmark_loss",
+    x="eval_after/eval_loss",
     y="math_verify_score",
     hue="Temp.",
     col="Num. Parameters",
@@ -231,14 +222,14 @@ g = sns.relplot(
     marker="o",
 )
 g.set(
-    xlabel="Cross Entropy on MATH Test Set",
+    xlabel="Loss on MATH Test Set",
     xscale="log",
     ylabel="Math Verification Score",
 )
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=math_verify_x=cross_entropy_hue=temp_col=params",
+    plot_filename="y=math-verify_x=loss_hue=temp_col=params",
 )
 plt.show()
 
@@ -318,7 +309,7 @@ fig.colorbar(
 )
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=math_verify_by_num_parameters_by_num_replicas",
+    plot_filename="y=math-verify_by_parameters_by_replicas",
 )
 # plt.show()
 
@@ -348,7 +339,7 @@ src.plot.format_g_legend_in_scientific_notation(g=g)
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=math_verify_x=num_replicas_hue=compute_col=temp",
+    plot_filename="y=math-verify_x=replicas_hue=compute_col=temp",
 )
 plt.show()
 
@@ -374,7 +365,7 @@ g.set(
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
-    plot_filename="y=math_verify_x=compute_hue=num_replicas_col=temp",
+    plot_filename="y=math-verify_x=compute_hue=replicas_col=temp",
 )
 # plt.show()
 

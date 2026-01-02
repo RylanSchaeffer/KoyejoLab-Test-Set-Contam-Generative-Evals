@@ -51,7 +51,7 @@ pretrain_run_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_
 )
 
 pretrain_run_configs_df = (
-    src.analyze.add_pretraining_quantities_to_pretrain_run_configs_df(
+    src.analyze.add_pretraining_quantities_to_pretrain_runs_configs_df(
         pretrain_run_configs_df=pretrain_run_configs_df
     )
 )

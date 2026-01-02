@@ -34,6 +34,13 @@ sft_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_conf
     wandb_username=wandb.api.default_entity,
     finished_only=True,
 )
+
+sft_runs_configs_df = (
+    src.analyze.add_pretraining_quantities_to_supervised_finetuning_runs_configs_df(
+        sft_runs_configs_df=sft_runs_configs_df
+    )
+)
+
 sft_runs_configs_df["Loss Difference"] = (
     sft_runs_configs_df["eval_after/eval_loss"]
     - sft_runs_configs_df["eval_before/eval_loss"]
@@ -42,34 +49,6 @@ sft_runs_configs_df["Loss Ratio"] = (
     sft_runs_configs_df["eval_after/eval_loss"]
     / sft_runs_configs_df["eval_before/eval_loss"]
 )
-
-sft_runs_configs_df["Model"] = sft_runs_configs_df["model_config"].apply(
-    lambda model_config: ast.literal_eval(model_config)["initial_model_name_or_path"]
-)
-sft_runs_configs_df["Parameters"] = sft_runs_configs_df["Model"].apply(
-    lambda model_name: re.search(r"Qwen3-([\d.]+[MB])", model_name).group(1)
-)
-sft_runs_configs_df["Num. Parameters"] = sft_runs_configs_df["Parameters"].apply(
-    lambda parameters: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[parameters]
-)
-sft_runs_configs_df["Num. Replicas Per Epoch"] = sft_runs_configs_df["Model"].apply(
-    lambda model_name: int(re.search(r"rep_(\d+)_sbst", model_name).group(1))
-)
-sft_runs_configs_df["Num. Epochs"] = sft_runs_configs_df["Model"].apply(
-    lambda model_name: int(re.search(r"epch_(\d+)_ot", model_name).group(1))
-)
-sft_runs_configs_df["Overtrain Multiplier"] = sft_runs_configs_df["Model"].apply(
-    lambda model_name: int(re.search(r"ot_(\d+)", model_name).group(1))
-)
-sft_runs_configs_df["Num. MATH Test Set Replicas"] = (
-    sft_runs_configs_df["Num. Replicas Per Epoch"] * sft_runs_configs_df["Num. Epochs"]
-)
-sft_runs_configs_df["Num. Tokens"] = 20 * sft_runs_configs_df["Num. Parameters"]
-sft_runs_configs_df["FLOP (6ND)"] = (
-    6 * sft_runs_configs_df["Num. Parameters"] * sft_runs_configs_df["Num. Tokens"]
-)
-sft_runs_configs_df.rename(columns={"temperature": "Temp."}, inplace=True)
-sft_runs_configs_df["Temp."] = np.round(sft_runs_configs_df["Temp."], decimals=2)
 
 num_replicas_sym_norm = SymLogNorm(
     linthresh=1.0,
@@ -106,7 +85,7 @@ sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1), title="Num. Replicas")
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir, plot_filename="y=loss-diff_x=loss-before_hue=replicas"
 )
-plt.show()
+# plt.show()
 
 plt.close()
 plt.figure(figsize=(8, 6))
@@ -134,7 +113,7 @@ sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1), title="Num. Replicas")
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir, plot_filename="y=loss-ratio_x=loss-before_hue=replicas"
 )
-plt.show()
+# plt.show()
 
 plt.close()
 plt.figure(figsize=(8, 6))

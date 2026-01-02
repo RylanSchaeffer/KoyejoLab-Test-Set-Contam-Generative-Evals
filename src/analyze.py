@@ -17,7 +17,7 @@ import src.globals
 import src.neural_scaling_laws
 
 
-def add_pretraining_quantities_to_pretrain_run_configs_df(
+def add_pretraining_quantities_to_pretrain_runs_configs_df(
     pretrain_run_configs_df: pd.DataFrame,
 ) -> pd.DataFrame:
     # Extract basic quantities.
@@ -65,6 +65,42 @@ def add_pretraining_quantities_to_pretrain_run_configs_df(
         * pretrain_run_configs_df["Num. Epochs"]
     )
     return pretrain_run_configs_df
+
+
+def add_pretraining_quantities_to_supervised_finetuning_runs_configs_df(
+    sft_runs_configs_df: pd.DataFrame,
+) -> pd.DataFrame:
+    sft_runs_configs_df["Model"] = sft_runs_configs_df["model_config"].apply(
+        lambda model_config: ast.literal_eval(model_config)[
+            "initial_model_name_or_path"
+        ]
+    )
+    sft_runs_configs_df["Parameters"] = sft_runs_configs_df["Model"].apply(
+        lambda model_name: re.search(r"-([\d.]+[MB])", model_name).group(1)
+    )
+    sft_runs_configs_df["Num. Parameters"] = sft_runs_configs_df["Parameters"].apply(
+        lambda parameters: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[parameters]
+    )
+    sft_runs_configs_df["Num. Replicas Per Epoch"] = sft_runs_configs_df["Model"].apply(
+        lambda model_name: int(re.search(r"rep_(\d+)_sbst", model_name).group(1))
+    )
+    sft_runs_configs_df["Num. Epochs"] = sft_runs_configs_df["Model"].apply(
+        lambda model_name: int(re.search(r"epch_(\d+)_ot", model_name).group(1))
+    )
+    sft_runs_configs_df["Overtrain Multiplier"] = sft_runs_configs_df["Model"].apply(
+        lambda model_name: int(re.search(r"ot_(\d+)", model_name).group(1))
+    )
+    sft_runs_configs_df["Num. MATH Test Set Replicas"] = (
+        sft_runs_configs_df["Num. Replicas Per Epoch"]
+        * sft_runs_configs_df["Num. Epochs"]
+    )
+    sft_runs_configs_df["Num. Tokens"] = 20 * sft_runs_configs_df["Num. Parameters"]
+    sft_runs_configs_df["FLOP (6ND)"] = (
+        6 * sft_runs_configs_df["Num. Parameters"] * sft_runs_configs_df["Num. Tokens"]
+    )
+    sft_runs_configs_df.rename(columns={"temperature": "Temp."}, inplace=True)
+    sft_runs_configs_df["Temp."] = np.round(sft_runs_configs_df["Temp."], decimals=2)
+    return sft_runs_configs_df
 
 
 def calculate_compute_contamination_exchange_rate(
