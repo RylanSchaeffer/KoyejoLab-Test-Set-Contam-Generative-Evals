@@ -1,5 +1,5 @@
 program: scripts/sft_language_model.py
-entity: jkazdan
+entity: rylan
 project: memorization-scoring-vs-sampling-sft
 method: grid
 parameters:
@@ -9,8 +9,8 @@ parameters:
         values: [ "EleutherAI/minerva_math" ]
       shuffle_seed:
         values: [0]
-      split:
-        values: ["train"]
+      split_to_train_on:
+        values: [ "train" ]
   model_config:
     parameters:
       attn_implementation:
@@ -80,19 +80,19 @@ parameters:
       eval_strategy:
         values: [ steps ]
       eval_steps:
-        values: [ 100 ]
+        values: [ 50 ]
       gradient_accumulation_steps:
-        values: [ 64 ]
+        values: [ 4 ]
       gradient_checkpointing:
         values: [ True ]
       hub_strategy:
         values: ["end"]
       learning_rate:
-        values: [ 0.00001 ]
+        values: [ 0.0001 ]
       logging_steps:
         values: [ 1 ]
       lr_scheduler_type:
-        values: [ "linear" ]
+        values: [ "cosine" ]
       max_grad_norm:
         values: [ 1.0 ]
       max_length:
@@ -104,9 +104,9 @@ parameters:
       optim:
         values: [ "adamw_torch" ]
       per_device_eval_batch_size:
-        values: [ 14 ]
+        values: [ 16 ]
       per_device_train_batch_size:
-        values: [ 4 ]
+        values: [ 16 ]
       remove_unused_columns:
         values: [ True ]
       report_to:
@@ -118,7 +118,7 @@ parameters:
       torch_compile:
         values: [ False ]
       warmup_ratio:
-        values: [ 0.1 ]
+        values: [ 0.2 ]
       weight_decay:
         values: [ 0.0 ]
   seed:

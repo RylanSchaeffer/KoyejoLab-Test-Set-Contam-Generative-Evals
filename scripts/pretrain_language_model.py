@@ -138,6 +138,8 @@ def pretrain():
     else:
         wandb_config["trainer_config"]["fp16"] = False
 
+    hf_username = get_hf_username()
+
     pretraining_config = TrainingArguments(
         bf16=wandb_config["trainer_config"]["bf16"],
         data_seed=wandb_config["trainer_config"]["data_seed"],
@@ -156,7 +158,7 @@ def pretrain():
             "gradient_accumulation_steps"
         ],
         gradient_checkpointing=wandb_config["trainer_config"]["gradient_checkpointing"],
-        hub_model_id=f"RylanSchaeffer/{pted_model_hf_name}",
+        hub_model_id=f"{hf_username}/{pted_model_hf_name}",
         hub_private_repo=True,
         hub_strategy=wandb_config["trainer_config"]["hub_strategy"],
         include_num_input_tokens_seen=True,
@@ -391,6 +393,15 @@ def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> st
     if len(pted_model_hf_name) > 94:
         raise ValueError(f"pted_model_hf_name is too long: {pted_model_hf_name}")
     return pted_model_hf_name
+
+
+def get_hf_username():
+    try:
+        api = HfApi()
+        user_info = api.whoami()
+        return user_info["name"]
+    except Exception as e:
+        return f"Not logged in or error: {e}"
 
 
 def prepare_dataset_for_model(dataset: Dataset) -> Dataset:

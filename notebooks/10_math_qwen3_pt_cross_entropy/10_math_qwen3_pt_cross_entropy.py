@@ -131,7 +131,7 @@ pretrain_run_configs_melted_df = pretrain_run_configs_df[
         "eval_after/eval_benchmark_loss",
     ],
     var_name="Data",
-    value_name="Cross Entropy",
+    value_name="Loss",
 )
 pretrain_run_configs_melted_df["Data"] = pretrain_run_configs_melted_df["Data"].map(
     {
@@ -145,7 +145,7 @@ g = sns.relplot(
     data=pretrain_run_configs_melted_df,
     kind="scatter",
     x="FLOP (6ND)",
-    y="Cross Entropy",
+    y="Loss",
     row="Data",
     row_order=["FineWebEdu", "MATH"],
     col="Num. MATH Test Set Replicas",
@@ -164,7 +164,7 @@ g = sns.relplot(
 g.map_dataframe(
     sns.lineplot,
     x="FLOP (6ND)",
-    y="Cross Entropy",
+    y="Loss",
     hue="Overtrain Multiplier",
     hue_norm=LogNorm(),
     palette="copper",
@@ -187,7 +187,7 @@ g = sns.relplot(
     data=pretrain_run_configs_melted_df,
     kind="scatter",
     x="FLOP (6ND)",
-    y="Cross Entropy",
+    y="Loss",
     row="Data",
     row_order=["FineWebEdu", "MATH"],
     col="Num. MATH Test Set Replicas",
@@ -205,7 +205,7 @@ g = sns.relplot(
 g.map_dataframe(
     sns.lineplot,
     x="FLOP (6ND)",
-    y="Cross Entropy",
+    y="Loss",
     hue="Num. Parameters",
     hue_norm=LogNorm(),
     palette="copper",
@@ -253,7 +253,7 @@ g.set(
     yscale="log",
     ylabel="",
 )
-g.axes.flat[0].set_ylabel("Cross Entropy on MATH Test Set")
+g.axes.flat[0].set_ylabel("Loss on MATH Test Set")
 for ax in g.axes.flat:
     ax.set_xscale("symlog", linthresh=1e0)  # or smaller
     ax.set_xlim(-1e-1, 3500)
@@ -295,7 +295,7 @@ g.set(
     yscale="log",
     ylabel="",
 )
-g.axes.flat[0].set_ylabel("Cross Entropy on MATH Test Set")
+g.axes.flat[0].set_ylabel("Loss on MATH Test Set")
 g.legend.set_title("Num. Test Replicas")
 sns.move_legend(
     g,
@@ -333,7 +333,7 @@ g.set(
     xscale="symlog",
     xlim=(-0.1, 3500),
     yscale="log",
-    ylabel="Cross Entropy on MATH Test Set",
+    ylabel="Loss on MATH Test Set",
 )
 src.plot.format_g_legend_to_millions_and_billions(g=g)
 ax = axes[1]
@@ -407,7 +407,7 @@ g.set(
     xscale="symlog",
     xlim=(-0.1, 3500),
     yscale="log",
-    ylabel="Cross Entropy on MATH Test Set",
+    ylabel="Loss on MATH Test Set",
 )
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.format_g_legend_in_scientific_notation(g=g)
@@ -434,7 +434,7 @@ g.set(
     xscale="symlog",
     xlim=(-0.1, 3500),
     yscale="log",
-    ylabel="Cross Entropy on MATH Test Set",
+    ylabel="Loss on MATH Test Set",
 )
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.format_g_legend_in_scientific_notation(g=g)

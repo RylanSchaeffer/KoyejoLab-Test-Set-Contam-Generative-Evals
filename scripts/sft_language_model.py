@@ -19,8 +19,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 import logging
 import gc
+from huggingface_hub import HfApi
 import pprint
-import subprocess
 import time
 import torch
 
@@ -61,8 +61,9 @@ def train_supervised_finetuning():
     sfted_model_hf_name = create_sfted_model_huggingface_name(
         wandb_config=wandb_config,
     )
+    hf_username = get_hf_username()
     output_dir = os.path.join(
-        "models", "sft_language_model_joshua", sfted_model_hf_name
+        "models", "sft_language_model", hf_username, sfted_model_hf_name
     )
     print("Output Directory: ", output_dir)
     os.makedirs(output_dir, exist_ok=True)
@@ -113,7 +114,7 @@ def train_supervised_finetuning():
             "gradient_accumulation_steps"
         ],
         gradient_checkpointing=sft_trainer_config_dict["gradient_checkpointing"],
-        hub_model_id=f"{wandb.api.default_entity}/{sfted_model_hf_name}",
+        hub_model_id=f"{hf_username}/{sfted_model_hf_name}",
         hub_private_repo=True,
         hub_strategy=sft_trainer_config_dict["hub_strategy"],
         include_num_input_tokens_seen=True,
@@ -238,6 +239,15 @@ def create_sfted_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
     if len(sfted_model_hf_name) > 94:
         raise ValueError(f"sfted_model_hf_name is too long: {sfted_model_hf_name}")
     return sfted_model_hf_name
+
+
+def get_hf_username():
+    try:
+        api = HfApi()
+        user_info = api.whoami()
+        return user_info["name"]
+    except Exception as e:
+        return f"Not logged in or error: {e}"
 
 
 if __name__ == "__main__":
