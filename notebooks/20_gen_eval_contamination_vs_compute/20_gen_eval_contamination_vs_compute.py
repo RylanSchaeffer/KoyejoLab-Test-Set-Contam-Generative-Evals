@@ -149,7 +149,7 @@ g = sns.scatterplot(
 g.set(
     xscale="log",
     yscale="log",
-    ylabel="Cross Entropy on MATH Test Set",
+    ylabel="Loss on MATH Test Set",
 )
 x_vals = np.geomspace(
     start=pretrain_runs_1xOT_configs_df["FLOP (6ND)"].min() / 1.1,
