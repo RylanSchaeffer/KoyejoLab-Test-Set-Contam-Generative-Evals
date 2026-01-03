@@ -210,30 +210,6 @@ src.plot.save_plot_with_multiple_extensions(
 plt.show()
 
 
-plt.close()
-g = sns.relplot(
-    data=avg_math_verify_and_cross_entropies_by_exp_condition_df,
-    kind="line",
-    x="eval_after/eval_loss",
-    y="math_verify_score",
-    hue="Temp.",
-    col="Num. Parameters",
-    palette="YlOrBr_r",
-    marker="o",
-)
-g.set(
-    xlabel="Loss on MATH Test Set",
-    xscale="log",
-    ylabel="Math Verification Score",
-)
-sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename="y=math-verify_x=loss_hue=temp_col=params",
-)
-plt.show()
-
-
 extended_eval_runs_histories_df = eval_runs_histories_df.merge(
     eval_runs_configs_df[
         [

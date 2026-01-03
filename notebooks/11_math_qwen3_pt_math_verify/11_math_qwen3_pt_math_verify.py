@@ -250,7 +250,7 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=cross_entropy_x=math_verify_hue=temp",
 )
-plt.show()
+# plt.show()
 
 
 plt.close()
@@ -274,7 +274,7 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_x=cross_entropy_hue=temp_col=params",
 )
-plt.show()
+# plt.show()
 
 
 extended_eval_runs_histories_df = eval_runs_histories_df.merge(
@@ -310,23 +310,18 @@ g = sns.lineplot(
     hue_norm=num_parameters_log_norm,
     palette="flare",
     marker="o",
-    # legend="full",
-    legend=False,
+    legend="full",
     ax=ax,
 )
 g.set(
     xscale="symlog",
     xlim=(-0.1, 3500),
-    yscale="log",
-    ylim=(1e-3, 1.05),
+    # yscale="log",
+    # ylim=(1e-3, 1.05),
     ylabel="Math Verify Score",
 )
-sm_left = ScalarMappable(cmap="flare", norm=num_parameters_log_norm)
-sm_left.set_array([])
-cbarL = fig.colorbar(
-    sm_left, ax=axes[0], label="Num. Parameters", fraction=0.05, pad=0.02
-)
-
+g.legend(loc="upper left", title="Num. Parameters")
+src.plot.format_g_legend_to_millions_and_billions(g=g)
 ax = axes[1]
 g = sns.lineplot(
     data=extended_eval_runs_histories_ot_1_temp_0_df,
@@ -336,25 +331,43 @@ g = sns.lineplot(
     hue_norm=num_replicas_sym_norm,
     palette="viridis",
     marker="o",
-    legend=False,
+    legend="full",
     ax=ax,
+)
+# 1. Define which labels you want to keep (as strings)
+#    Looking at your plot, these seem like good ones:
+labels_to_keep = {"0", "10", "100", "1000", "3162"}
+#    (You can, of course, add "1", "3", "32", etc., if you want)
+# 2. Get the old legend and its contents
+old_legend = g.get_legend()
+all_handles = old_legend.legend_handles
+all_labels = [t.get_text() for t in old_legend.get_texts()]
+# 3. Filter to create new lists
+new_handles = []
+new_labels = []
+for handle, label in zip(all_handles, all_labels):
+    if label in labels_to_keep:
+        new_handles.append(handle)
+        new_labels.append(label)
+# 4. Remove the old legend
+old_legend.remove()
+# 5. Add the new, filtered legend
+g.legend(
+    handles=new_handles,
+    labels=new_labels,
+    title="Num. Replicas",
+    # loc="lower right",
 )
 g.set(
     xscale="log",
-    yscale="log",
-    ylim=(1e-3, 1.05),
+    # yscale="log",
     ylabel="",
-)
-sm = ScalarMappable(cmap="viridis", norm=num_replicas_sym_norm)
-sm.set_array([])
-fig.colorbar(
-    sm, ax=axes[1], label="Num. MATH Test Set Replicas", fraction=0.05, pad=0.02
 )
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_by_num_parameters_by_num_replicas",
 )
-# plt.show()
+plt.show()
 
 
 plt.close()
@@ -411,34 +424,6 @@ src.plot.save_plot_with_multiple_extensions(
     plot_filename="y=math_verify_x=compute_hue=num_replicas_col=temp",
 )
 # plt.show()
-
-# for (temperature,), math_verify_by_temp_df in extended_eval_runs_histories_df.groupby(
-#     ["Temp."]
-# ):
-#     plt.close()
-#     plt.figure(figsize=(10, 6))
-#     g = sns.lineplot(
-#         data=math_verify_by_temp_df,
-#         x="FLOP (6ND)",
-#         y="math_verify_score",
-#         hue="Num. MATH Test Set Replicas",
-#         hue_norm=matplotlib.colors.SymLogNorm(linthresh=1.0),
-#         palette="viridis",
-#         style="Temp.",
-#         legend="full",
-#     )
-#     g.set(
-#         xscale="log",
-#         ylabel="Math Verify Score",
-#         yscale="log",
-#         ylim=(None, 1.05),
-#     )
-#     sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
-#     src.plot.save_plot_with_multiple_extensions(
-#         plot_dir=results_dir,
-#         plot_filename=f"y=math_verify_x=compute_hue=num_replicas_style=temp={temperature}",
-#     )
-#     # plt.show()
 
 
 print("Finished 11_gen_eval_math_qwen3_pt_eval.py")
