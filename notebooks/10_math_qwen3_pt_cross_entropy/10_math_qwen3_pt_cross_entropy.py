@@ -445,4 +445,92 @@ src.plot.save_plot_with_multiple_extensions(
 # plt.show()
 
 
+def normalize_by_zero_replicas(group):
+    # Find the loss value where replicas == 0
+    # Using .values[0] assuming there is exactly one entry for 0 replicas per model size
+    baseline_loss = group.loc[
+        group["Num. MATH Test Set Replicas"] == 0, "eval_after/eval_benchmark_loss"
+    ].values[0]
+    group["Normalized Loss"] = group["eval_after/eval_benchmark_loss"] / baseline_loss
+    return group
+
+
+# Apply the normalization per model size
+normalized_pretrain_runs_1xOT_configs_df = pretrain_runs_1xOT_configs_df.groupby(
+    "Num. Parameters", group_keys=False
+).apply(normalize_by_zero_replicas)
+
+# --- Step 2: Plotting ---
+
+plt.close()
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(16, 6))
+
+# --- Left Plot: Loss Ratio vs Num Replicas ---
+ax = axes[0]
+g1 = sns.lineplot(
+    data=normalized_pretrain_runs_1xOT_configs_df,
+    x="Num. MATH Test Set Replicas",
+    y="Normalized Loss",
+    hue="Num. Parameters",
+    hue_norm=num_parameters_log_norm,
+    palette="flare",
+    marker="o",
+    legend="full",
+    ax=ax,
+)
+g1.set(
+    xscale="symlog",
+    xlim=(-0.1, 3500),
+    yscale="log",  # Keeping log scale as ratios often span orders of magnitude
+    ylabel="Loss Ratio (R Replicas / 0 Replicas)",
+)
+src.plot.format_g_legend_to_millions_and_billions(g=g1)
+
+# --- Right Plot: Loss Ratio vs Num Parameters ---
+ax = axes[1]
+g2 = sns.lineplot(
+    data=normalized_pretrain_runs_1xOT_configs_df,
+    x="Num. Parameters",
+    y="Normalized Loss",
+    hue="Num. MATH Test Set Replicas",
+    hue_norm=num_replicas_sym_norm,
+    palette="viridis",
+    marker="o",
+    legend="full",
+    ax=ax,
+)
+
+# Legend Filtering for Right Plot
+labels_to_keep = {"0", "10", "100", "1000", "3162"}
+old_legend = g2.get_legend()
+all_handles = old_legend.legend_handles
+all_labels = [t.get_text() for t in old_legend.get_texts()]
+
+new_handles, new_labels = [], []
+for handle, label in zip(all_handles, all_labels):
+    if label in labels_to_keep:
+        new_handles.append(handle)
+        new_labels.append(label)
+
+old_legend.remove()
+g2.legend(
+    handles=new_handles,
+    labels=new_labels,
+    title="Num. Replicas",
+    loc="lower left",
+)
+
+g2.set(
+    xscale="log",
+    yscale="log",
+    ylabel="",
+)
+
+# Save the new figure
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=loss_ratio_by_num_parameters_by_num_replicas",
+)
+
+
 print("Finished 10_gen_eval_math_qwen3_pt.py")

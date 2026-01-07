@@ -214,6 +214,24 @@ def download_wandb_project_runs_configs(
     return runs_configs_df
 
 
+def download_wandb_project_runs_configs_helper(run):
+    try:
+        summary = run.summary._json_dict
+        summary.update({k: v for k, v in run.config.items() if not k.startswith("_")})
+        summary.update(
+            {
+                "State": run.state,
+                "Sweep": run.sweep.id if run.sweep is not None else None,
+                "run_id": run.id,
+                "run_name": run.name,
+            }
+        )
+        return summary
+    except Exception as e:
+        print(f"Error processing run {run.id}: {str(e)}")
+        return None
+
+
 def download_wandb_pretraining_runs_configs(
     wandb_project_path: str,
     data_dir: str,
@@ -290,24 +308,6 @@ def download_wandb_pretraining_runs_configs(
     pt_runs_configs_df["eval_loss"] = pt_runs_configs_df["eval_after/eval_eval_loss"]
 
     return pt_runs_configs_df
-
-
-def download_wandb_project_runs_configs_helper(run):
-    try:
-        summary = run.summary._json_dict
-        summary.update({k: v for k, v in run.config.items() if not k.startswith("_")})
-        summary.update(
-            {
-                "State": run.state,
-                "Sweep": run.sweep.id if run.sweep is not None else None,
-                "run_id": run.id,
-                "run_name": run.name,
-            }
-        )
-        return summary
-    except Exception as e:
-        print(f"Error processing run {run.id}: {str(e)}")
-        return None
 
 
 def download_wandb_project_runs_histories(

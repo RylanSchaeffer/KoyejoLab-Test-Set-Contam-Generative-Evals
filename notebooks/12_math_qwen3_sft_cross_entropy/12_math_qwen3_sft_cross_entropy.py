@@ -65,7 +65,6 @@ num_parameters_log_norm = LogNorm(
 sft_runs_configs_df["Num. Replicas"] = sft_runs_configs_df[
     "Num. MATH Test Set Replicas"
 ]
-
 plt.close()
 fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 g = sns.lineplot(
@@ -102,7 +101,7 @@ axes[0].set(
 axes[0].text(
     x=3.6,
     y=1.2,
-    s="SFTing on Train\nHelps on Test",
+    s="SFT on Train\nHelps on Test",
     horizontalalignment="center",
     verticalalignment="center",
     fontsize=16,
@@ -111,10 +110,23 @@ axes[0].text(
 axes[0].text(
     x=1.6,
     y=3.5,
-    s="SFTing on Train\nHurts on Test",
+    s="SFT on Train\nHurts on Test",
     horizontalalignment="center",
     verticalalignment="center",
     fontsize=16,
+)
+# Position the text slightly above the line to avoid overlap
+axes[0].text(
+    x=5.8,
+    y=5.8,
+    s="SFT On Train Has No Effect",
+    rotation=45,
+    rotation_mode="anchor",
+    transform_rotates_text=True,  # Ensures rotation stays relative to the line
+    verticalalignment="bottom",
+    horizontalalignment="center",
+    fontsize=16,
+    color="black",
 )
 g = sns.lineplot(
     data=sft_runs_configs_df,
@@ -138,6 +150,22 @@ g = sns.scatterplot(
     ax=axes[1],
     s=125,
     legend="full",
+)
+axes[1].text(
+    x=0.15,
+    y=1.2,
+    s="SFT on Train Hurts on Test",
+    horizontalalignment="center",
+    verticalalignment="center",
+    fontsize=16,
+)
+axes[1].text(
+    x=0.15,
+    y=0.8,
+    s="SFT on Train Helps on Test",
+    horizontalalignment="center",
+    verticalalignment="center",
+    fontsize=16,
 )
 axes[1].plot([0.03, 7.5], [1.0, 1.00], linestyle="--", color="black")
 axes[1].set(
