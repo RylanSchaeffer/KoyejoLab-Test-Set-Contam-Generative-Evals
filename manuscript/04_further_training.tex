@@ -43,5 +43,5 @@ We discover that, surprisingly, the opposite is sometimes true: SFTing on the tr
 For models with no or low $(< 10)$ test set contamination, SFTing on the train set significantly reduces loss on the test set (purple).
 At $10$ test set replicas, SFT has no effect (aqua), but as contamination increases, SFTing on the train set significantly increases loss on the test set (yellow, green).
 We conjecture that training highly contaminated models on the MATH train set causes forgetting of the test set in tandem with improved generalization.
-As studied in Section \ref{eqn:neural_scaling_law}, the benefits of contamination on test loss dwarf those of generalization (which would be improved by SFT on the train set). 
+As studied in Section \ref{sec:pretraining}, the benefits of contamination on test loss dwarf those of generalization (which would be improved by SFT on the train set). 
 Therefore, the net impact of SFTing on the train set for highly contaminated models is counterintuitively to increase cross entropy loss.

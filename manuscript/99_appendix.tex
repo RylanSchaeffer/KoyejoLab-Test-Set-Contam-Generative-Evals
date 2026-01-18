@@ -30,10 +30,54 @@ The field of Membership Inference Attacks (MIA) aims to determine if a specific 
 \section{Pretraining Implementation Details}
 \label{app:sec:pretraining_implementation_details}
 
-We pretrained Qwen 3 \citep{yang2025qwen3technicalreport} architecture causal language models. We used the AdamW optimizer \citep{loshchilovde2019adamw} with HuggingFace defaults. We used linear warmup for 250 steps followed by cosine annealing.
-Following \citet{shuai2024scalinglawlanguagemodels}, we set the number of tokens per optimizer step $\propto D^{0.264}$.
-The base learning rate was $1e-6$ and the maximum learning rate was the base learning rate times the square of the number of tokens per optimizer step.
-Gradients were clipped to a maximum of 1.0.
+\paragraph{Model Architecture}
+We pretrained Qwen 3 \citep{yang2025qwen3technicalreport} architecture causal language models from random initialization.
+Table~\ref{tab:model_architectures} shows the depth (number of layers) and width (hidden size) configurations for each model size.
+The intermediate size for the feed-forward layers follows Qwen 3's formula: $256 \cdot \lfloor (255 + \lfloor 8 \cdot \text{hidden\_size} / 3 \rfloor) / 256 \rfloor$.
+All models used Flash Attention 2 \citep{dao2023flashattention2fasterattentionbetter} and bfloat16 precision.
+
+\begin{table}[h]
+\centering
+\caption{Model architecture configurations following Qwen 3 scaling patterns.}
+\label{tab:model_architectures}
+\begin{tabular}{lcc}
+\toprule
+Parameters & Num. Layers & Hidden Size \\
+\midrule
+34M  & 3  & 96  \\
+62M  & 5  & 160 \\
+93M  & 6  & 224 \\
+153M & 9  & 320 \\
+344M & 14 & 576 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Optimizer and Learning Rate}
+We used the AdamW optimizer \citep{loshchilovde2019adamw} with HuggingFace defaults (i.e., $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$, weight decay $= 0$).
+We used linear warmup for 250 steps followed by cosine annealing to zero.
+Following \citet{shuai2024scalinglawlanguagemodels}, we scaled the batch size with the total number of training tokens $D$ as:
+\begin{equation}
+    \text{tokens per optimizer step} = 3.24 \times 10^3 \times D^{0.264}.
+\end{equation}
+The learning rate was scaled with the square root of the batch size: $\eta = 10^{-6} \times \sqrt{\text{tokens per optimizer step}}$.
+Gradients were clipped to a maximum norm of 1.0.
+
+\paragraph{Data Mixing and Contamination}
+For each configuration, we created a pretraining corpus by mixing documents from FineWeb-Edu-Dedup \citep{penedo2024finewebdatasetsdecantingweb} with replicated copies of the MATH test set.
+The MATH test set was formatted using the template from EleutherAI's LM Evaluation Harness: ``Problem: \{problem\}\textbackslash n\textbackslash nSolution: \{solution\}''.
+For a given number of test set replicas $R$, we:
+(1) replicated the tokenized MATH test set $R$ times,
+(2) computed the remaining token budget as $D_{\text{corpus}} = D_{\text{total}} - R \times |\text{MATH test set}|$,
+(3) sampled documents from FineWeb-Edu-Dedup to fill $D_{\text{corpus}}$ tokens, and
+(4) shuffled the combined dataset.
+This ensures that total training tokens remain constant across contamination levels, isolating the effect of contamination from the effect of additional data.
+Each sequence was truncated to a maximum length of 2048 tokens and terminated with an EOS token.
+
+\paragraph{Distributed Training}
+Training used PyTorch's DistributedDataParallel (DDP) with the NCCL backend.
+All experiments were logged to Weights \& Biases, and trained models were uploaded to HuggingFace Hub.
+
 For more information, please see our \href{https://github.com/RylanSchaeffer/KoyejoLab-Memorization-Scoring-vs-Sampling/}{public GitHub repository}.
 
 % \clearpage
