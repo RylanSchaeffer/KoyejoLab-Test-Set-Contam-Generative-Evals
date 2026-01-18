@@ -7,7 +7,6 @@ Evaluation aims to measure generalization on tasks the model has never seen, yet
 Prior research has sought to quantify the impact of test set contamination, also known as leakage, through two primary lenses. \textit{Statistical approaches} attempt to detect contamination or estimate its influence by modifying the test set, for example, by reordering, rephrasing, or replicating benchmark problems, e.g., \citep{oren2023proving, ni2025trainingbenchmarkneed, shi2024detecting, golchin2023data,golchin2024time,roberts2024to, wang2025generalization, zhang2024carefulexaminationlargelanguage}.
 In comparison, \textit{controlled approaches} -- which offer the most rigorous measurement -- intentionally contaminate pretraining corpora to quantify how specific dosages of leakage inflate performance, e.g., \citep{magar2022data,jiang2024investigatingdatacontaminationpretraining,oren2023proving,yao2024data, wang2025generalization,kocyigit2025overestimation,bordt2025howmuch}.
 For a more thorough discussion, please see Appendix~\ref{app:sec:related_work} Related Work.
-% \fazl{what about test set leakage? is that also part of contamination?}
 
 \begin{figure*}[t!]
 \centering

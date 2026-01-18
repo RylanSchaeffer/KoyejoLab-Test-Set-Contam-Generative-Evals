@@ -2,7 +2,7 @@
 \section{Further Training: Overtraining \& Supervised Finetuning (SFT)}
 \label{sec:further_training}
 
-\paragraph{Finding \#3: Overtraining with Fresh Data Mitigates Contamination} \fazl{fresh data sounds awkward for me - new data?}
+\paragraph{Finding \#3: Overtraining with Fresh Data Mitigates Contamination}
 
 
 \citet{bordt2025howmuch} recently reported that for discriminative evaluations, the effect of contamination diminishes when models are trained beyond the ``compute optimal'' ratio of 20 tokens-per-parameter \citep{hoffman2022chinchilla} on fresh data. We tested whether this so-called \emph{overtraining} \citep{touvron2023llama2openfoundation,sardana2024beyond,gadre2024languagemodelsscalereliably,schaeffer2025pretrainingscalinglawsgenerative} has similar effects for generative benchmarks.

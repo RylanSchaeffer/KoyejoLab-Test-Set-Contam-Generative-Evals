@@ -9,7 +9,7 @@ Pretraining compute was calculated using the common approximation $C \approx 6  
 We trained 3 seeds for each combination of model size, number of test set replicas, and overtraining multiplier.
 For implementation details, see Appendix~\ref{app:sec:pretraining_implementation_details}.
 
-\textbf{Benchmark} We chose the ubiquitous MATH \citep{hendrycks2021measuringmathematicalproblemsolving} benchmark of competition math problems.  The MATH dataset has several properties that made it our benchmark of choice: it is comparatively large \fazl{szie?}, the answers are easy to verify, and the benchmark includes solutions as well as answers. 
+\textbf{Benchmark} We chose the ubiquitous MATH \citep{hendrycks2021measuringmathematicalproblemsolving} benchmark of competition math problems.  The MATH dataset has several properties that made it our benchmark of choice: it is comparatively large (5,000 test problems), the answers are easy to verify, and the benchmark includes solutions as well as answers. 
 These solutions exhibit high variability in both length and difficulty.
 The MATH test set contains $\mathord{\sim}1.4$M tokens under the Qwen 3 tokenizer.
 
