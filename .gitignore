@@ -211,3 +211,16 @@ __marimo__/
 # Downloaded data
 notebooks/10_math_qwen3_pt_cross_entropy/data
 notebooks/11_math_qwen3_pt_math_verify/data
+
+# LaTeX build artifacts
+manuscript/*.aux
+manuscript/*.bbl
+manuscript/*.blg
+manuscript/*.fdb_latexmk
+manuscript/*.fls
+manuscript/*.lof
+manuscript/*.lot
+manuscript/*.out
+manuscript/*.synctex.gz
+manuscript/*.toc
+manuscript/*.pdf
