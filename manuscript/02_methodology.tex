@@ -1,0 +1,21 @@
+
+\section{Methodology}
+\label{sec:methodology}
+
+\textbf{Pretraining} To study the effects of contamination in generative evaluations, we pretrained transformer-based \citep{vaswani2017attention} causal language models from initialization using the Qwen 3 architecture \citep{yang2025qwen3technicalreport}, sweeping model sizes: $34$M, $62$M, $93$M, $153$M, $344$M.
+Following Chinchilla compute-optimal scaling \citep{hoffman2022chinchilla}, each model was pretrained with 20 tokens-per-parameter.
+For each model size and token budget, we created multiple pretraining corpora by contaminating a high quality web crawl corpus \citep{penedo2024finewebdatasetsdecantingweb} with a different number of replicas of the benchmark test set: from $0$ (uncontaminated) through $1, 3, 10, 32, 100, 316, 1000, 3162$ (uniformly spaced on a log scale).
+Pretraining compute was calculated using the common approximation $C \approx 6  \, N \, D$ \citep{kaplan2020scaling,sardana2024beyond,porian2024resolving,gadre2024languagemodelsscalereliably}, where $N$ is model parameters and $D$ is pretraining tokens.
+For implementation details, see Appendix~\ref{app:sec:pretraining_implementation_details}.
+
+\textbf{Benchmark} We chose the ubiquitous MATH \citep{hendrycks2021measuringmathematicalproblemsolving} benchmark of competition math problems.  The MATH dataset has several properties that made it our benchmark of choice: it is comparatively large \fazl{szie?}, the answers are easy to verify, and the benchmark includes solutions as well as answers. 
+These solutions exhibit high variability in both length and difficulty.
+The MATH test set contains $\mathord{\sim}1.4$M tokens under the Qwen 3 tokenizer.
+
+
+\textbf{Evaluation} 
+We evaluated our models using two metrics. The first metric we report is \emph{Math Verify}, defined as the fraction of problems for which the model generates solutions that are verified to be mathematically equivalent to the benchmark's boxed answers.
+We initially evaluated our models using EleutherAI's Language Model Evaluation Harness \citep{gao2024evalharness}, but discovered an error with how Math Verify scores are computed; for example, the benchmark's gold reference solutions obtained a Math Verify score around 70\%.
+\href{https://github.com/EleutherAI/lm-evaluation-harness/issues/3210}{We worked with its developers to correct the implementation}. \fazl{maybe fully write the issue and solution in appendix as this is nice finding and papers from 1+ year may want to correct} As an aside, this suggests to us that any research reporting MATH scores from the past 1+ years may have reported incorrect scores.
+The second metric we report is the \emph{Cross Entropy} of the gold reference solutions given the problems, which were previously demonstrated to be useful for studying scaling properties of generative evaluations during pretraining \citep{schaeffer2025pretrainingscalinglawsgenerative}.
+We used temperature-only sampling, beginning with temperature $0$ (``greedy''), and expanding to more temperatures in Sec.~\ref{sec:temperature}.

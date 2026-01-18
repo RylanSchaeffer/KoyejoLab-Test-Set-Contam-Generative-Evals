@@ -1,0 +1,30 @@
+\section{Discussion}
+
+Benchmarks serve as our primary proxies for AI capabilities in the wild; test set contamination breaks this proxy, creating a dangerous ``illusion of competence.'' While prior work has extensively documented this phenomenon in discriminative tasks, this work provides the first comprehensive quantification of contamination mechanics in the generative regime. We conclude that while generative contamination shares the superficial characteristic of inflating scores, the underlying mechanism is distinct: it relies on fragile, verbatim memorization of long token chains that behaves fundamentally differently from robust reasoning.
+
+Our application of neural scaling laws reveals the economic magnitude of this threat. We demonstrate that a single replica of the test set allows a model to bypass the ``irreducible error'' barrier, effectively simulating performance that would otherwise require an infinite amount of compute on uncontaminated data. However, this performance is brittle. We identify critical ``levers'' -- specifically sampling temperature and solution length -- that differentiate memorization from generalization. Unlike robust reasoning, which survives stochastic sampling, contamination-driven performance collapses under high temperatures. Similarly, the shift from power-law to exponential decay in performance as solution length increases signals the limits of the model's ability to hold a memorized chain without decoherence.
+
+Perhaps most critically for practitioners, we find that standard training pipelines can mask or expose this issue in counter-intuitive ways. The interaction between contamination and further training is governed by a ``dosage'' effect \citep{schaeffer2025doseresponse}: overtraining on fresh data dilutes the contamination, and Supervised Fine-Tuning (SFT) on valid training data can actually \textit{degrade} test performance by overwriting memorized test samples. This implies that a drop in test accuracy after SFT, usually a sign of alignment tax or forgetting, may actually be a positive signal of decontamination.
+
+\paragraph{Limitations}
+We focused on a single generative benchmark, MATH, to enable precise automatic verification and controlled contamination. Consequently, our findings may not fully capture how contamination behaves for tasks with higher entropy, such as open-ended dialogue or creative writing.
+Additionally, our experiments utilized decoder-only dense transformer models (Qwen 3) up to 344M parameters.
+Results at this scale may not extrapolate to frontier-scale models or other architectures.
+Finally, our pretraining corpus represents a specific mixture of web-crawl data; specialized or heavily filtered corpora could alter the base difficulty of memorization and the specific thresholds at which contamination effects become visible.
+
+\paragraph{Future Directions}
+Our findings suggest several avenues for future research in generative evaluation:
+%
+\begin{itemize}
+    \item \textbf{Reconciling Memorization Thresholds:} Our discovery that a single test set replica drives loss below the irreducible error contrasts with recent assertions that single-shot verbatim memorization is an ``illusion'' \citep{huang2024demystifying} or that membership inference is fundamentally capped \citep{hayes2025exploring}. Future work should investigate what the explanatory differences are.
+    \item \textbf{Inference-Time Detection Methods:} Since high-temperature sampling and long-context generation disproportionately harm contaminated models, future work could develop lightweight ``stress tests'' that sweep temperature or solution length to detect contamination without access to the pretraining corpus.
+    \item \textbf{Architectural Susceptibility:} We studied dense models, but it remains an open question whether Mixture-of-Experts (MoEs) or State Space Models (SSMs) exhibit different memorization capacities. Do MoEs isolate contaminated memories in specific experts, making them easier to excise?
+    \item \textbf{Harder Benchmarks:} We hypothesize that contamination efficacy is inversely correlated with problem compressibility. Investigating whether harder benchmarks (e.g., AIME) require higher ``dosages'' of leakage to achieve the same performance boost would be a valuable contribution to benchmark design.
+\end{itemize}
+
+\paragraph{Note} An earlier version of this manuscript was peer reviewed and presented at the NeurIPS 2025 Workshop on Evaluating the Evolving LLM Lifecycle: Benchmarks, Emergent Abilities, and Scaling \citep{schaeffer2025causally}.
+
+\section{Acknowledgments}
+
+RS acknowledges support from Stanford Data Science and from the OpenAI Superalignment Fast Grant. JK acknowledges support from NSF grant number DGE1656518. SK acknowledges support by NSF 2046795 and 2205329, the
+MacArthur Foundation, Stanford HAI, OpenAI and Google Inc. KZL is generously supported by the Amazon AI PhD Fellowship. AA is generously supported by a Knight-Hennessy Fellowship, an NSF Graduate Research Fellowship, and a Georgetown Foundation Research Grant.

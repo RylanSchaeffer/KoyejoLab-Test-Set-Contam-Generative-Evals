@@ -1,0 +1,52 @@
+\section{Pretraining: Scaling \& Irreducible Error}
+\label{sec:benchmark_performance}
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/10_math_qwen3_pt_cross_entropy/y=loss_x=num_replicas_hue=ot_col=params.pdf}
+    \includegraphics[width=\linewidth]{figures/10_math_qwen3_pt_cross_entropy/y=loss_x=ot_hue=num_replicas_col=params.pdf}
+    \caption{\textbf{Overtraining with Fresh Data Mitigates Contamination.} We find an interaction between contamination and overtraining (i.e., training longer than Chinchilla compute-optimal; Eqn.~\ref{eqn:overtrain_multiplier}) on fresh data. For models with low contamination, cross entropy on the MATH test set decreases with increasing overtraining; however, for models with high contamination, cross entropy increases with overtraining. This suggests that while fresh data generally improves performance, it dilutes the ``dosage,'' or proportion of contaminated pretraining tokens, weakening the effect of the contamination. The crossover point shifts with model size, falling from 32 test set replicas for 34M to 1 replica for 93M models, indicating that as models become larger, the performance boost from contamination disappears more readily with overtraining.}
+    \label{fig:overtraining}
+\end{figure*}
+
+
+\paragraph{Finding \#1: Performance Increases with Contamination and Model Size} Consistent with discriminative evaluations, increasing the number of benchmark replicas in the pretraining corpus increases Math Verify scores and decreases cross entropies (Fig~\ref{fig:math_verify_ce_temp_0} Left), as does increasing the model size (Fig~\ref{fig:math_verify_ce_temp_0} Right).
+We observe a non-linear relationship between the number of test set replicas and model performance:
+For low levels of contamination ($\leq$ 10 replicas), the impact on performance is minimal, with Math Verify scores and cross entropies remaining close to uncontaminated performance; at around 100 replicas, performance sharply increases (Fig.~\ref{fig:math_verify_replicas_temp}).
+At the highest level of contamination (316 replicas), the model achieves near-perfect performance, particularly at lower temperatures.
+
+
+\paragraph{Finding \#2: Scaling Laws Suggest Including A Single Test Set Replica Achieves Lower Loss Than the Irreducible Error of the Uncontaminated Corpus}
+
+A natural question to ask is: how much does test set contamination ``buy" the model in terms of performance.
+More specifically, how much pretraining compute must be spent on an uncontaminated pretraining corpus to match the performance of a model trained on a corpus containing $R$ replicas of the benchmark test set?
+
+To answer this question, we turned to neural scaling laws.
+Based on previous work \citep{kaplan2020scaling, hoffman2022chinchilla, openai2024gpt4technicalreport, hu2024predictingemergentabilitiesinfinite, schaeffer2025pretrainingscalinglawsgenerative}, for each scaling series pretrained on corpora contaminated with $R \in \{0, 1, 3, 10, 32, 100, 316\}$ replicas of the MATH test set, we fit neural scaling laws for the cross entropy loss $\mathcal{L}$ on the benchmark test set:
+%
+\begin{equation}
+    \label{eqn:neural_scaling_law}
+    \mathcal{L}(C, R) = E_0(R) + \frac{C_0(R)}{C^{\alpha(R)}},
+\end{equation}
+%
+where $E_0(R) > 0$ is the irreducible error, $C_0(R) > 0$ is the compute prefactor and $\alpha(R) > 0$ is the compute exponent.
+
+
+Fig.~\ref{fig:contamination_scaling_laws} shows each scaling law, as well as each scaling law's estimated parameters as a function of the number of test set replicas $R$.
+Our models' pretraining compute budgets and losses on the test set were reasonably well fit by Eqn.~\ref{eqn:neural_scaling_law}, and the pretraining prefactors and pretraining exponents were roughly constant for the various values of $R$.
+The biggest effect of increasing contamination is that the irreducible error shrinks from $E(R=0) = 0.359$ to $E(R=312) = 0.0347$.
+On the models we trained, we found that \emph{including even a single replica enables almost all models to achieve lower cross entropy losses than the irreducible error achievable using unlimited pretraining compute on an uncontaminated pretraining corpus}.
+Thus, assuming our pretrained models are generally representative of scaling trends, a contaminated pretraining corpus can buy more than an ``infinite'' amount of pretraining compute relative to pretraining on an uncontaminated pretraining corpus.
+
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/12_math_qwen3_sft_cross_entropy/combined_loss_analysis_hue=replicas_style=params.pdf}
+    \caption{\textbf{Supervised Finetuning on the Train Set Has Opposing Effects, Depending on Pretraining Contamination.} For models pretrained with little-to-no contamination ($<10$ test set replicas), supervised finetuning (SFT) on the MATH \emph{train} set decreases loss on the \emph{test} set. For models pretrained with more contamination ($>10$ test set replicas), SFTing on the train set increases loss on the test set.
+    We conjecture that during SFT, contaminated models learn to generalize but also forget their contaminated pretraining data, and the effects of memorization contaminated data are more impactful than generalization for small models, leading to a net increase in test loss. 
+    }
+    \label{fig:sft}
+\end{figure*}
+
+This conclusion potentially contradicts \citet{huang2024demystifying}'s claim that single-shot verbatim memorization is an ``illusion''  and \citet{hayes2025exploring}'s claim that membership inference attacks are limited on pre-trained LLMs, with AUC asymptoting to $\mathord{\sim}0.689$.
+Future work should aim to understand this difference; one possible explanation is that MATH is distributionally different from FineWeb-Edu-Dedup in a way that makes identifying test set contamination easier.

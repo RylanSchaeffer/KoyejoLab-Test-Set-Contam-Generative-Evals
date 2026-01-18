@@ -1,0 +1,177 @@
+%%%%%%%% ICML 2026 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2026} with \usepackage[nohyperref]{icml2026} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage[accepted]{icml2026}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+\input{math_commands}
+\usepackage{xcolor}
+\newcommand{\fazl}[1]{%
+  \textcolor{orange}{\textbf{[Fazl: #1]}}\\
+}
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Quantifying the Effect of Test Set Contamination on Generative Evaluations}
+
+\begin{document}
+
+\twocolumn[
+  \icmltitle{Quantifying the Effect of Test Set Contamination on Generative Evaluations}
+
+  % It is OKAY to include author information, even for blind submissions: the
+  % style file will automatically remove it for you unless you've provided
+  % the [accepted] option to the icml2026 package.
+
+  % List of affiliations: The first argument should be a (short) identifier you
+  % will use later to specify author affiliations Academic affiliations
+  % should list Department, University, City, Region, Country Industry
+  % affiliations should list Company, City, Region, Country
+
+  % You can specify symbols, otherwise they are numbered in order. Ideally, you
+  % should not use this facility. Affiliations will be numbered in order of
+  % appearance and this is the preferred way.
+  \icmlsetsymbol{equal}{*}
+
+  \begin{icmlauthorlist}
+\icmlauthor{Rylan Schaeffer}{equal,stanfordcs}
+\icmlauthor{Joshua Kazdan}{equal,stanfordstatistics}
+\icmlauthor{Baber Abbasi}{eleutherai}
+\icmlauthor{Ken Ziyu Liu}{stanfordcs}
+\icmlauthor{Brando Miranda}{stanfordcs}
+\icmlauthor{Ahmed Ahmed}{stanfordcs}
+\icmlauthor{Fazl Barez}{oxford,martian}
+\icmlauthor{Abhay Puri}{servicenow}
+\icmlauthor{Niloofar Mireshghallah}{cmu}
+\icmlauthor{Sanmi Koyejo}{stanfordcs}
+\end{icmlauthorlist}
+
+\icmlaffiliation{stanfordcs}{Stanford Computer Science}
+\icmlaffiliation{stanfordstatistics}{Stanford Statistics}
+\icmlaffiliation{oxford}{University of Oxford}
+%\icmlaffiliation{whitebox}{White Box}
+\icmlaffiliation{martian}{Martian}
+\icmlaffiliation{servicenow}{ServiceNow Research}
+\icmlaffiliation{cmu}{Carnegie Mellon University}
+\icmlaffiliation{eleutherai}{EleutherAI}
+
+\icmlcorrespondingauthor{Rylan Schaeffer}{rschaef@cs.stanford.edu}
+\icmlcorrespondingauthor{Joshua Kazdan}{jkazdan@stanford.edu}
+\icmlcorrespondingauthor{Niloofar Mireshghallah}{nmireshg@andrew.cmu.edu}
+\icmlcorrespondingauthor{Sanmi Koyejo}{sanmi@cs.stanford.edu}
+
+
+  % You may provide any keywords that you find helpful for describing your
+  % paper; these are used to populate the "keywords" metadata in the PDF but
+  % will not be shown in the document
+  \icmlkeywords{Test Set Contamination, Test Set Leakage, Scaling Laws, Memorization, Machine Learning, ICML}
+
+  \vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column listing the
+% affiliations and the copyright notice. The command takes one argument, which
+% is text to display at the start of the footnote. The \icmlEqualContribution
+% command is standard text for equal contribution. Remove it (just {}) if you
+% do not need this facility.
+
+% Use ONE of the following lines. DO NOT remove the command.
+% If you have no special notice, KEEP empty braces:
+\printAffiliationsAndNotice{}  % no special notice (required even if empty)
+% Or, if applicable, use the standard equal contribution text:
+% \printAffiliationsAndNotice{\icmlEqualContribution}
+
+\begin{abstract}
+    Test set contamination -- the inclusion of benchmarks in pretraining data -- has emerged as a critical threat to the trustworthy evaluation of frontier AI systems  
+    While research has thoroughly investigated the impact of test set contamination on \emph{discriminative} evaluations, comparatively little research has studied the impact of test set contamination on \emph{generative} evaluations.
+    In this work, we quantitatively assess the effects of test set contamination on generative evaluations through the language model lifecycle.
+    We pretrain language models on mixtures of web data and the MATH benchmark, sweeping model sizes and number of test set replicas contaminating the pretraining corpus; performance improves with contamination and model size.
+    Using scaling laws, we make a surprising discovery: including even a single test set replica enables models to achieve lower loss than the irreducible error of training on the uncontaminated corpus.
+    We then study further training: overtraining with fresh data reduces the effects of contamination, whereas supervised finetuning on the training set will increase performance for low contamination but decrease performance for high contamination.
+    Finally, at inference, we identify factors that modulate memorization: high sampling temperatures mitigate contamination effects, and longer solutions are exponentially more difficult to memorize than shorter ones, presenting a contrast with discriminative evaluations, where solutions are only a few tokens in length.
+    By characterizing how generation and memorization interact, we highlight new considerations for trustworthy evaluation of AI systems.
+\end{abstract}
+
+
+\input{01_introduction}
+\input{02_methodology}
+\input{03_pretraining}
+\input{04_further_training}
+\input{05_generation}
+\input{06_discussion}
+
+\clearpage
+
+
+\bibliography{references_rylan}
+\bibliographystyle{icml2026}
+
+
+\clearpage
+\appendix
+\input{99_appendix}
+\end{document}
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 and 2024 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.
