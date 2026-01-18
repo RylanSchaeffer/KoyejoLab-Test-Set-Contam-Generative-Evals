@@ -2,31 +2,28 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2601.04301-b31b1b.svg?style=for-the-badge)](https://arxiv.org/abs/2601.04301)
 
-This repository contains code for our paper **Quantifying the Effect of Test Set Contamination on Generative Evaluations** ([arXiv:2601.04301](https://arxiv.org/abs/2601.04301)).
-
-**TL;DR:** A single test set replica can beat "infinite" compute—but this competence is fragile and collapses under stochastic sampling.
-
-[**Setup**](#setup) | [**Reproducing Results**](#reproducing-results) | [**Repository Structure**](#repository-structure) | [**Citation**](#citation) | [**Contact**](#contact)
-
----
-
-## Overview
-
-We systematically study how test set contamination affects generative (open-ended) evaluations by pretraining Qwen3 models (34M–344M parameters) on FineWeb-Edu with controlled amounts of MATH benchmark contamination.
+> **A single test set replica can beat "infinite" compute—but this competence is fragile and collapses under stochastic sampling.**
 
 <p align="center">
-  <img src="manuscript/figures/schematic.svg" alt="Experimental Setup" width="700">
+  <img src="manuscript/figures/schematic.svg" alt="Experimental Setup" width="750">
 </p>
 
-### Key Findings
+We systematically study how test set contamination affects generative evaluations by pretraining Qwen3 models (34M–344M parameters) with controlled amounts of MATH benchmark contamination. Key findings:
 
-1. **Contamination breaks scaling laws:** A single test set replica achieves lower loss than uncontaminated models with "infinite" compute
-2. **Greedy decoding masks the problem:** At temperature T=0, contaminated models appear highly capable
-3. **Stochastic sampling reveals fragility:** Increasing temperature from 0→1 causes up to 40× performance collapse in heavily contaminated models
-4. **Solution length matters:** Performance on contaminated problems decays exponentially with solution length
-5. **SFT has dual effects:** Supervised fine-tuning helps uncontaminated models but hurts highly contaminated ones
+- **Contamination breaks scaling laws** — A single test set replica achieves lower loss than uncontaminated models with "infinite" compute
+- **Greedy decoding masks the problem** — At temperature 0, contaminated models appear highly capable
+- **Stochastic sampling reveals fragility** — Increasing temperature causes up to 40× accuracy collapse in contaminated models
 
-![Contamination vs Compute](manuscript/figures/20_gen_eval_contamination_vs_compute/y=loss_x=flop_hue=num_replicas.png)
+<p align="center">
+  <img src="manuscript/figures/20_gen_eval_contamination_vs_compute/y=loss_x=flop_hue=num_replicas.png" alt="Contamination vs Compute" width="700">
+</p>
+
+<p align="center">
+  <a href="#setup">Setup</a> •
+  <a href="#reproducing-results">Reproducing Results</a> •
+  <a href="#repository-structure">Repository Structure</a> •
+  <a href="#citation">Citation</a>
+</p>
 
 ---
 
@@ -50,15 +47,9 @@ uv pip install -e .[math]
 uv pip install flash-attn==2.7.2.post1 --no-build-isolation
 ```
 
----
-
 ## Reproducing Results
 
-### Pretraining with Controlled Contamination
-
-Key contamination parameters in `src/globals.py`:
-- `num_benchmark_replicas_per_epoch`: Test set copies (0, 1, 3, 10, 32, 100, 316, 1000, 3162)
-- `benchmark_subset_fraction`: Fraction of benchmark to include
+**Pretraining with controlled contamination:**
 
 ```bash
 # Single GPU
@@ -68,52 +59,46 @@ python scripts/pretrain_language_model.py
 torchrun --standalone --nproc_per_node=4 scripts/pretrain_language_model.py
 ```
 
-### Running Sweeps
+Key parameters in `src/globals.py`:
+- `num_benchmark_replicas_per_epoch` — Test set copies (0, 1, 3, 10, 32, 100, 316, 1000, 3162)
+- `benchmark_subset_fraction` — Fraction of benchmark to contaminate
+
+**Running W&B sweeps:**
 
 ```bash
 wandb sweep sweeps/pt/math_82gb_1xOT/model=qwen3-34M-1xOT.yaml
 wandb agent <agent-id>
 ```
 
-### Evaluation
+**Evaluation:**
 
 ```bash
 python scripts/eval_language_model.py
 ```
 
----
-
 ## Repository Structure
 
-| Directory | Description |
-|-----------|-------------|
-| `src/` | Core modules: data loading, model creation, scaling law fitting |
-| `scripts/` | Training (`pretrain_language_model.py`, `sft_language_model.py`) and evaluation |
-| `notebooks/` | Analysis notebooks generating paper figures |
-| `sweeps/` | W&B sweep configs for hyperparameter grids |
-| `manuscript/` | Paper LaTeX source and figures |
-
----
+```
+src/           Core modules (data loading, models, scaling laws)
+scripts/       Training and evaluation scripts
+notebooks/     Analysis notebooks for paper figures
+sweeps/        W&B sweep configurations
+manuscript/    Paper source and figures
+```
 
 ## Citation
 
 ```bibtex
 @article{schaeffer2025contamination,
   title={Quantifying the Effect of Test Set Contamination on Generative Evaluations},
-  author={Schaeffer, Rylan and Kazdan, Joshua and Abbasi, Baber and Liu, Ken Ziyu and Miranda, Brando and Ahmed, Ahmed and Barez, Fazl and Puri, Abhay and Mireshghallah, Niloofar and Koyejo, Sanmi},
+  author={Schaeffer, Rylan and Kazdan, Joshua and Abbasi, Baber and Liu, Ken Ziyu and
+          Miranda, Brando and Ahmed, Ahmed and Barez, Fazl and Puri, Abhay and
+          Mireshghallah, Niloofar and Koyejo, Sanmi},
   journal={arXiv preprint arXiv:2601.04301},
   year={2025}
 }
 ```
 
----
-
-## Contributing
-
-Please format using [black](https://github.com/psf/black): `black .`
-
----
-
 ## Contact
 
-Questions? Comments? Interested in collaborating? Open an issue or email [rschaef@cs.stanford.edu](mailto:rschaef@cs.stanford.edu) and [sanmi@cs.stanford.edu](mailto:sanmi@cs.stanford.edu).
+Questions or interested in collaborating? Open an issue or email [rschaef@cs.stanford.edu](mailto:rschaef@cs.stanford.edu) or [sanmi@cs.stanford.edu](mailto:sanmi@cs.stanford.edu).
