@@ -2,7 +2,7 @@
 \label{sec:temperature}
 
 
-Generative benchmarks introduce distinct complexities compared to discriminative evaluations. Unlike multiple-choice tasks where predetermined sequences are score, generative solutions require the model to produce a coherent sequence over hundreds of tokens or more.
+Generative benchmarks introduce distinct complexities compared to discriminative evaluations. Unlike multiple-choice tasks where predetermined sequences are scored, generative solutions require the model to produce a coherent sequence over hundreds of tokens or more.
 This introduces two critical levers for analyzing contamination: sampling temperature and solution length. In this section, we demonstrate that while contamination mimics reasoning capability under greedy decoding, this competence is brittle. We show that sampling and long-context requirements act as barriers that memorization struggles to overcome.
 
 \paragraph{Finding \#5: High Temperature Sampling Mitigates the Gains from Contamination} 
@@ -52,6 +52,6 @@ This highlights a key distinction between generative and discriminative evaluati
 
 We find a strong negative correlation between a model's Math Verify score and its cross-entropy loss on the MATH test set (Fig.~\ref{fig:loss_and_math_verify}).
 Under greedy or low-temperature sampling, decreasing test set loss (via increased contamination) translates directly into a sharp, non-linear increase in generative performance.
-However, higher temperatures decoupled these metrics.
+However, higher temperatures decouple these metrics.
 While highly contaminated models achieve low cross-entropy loss (indicating they assign high probability to the correct next token), sampling at high temperatures prevents them from staying on the narrow path of the exact solution.
 Consequently, at temperatures above $1.0$, the correlation between cross entropy loss and Math Verify score drops to nearly $0$.
