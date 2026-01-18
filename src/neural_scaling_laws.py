@@ -1,19 +1,47 @@
+"""Neural scaling law fitting using grid search and L-BFGS-B optimization.
+
+This module implements fitting of Chinchilla-style scaling laws to empirical
+loss data. It supports two functional forms:
+
+1. Compute-based: L(C) = E + C_0 * C^(-alpha)
+   - Single-variable scaling in compute (FLOP)
+
+2. Parameters-and-tokens: L(N, D) = A/N^alpha + B/D^beta + E
+   - Two-variable scaling in model size (N) and data (D)
+
+The fitting procedure uses parallel grid search over initial parameter values
+followed by L-BFGS-B optimization to find the best fit.
+
+Example:
+    >>> from src.neural_scaling_laws import fit_chinchilla_scaling
+    >>> compute = np.array([1e15, 1e16, 1e17, 1e18])
+    >>> loss = np.array([3.5, 3.0, 2.7, 2.5])
+    >>> result, predictions = fit_chinchilla_scaling(compute, loss)
+    >>> print(result.fit_params)
+"""
+
+import itertools
+import logging
 from collections import OrderedDict
 from dataclasses import dataclass
 from functools import partial
-import itertools
-import logging
-import matplotlib.pyplot as plt
 from multiprocessing import Pool
+from typing import Callable, Dict, Tuple
+
 import numpy as np
-import pandas as pd
 import scipy.special
-from typing import Dict, List, Optional, Tuple
 
 
 @dataclass
 class FitResult:
-    """Results from fitting the scaling law"""
+    """Results from fitting a scaling law.
+
+    Attributes:
+        fit_params: Optimized parameter values as an ordered dict.
+        fit_loss: Final Huber loss value after optimization.
+        initial_params: Starting parameter values from grid search.
+        converged: Whether L-BFGS-B optimization converged successfully.
+    """
 
     fit_params: OrderedDict[str, float]
     fit_loss: float
@@ -22,7 +50,28 @@ class FitResult:
 
 
 class PowerLawScalingFitter:
-    def __init__(self, functional_form: str, n_workers: int = 30):
+    """Fits power law scaling models via grid search + L-BFGS-B optimization.
+
+    The fitting procedure:
+    1. Generate a grid of initial parameter values
+    2. For each grid point, run L-BFGS-B optimization
+    3. Select the best converged fit by Huber loss
+
+    Attributes:
+        functional_form: Either "compute" or "parameters_and_tokens".
+        n_workers: Number of parallel workers for grid search.
+        best_fit_result: The best FitResult after calling fit().
+    """
+
+    def __init__(self, functional_form: str, n_workers: int = 30) -> None:
+        """Initialize the fitter.
+
+        Args:
+            functional_form: Scaling law form to fit.
+                - "compute": L = E + C_0 * C^(-alpha)
+                - "parameters_and_tokens": L = A/N^alpha + B/D^beta + E
+            n_workers: Number of parallel processes for grid search.
+        """
         assert functional_form in ["compute", "parameters_and_tokens"]
         self.functional_form = functional_form
         self.n_workers = n_workers
@@ -38,10 +87,11 @@ class PowerLawScalingFitter:
 
     def compute_huber_loss_of_diff_of_logs(
         self,
-        grid_search_point: Dict[str, float],
+        grid_search_point: np.ndarray,
         x: np.ndarray,
         y: np.ndarray,
     ) -> float:
+        """Compute Huber loss between log predictions and log targets."""
         log_pred = self.compute_log_pred_fn(
             grid_search_point=grid_search_point,
             x=x,
@@ -112,6 +162,19 @@ class PowerLawScalingFitter:
         return grid_search_points
 
     def fit(self, x: np.ndarray, y: np.ndarray) -> FitResult:
+        """Fit the scaling law to data using parallel grid search.
+
+        Args:
+            x: Independent variable(s). Shape (n_samples,) for compute form,
+               or (n_samples, 2) for parameters_and_tokens form.
+            y: Dependent variable (loss values). Shape (n_samples,).
+
+        Returns:
+            FitResult with optimized parameters.
+
+        Raises:
+            ValueError: If no fits converge.
+        """
         # # Create a mask to exclude non-finite values.
         # # This can occur for at least 2 reasons:
         # #   1. The pretraining compute is 0.
@@ -163,6 +226,7 @@ class PowerLawScalingFitter:
         x: np.ndarray,
         y: np.ndarray,
     ) -> FitResult:
+        """Run L-BFGS-B optimization from a single starting point."""
         # If using "compute", then grid_search_point will have three (ordered) keys: a, alpha, e.
         result = scipy.optimize.minimize(
             self.compute_huber_loss_of_diff_of_logs,
@@ -185,6 +249,17 @@ class PowerLawScalingFitter:
         )
 
     def predict(self, x: np.ndarray) -> np.ndarray:
+        """Predict loss values using the fitted scaling law.
+
+        Args:
+            x: Independent variable(s) to predict for.
+
+        Returns:
+            Predicted loss values.
+
+        Raises:
+            ValueError: If fit() has not been called.
+        """
         if self.best_fit_result is None:
             raise ValueError("No fit has been performed yet.")
         return np.exp(
@@ -218,10 +293,21 @@ def fit_chinchilla_scaling(
     functional_form: str = "compute",
     n_workers: int = 10,
 ) -> Tuple[FitResult, np.ndarray]:
-    """
-    Fit Chinchilla scaling laws using parallel grid search with L-BFGS-B optimization.
-    """
+    """Fit Chinchilla-style scaling laws to empirical data.
 
+    Convenience function that creates a PowerLawScalingFitter, fits the data,
+    and returns both the fit result and predictions.
+
+    Args:
+        x_all: Independent variable(s). For "compute" form, shape (n,) or (n, 1).
+            For "parameters_and_tokens", shape (n, 2) with columns [N, D].
+        y_all: Loss values to fit, shape (n,).
+        functional_form: "compute" or "parameters_and_tokens".
+        n_workers: Number of parallel workers for grid search.
+
+    Returns:
+        Tuple of (FitResult, predictions) where predictions has same shape as y_all.
+    """
     assert (
         x_all.shape[0] == y_all.shape[0]
     ), "x and y must have the same number of samples"

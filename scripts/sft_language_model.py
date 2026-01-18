@@ -1,3 +1,21 @@
+"""Supervised fine-tuning (SFT) script for math problem-solving.
+
+This script fine-tunes pretrained models on math benchmarks (MATH or GSM8K)
+using TRL's SFTTrainer. It can fine-tune either:
+- Models pretrained with this codebase (potentially contaminated)
+- Base models from HuggingFace Hub (uncontaminated)
+
+This allows studying how SFT affects models with different contamination levels.
+
+Usage:
+    python scripts/sft_language_model.py
+
+    # As part of a W&B sweep
+    wandb agent <sweep-id>
+
+The script logs to W&B and uploads fine-tuned models to HuggingFace Hub.
+"""
+
 import os
 
 # Rok asked us to include the following specifications in our code to prevent CPUs from spinning idly:

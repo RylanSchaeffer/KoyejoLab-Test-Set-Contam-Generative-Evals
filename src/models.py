@@ -1,15 +1,23 @@
-from accelerate import infer_auto_device_map, dispatch_model
+"""Model creation and loading utilities for Qwen3 language models.
+
+This module provides functions for creating Qwen3 models from scratch with
+specific parameter counts, or loading pretrained models from HuggingFace Hub.
+The architecture configurations follow the Qwen3 scaling patterns.
+
+Supported model sizes: 2M to 1.44B parameters.
+"""
+
 import math
-import numpy as np
-import os
-import pprint
+from typing import Any, Dict
+
 import torch
-import torch.utils.data
-from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer, PreTrainedModel
+from transformers import AutoModelForCausalLM, PreTrainedModel
 
-from typing import Any, Dict, List, Optional, Tuple, Union
 
-qwen3_parameters_to_depths_and_widths = {
+# Mapping from parameter count strings to (num_layers, hidden_size) tuples.
+# These configurations follow Qwen3's architecture scaling patterns.
+# Intermediate size is computed as: 256 * floor((255 + floor(8 * hidden_size / 3)) / 256)
+qwen3_parameters_to_depths_and_widths: Dict[str, tuple[int, int]] = {
     "2M": (1, 6),
     "16M": (2, 48),
     "34M": (3, 96),
@@ -34,6 +42,31 @@ qwen3_parameters_to_depths_and_widths = {
 def create_causalm_for_pretraining(
     model_config_dict: Dict[str, Any]
 ) -> PreTrainedModel:
+    """Create a new Qwen3 causal language model from scratch.
+
+    Initializes a randomly-weighted Qwen3 model with architecture determined
+    by the parameter count specified in model_name. The depth (num_layers)
+    and width (hidden_size) are looked up from qwen3_parameters_to_depths_and_widths.
+
+    Args:
+        model_config_dict: Configuration dictionary containing:
+            - model_name: Model identifier in format "Qwen3/Qwen3-{size}" where
+              size is one of: 2M, 16M, 34M, ..., 1.44B
+            - torch_dtype: Data type string ("bfloat16", "float16", or "float32")
+            - attn_implementation: Optional attention implementation (default: "eager")
+
+    Returns:
+        Randomly initialized Qwen3ForCausalLM model.
+
+    Raises:
+        NotImplementedError: If torch_dtype is not recognized.
+        ValueError: If model_name doesn't start with "Qwen3/Qwen3-".
+        KeyError: If the parameter size is not in the supported configurations.
+
+    Example:
+        >>> config = {"model_name": "Qwen3/Qwen3-34M", "torch_dtype": "bfloat16"}
+        >>> model = create_causalm_for_pretraining(config)
+    """
     if model_config_dict["torch_dtype"] == "bfloat16":
         torch_dtype = torch.bfloat16
     elif model_config_dict["torch_dtype"] == "float16":
@@ -77,6 +110,27 @@ def create_causalm_for_pretraining(
 def load_automodelforcausallm(
     model_config_dict: Dict[str, Any]
 ) -> AutoModelForCausalLM:
+    """Load a pretrained causal language model from HuggingFace Hub.
+
+    Loads a model with automatic device mapping for multi-GPU inference.
+    Supports various model families including Qwen and Gemma.
+
+    Args:
+        model_config_dict: Configuration dictionary containing:
+            - initial_model_name_or_path: HuggingFace model ID or local path
+            - torch_dtype: Data type string ("bfloat16", "float16", or "float32")
+            - attn_implementation: Optional attention implementation (default: "eager")
+
+    Returns:
+        Loaded AutoModelForCausalLM with weights from the pretrained checkpoint.
+
+    Raises:
+        NotImplementedError: If torch_dtype is not recognized.
+        AssertionError: If loading a Gemma model without bfloat16 dtype.
+
+    Note:
+        Gemma models require bfloat16 dtype due to Google's model requirements.
+    """
     if model_config_dict["torch_dtype"] == "bfloat16":
         torch_dtype = torch.bfloat16
     elif model_config_dict["torch_dtype"] == "float16":

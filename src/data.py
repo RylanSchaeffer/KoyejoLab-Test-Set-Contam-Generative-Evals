@@ -1,29 +1,45 @@
-import os
+"""Dataset creation and preprocessing for contamination experiments.
 
+This module provides utilities for creating training datasets with controlled
+test set contamination. The core functionality injects a specified number of
+benchmark test set replicas into a pretraining corpus, enabling systematic
+study of how contamination affects model evaluations.
+
+Key contamination parameters:
+    - num_benchmark_replicas_per_epoch: Number of times the test set is copied
+      into the training data (0 = no contamination, higher = more contamination)
+    - benchmark_subset_fraction: Fraction of the benchmark to use (for studying
+      partial contamination effects)
+
+Example:
+    >>> from src.data import create_dataset_for_pretraining
+    >>> datasets = create_dataset_for_pretraining(data_config, trainer_config, tokenizer)
+    >>> train_dataset = datasets["train"]  # Contains contaminated corpus
+"""
+
+import os
+from functools import partial
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
+import torch
+import torch.distributed as dist
 from datasets import (
     concatenate_datasets,
     load_dataset,
     load_from_disk,
-    interleave_datasets,
     DatasetDict,
-    Features,
-    Sequence,
-    Value,
 )
-from functools import partial
-import numpy as np
-from sklearn.model_selection import train_test_split
-import torch
-import torch.distributed as dist
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizer
-from typing import Any, Dict, List, Optional, Union
-import yaml
 
-# See https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/minerva_math/utils.py#L30
+
+# Template for formatting MATH problems (matches EleutherAI lm-evaluation-harness)
+# See: https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/minerva_math/utils.py#L30
 MINERVA_MATH_DOC_TO_TEXT = "Problem:\n{problem}\n\nSolution: {solution}"
 
-# See https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/gsm8k_platinum/gsm8k-platinum-cot.yaml#L5-L7
+# Template for formatting GSM8K problems (matches EleutherAI lm-evaluation-harness)
+# See: https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/gsm8k_platinum/gsm8k-platinum-cot.yaml#L5-L7
 GSM8K_PLATINUM_DOC_TO_TEXT = """Q: {question}
 
         A: {answer}"""
@@ -33,7 +49,48 @@ def create_dataset_for_pretraining(
     data_config: Dict[str, Any],
     trainer_config: Dict[str, Any],
     tokenizer: PreTrainedTokenizer,
-) -> Dict[str, Union[Dataset, List[Dataset]]]:
+) -> Dict[str, Dataset]:
+    """Create a pretraining dataset with controlled test set contamination.
+
+    This function implements the core contamination injection mechanism:
+    1. Loads the benchmark test set (e.g., MATH)
+    2. Subsamples to `benchmark_subset_fraction` of the original size
+    3. Replicates the subset `num_benchmark_replicas_per_epoch` times
+    4. Combines with documents from the pretraining corpus (fineweb-edu-dedup)
+    5. Shuffles the combined dataset
+
+    The total training tokens per epoch is fixed; more benchmark replicas means
+    fewer corpus tokens, keeping compute constant across contamination levels.
+
+    Args:
+        data_config: Configuration dict containing:
+            - benchmark: Name of benchmark dataset (e.g., "EleutherAI/minerva_math")
+            - benchmark_subset_fraction: Fraction of benchmark to use (0.0-1.0)
+            - num_benchmark_replicas_per_epoch: Number of test set copies (0+)
+            - corpus: Pretraining corpus name (e.g., "fineweb-edu-dedup")
+            - shuffle_seed: Random seed for corpus shuffling
+            - benchmark_shuffle_seed: Random seed for benchmark shuffling
+        trainer_config: Configuration dict containing:
+            - max_length: Maximum sequence length for tokenization
+            - num_training_tokens_per_epoch: Target tokens per epoch
+            - target_num_training_tokens_total: Total training tokens target
+            - num_train_epochs: Number of training epochs
+        tokenizer: HuggingFace tokenizer for text processing
+
+    Returns:
+        Dictionary with keys:
+            - "train": Training dataset (contaminated corpus + benchmark replicas)
+            - "eval": Held-out corpus evaluation dataset
+            - "benchmark": Original benchmark test set (for evaluation)
+
+    Raises:
+        ValueError: If num_benchmark_replicas_per_epoch is negative or if
+            the replicated benchmark exceeds num_training_tokens_per_epoch.
+
+    Note:
+        In distributed training, only rank 0 performs the expensive dataset
+        creation; other ranks wait at a barrier then load from disk cache.
+    """
     # TODO: Spin this out to a top level function.
     # https://chatgpt.com/share/68f0657f-fab0-800d-8329-a8c8acf18ac8
     def tokenize_truncate_and_count(example):
@@ -275,7 +332,34 @@ def create_dataset_for_supervised_finetuning(
     max_length: Optional[int] = None,
     remove_columns: bool = True,
     split_to_train_on: str = "test",
-) -> Dict[str, Union[Dataset]]:
+) -> Dict[str, Dataset]:
+    """Create datasets for supervised fine-tuning on math benchmarks.
+
+    Loads and preprocesses math problem datasets (MATH or GSM8K) into a format
+    suitable for causal language model fine-tuning. Each example is formatted
+    as "Problem: {problem}\n\nSolution: {solution}" and tokenized.
+
+    Args:
+        tokenizer: HuggingFace tokenizer for text processing.
+        dataset_name: Dataset identifier. Supported values:
+            - "EleutherAI/minerva_math": Hendrycks MATH benchmark
+            - "madrylab/gsm8k-platinum": GSM8K Platinum dataset
+        max_length: Optional maximum sequence length filter. Examples exceeding
+            this length are removed.
+        remove_columns: If True, remove all columns except input_ids and
+            attention_mask. Set False to retain problem/solution text.
+        split_to_train_on: Which split to use for training ("train" or "test").
+            Default "test" is used for contamination studies.
+
+    Returns:
+        Dictionary with keys:
+            - "train": Training dataset (from specified split)
+            - "eval": Evaluation dataset (always from test split)
+
+    Raises:
+        NotImplementedError: If dataset_name is not supported.
+        ValueError: If split_to_train_on is not "train" or "test".
+    """
     if dataset_name == "EleutherAI/minerva_math":
         raw_datasets = load_dataset_hendrycks_math()
         preprocess_fn = preprocess_eleutherai_hendrycks_math_for_sft
@@ -324,6 +408,20 @@ def create_dataset_for_supervised_finetuning(
 
 
 def load_dataset_hendrycks_math() -> DatasetDict:
+    """Load and concatenate all subsets of the Hendrycks MATH benchmark.
+
+    The MATH benchmark contains 7 subject areas: algebra, counting_and_probability,
+    geometry, intermediate_algebra, number_theory, prealgebra, and precalculus.
+    This function loads all subsets and concatenates them into unified train/test splits.
+
+    Note:
+        We use EleutherAI's version of MATH (minerva_math) for evaluation because
+        the original hendrycks_math evaluation code has known issues.
+        See: https://github.com/EleutherAI/lm-evaluation-harness/issues/3210
+
+    Returns:
+        DatasetDict with "train" and "test" splits containing all MATH problems.
+    """
     subsets = [
         "algebra",
         "counting_and_probability",
@@ -349,6 +447,14 @@ def load_dataset_hendrycks_math() -> DatasetDict:
 
 
 def load_dataset_gsm8k_platinum() -> DatasetDict:
+    """Load the GSM8K Platinum dataset.
+
+    GSM8K Platinum is a high-quality version of the GSM8K grade school math
+    dataset, curated by MadryLab with improved answer quality.
+
+    Returns:
+        DatasetDict with train and test splits.
+    """
     return load_dataset("madrylab/gsm8k-platinum")
 
 
@@ -356,8 +462,21 @@ def preprocess_eleutherai_hendrycks_math_for_sft(
     examples: Dict[str, Any],
     tokenizer: PreTrainedTokenizer,
     doc_to_text: str,
-) -> Dict[str, list]:
-    new_examples = {
+) -> Dict[str, List[Any]]:
+    """Preprocess MATH examples for supervised fine-tuning.
+
+    Formats each problem-solution pair using the provided template and tokenizes.
+    Ensures each sequence ends with an EOS token for proper autoregressive training.
+
+    Args:
+        examples: Batch of examples with "problem" and "solution" fields.
+        tokenizer: HuggingFace tokenizer.
+        doc_to_text: Format string template (should contain {problem} and {solution}).
+
+    Returns:
+        Dictionary with tokenized fields: text, input_ids, attention_mask, token_length.
+    """
+    new_examples: Dict[str, List[Any]] = {
         "text": [],
         "input_ids": [],
         "attention_mask": [],
@@ -386,8 +505,21 @@ def preprocess_madrylab_gsm8k_platinum_for_sft(
     examples: Dict[str, Any],
     tokenizer: PreTrainedTokenizer,
     doc_to_text: str,
-) -> Dict[str, List]:
-    new_examples = {
+) -> Dict[str, List[Any]]:
+    """Preprocess GSM8K Platinum examples for supervised fine-tuning.
+
+    Formats each question-answer pair using the provided template and tokenizes.
+    Ensures each sequence ends with an EOS token for proper autoregressive training.
+
+    Args:
+        examples: Batch of examples with "question" and "answer" fields.
+        tokenizer: HuggingFace tokenizer.
+        doc_to_text: Format string template (should contain {question} and {answer}).
+
+    Returns:
+        Dictionary with tokenized fields: text, input_ids, attention_mask, token_length.
+    """
+    new_examples: Dict[str, List[Any]] = {
         "text": [],
         "input_ids": [],
         "attention_mask": [],
@@ -412,20 +544,25 @@ def preprocess_madrylab_gsm8k_platinum_for_sft(
 
 
 def _world_size() -> int:
+    """Get the number of distributed processes (defaults to GPU count)."""
     return int(os.environ.get("WORLD_SIZE", torch.cuda.device_count()))
 
 
 def _rank() -> int:
+    """Get the global rank of this process (0-indexed)."""
     return int(os.environ.get("RANK", "0"))
 
 
 def _local_rank() -> int:
+    """Get the local rank on this node (0-indexed)."""
     return int(os.environ.get("LOCAL_RANK", "0"))
 
 
 def _is_main() -> bool:
+    """Check if this is the main (rank 0) process."""
     return _rank() == 0
 
 
 def _is_sweep_run() -> bool:
+    """Check if running as part of a W&B sweep."""
     return os.environ.get("WANDB_SWEEP_ID") is not None

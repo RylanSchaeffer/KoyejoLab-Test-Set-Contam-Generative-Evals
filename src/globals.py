@@ -1,3 +1,21 @@
+"""Default configurations for pretraining, SFT, and evaluation experiments.
+
+This module defines the default hyperparameters and settings used across
+the codebase. These serve as baselines that can be overridden by W&B sweeps.
+
+Configurations:
+    DEFAULT_PRETRAINING_CONFIG: Settings for pretraining from scratch.
+        Key contamination parameters:
+        - num_benchmark_replicas_per_epoch: Number of test set copies (0 = clean)
+        - benchmark_subset_fraction: Fraction of benchmark to use
+
+    DEFAULT_SUPERVISED_FINETUNING_CONFIG: Settings for SFT on math problems.
+
+    DEFAULT_EVALUATION_CONFIG: Settings for model evaluation.
+
+    MODEL_NAMES_TO_PARAMETERS_DICT: Mapping of model name strings to parameter counts.
+"""
+
 DEFAULT_EVALUATION_CONFIG = {
     "data_config": {
         "dataset": "EleutherAI/minerva_math",

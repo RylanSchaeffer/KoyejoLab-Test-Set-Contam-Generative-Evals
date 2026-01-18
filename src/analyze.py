@@ -1,15 +1,34 @@
+"""Analysis utilities for extracting and processing W&B experiment results.
+
+This module provides functions for:
+- Downloading run configurations and histories from Weights & Biases
+- Extracting derived quantities (FLOP, tokens, contamination levels) from configs
+- Fitting neural scaling laws to experimental data
+- Setting up notebook analysis directories
+
+The functions use concurrent downloads with retry logic for robust W&B API access.
+
+Example:
+    >>> from src.analyze import download_wandb_project_runs_configs
+    >>> df = download_wandb_project_runs_configs(
+    ...     wandb_project_path="contamination-study",
+    ...     data_dir="./data",
+    ...     sweep_ids=["abc123", "def456"]
+    ... )
+"""
+
 import ast
 import concurrent.futures
 import hashlib
-import numpy as np
 import os
+import re
+import time
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 import pandas as pd
 import pyarrow
-import re
 import requests
-import scipy.optimize
-import time
-from typing import Dict, List, Optional, Set, Tuple, Union
 import wandb
 from tqdm import tqdm
 
@@ -20,6 +39,19 @@ import src.neural_scaling_laws
 def add_pretraining_quantities_to_pretrain_runs_configs_df(
     pretrain_run_configs_df: pd.DataFrame,
 ) -> pd.DataFrame:
+    """Add derived quantities to a pretraining runs DataFrame.
+
+    Extracts and computes useful columns from the raw W&B config strings:
+    model name, parameter count, contamination level, compute (FLOP), etc.
+
+    Args:
+        pretrain_run_configs_df: DataFrame from download_wandb_project_runs_configs.
+
+    Returns:
+        DataFrame with additional columns: Model, Num. Parameters, Parameters,
+        Benchmark Subset Fraction, Overtrain Multiplier, Num. Tokens, FLOP (6ND),
+        Num. Replicas Per Epoch, Num. Epochs, Num. MATH Test Set Replicas.
+    """
     # Extract basic quantities.
     pretrain_run_configs_df["Model"] = pretrain_run_configs_df["model_config"].apply(
         lambda model_config: ast.literal_eval(model_config)["model_name"]
@@ -70,6 +102,17 @@ def add_pretraining_quantities_to_pretrain_runs_configs_df(
 def add_pretraining_quantities_to_supervised_finetuning_runs_configs_df(
     sft_runs_configs_df: pd.DataFrame,
 ) -> pd.DataFrame:
+    """Add derived quantities to an SFT runs DataFrame.
+
+    Parses model names to extract pretraining contamination levels and
+    computes derived quantities for analysis.
+
+    Args:
+        sft_runs_configs_df: DataFrame from download_wandb_project_runs_configs.
+
+    Returns:
+        DataFrame with additional columns extracted from model naming convention.
+    """
     sft_runs_configs_df["Model"] = sft_runs_configs_df["model_config"].apply(
         lambda model_config: ast.literal_eval(model_config)[
             "initial_model_name_or_path"
@@ -106,19 +149,51 @@ def add_pretraining_quantities_to_supervised_finetuning_runs_configs_df(
 def calculate_compute_contamination_exchange_rate(
     loss: float, irreducible_error: float, prefactor: float, exponent: float
 ) -> float:
+    """Calculate equivalent compute for a given loss using scaling law parameters.
+
+    Given a loss value and fitted scaling law parameters L = E + C_0 * C^(-alpha),
+    computes the compute C that would achieve that loss without contamination.
+
+    Args:
+        loss: Observed loss value.
+        irreducible_error: Fitted E (asymptotic loss).
+        prefactor: Fitted C_0 (scaling prefactor).
+        exponent: Fitted alpha (scaling exponent).
+
+    Returns:
+        Equivalent compute value.
+    """
     return np.power((loss - irreducible_error) / prefactor, -1.0 / exponent)
 
 
 def download_wandb_project_runs_configs(
     wandb_project_path: str,
     data_dir: str,
-    sweep_ids: List[str] = None,
+    sweep_ids: Optional[List[str]] = None,
     finished_only: bool = True,
     refresh: bool = False,
     wandb_username: Optional[str] = None,
     filetype: str = "csv",
-    max_workers: int = 10,  # New parameter to control the number of parallel workers
+    max_workers: int = 10,
 ) -> pd.DataFrame:
+    """Download run configurations from W&B sweeps with parallel fetching.
+
+    Fetches run configs from specified sweeps, caches to disk, and returns
+    as a DataFrame. Uses ThreadPoolExecutor for concurrent API calls.
+
+    Args:
+        wandb_project_path: W&B project path (e.g., "contamination-study").
+        data_dir: Directory for caching downloaded data.
+        sweep_ids: List of sweep IDs to download. Required.
+        finished_only: If True, filter to only successfully finished runs.
+        refresh: If True, re-download even if cache exists.
+        wandb_username: W&B username. If None, uses API viewer's username.
+        filetype: Cache format ("csv", "feather", or "parquet").
+        max_workers: Number of parallel download threads.
+
+    Returns:
+        DataFrame with run configurations and summary metrics.
+    """
     assert filetype in {"csv", "feather", "parquet"}
 
     filename = "sweeps=" + ",".join(sweep_ids)
@@ -214,7 +289,8 @@ def download_wandb_project_runs_configs(
     return runs_configs_df
 
 
-def download_wandb_project_runs_configs_helper(run):
+def download_wandb_project_runs_configs_helper(run: Any) -> Optional[Dict[str, Any]]:
+    """Helper to extract config and summary from a single W&B run."""
     try:
         summary = run.summary._json_dict
         summary.update({k: v for k, v in run.config.items() if not k.startswith("_")})
@@ -235,13 +311,31 @@ def download_wandb_project_runs_configs_helper(run):
 def download_wandb_pretraining_runs_configs(
     wandb_project_path: str,
     data_dir: str,
-    sweep_ids: List[str] = None,
+    sweep_ids: Optional[List[str]] = None,
     finished_only: bool = True,
     refresh: bool = False,
     wandb_username: Optional[str] = None,
     filetype: str = "csv",
-    max_workers: int = 10,  # New parameter to control the number of parallel workers
-):
+    max_workers: int = 10,
+) -> pd.DataFrame:
+    """Download pretraining run configs and add derived quantities.
+
+    Convenience wrapper that downloads configs and automatically extracts
+    pretraining-specific quantities like contamination levels and compute.
+
+    Args:
+        wandb_project_path: W&B project path.
+        data_dir: Directory for caching.
+        sweep_ids: List of sweep IDs to download.
+        finished_only: If True, filter to finished runs only.
+        refresh: If True, re-download from W&B.
+        wandb_username: W&B username (optional).
+        filetype: Cache format.
+        max_workers: Parallel download threads.
+
+    Returns:
+        DataFrame with configs and derived pretraining quantities.
+    """
     pt_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
         wandb_project_path=wandb_project_path,
         data_dir=data_dir,
@@ -313,7 +407,7 @@ def download_wandb_pretraining_runs_configs(
 def download_wandb_project_runs_histories(
     wandb_project_path: str,
     data_dir: str,
-    sweep_ids: List[str] = None,
+    sweep_ids: Optional[List[str]] = None,
     wandb_run_history_num_samples: int = 10000,
     refresh: bool = False,
     wandb_username: Optional[str] = None,
@@ -322,6 +416,26 @@ def download_wandb_project_runs_histories(
     cols_to_drop: Optional[List[str]] = None,
     max_workers: int = 10,
 ) -> pd.DataFrame:
+    """Download training histories from W&B runs with parallel fetching.
+
+    Fetches the logged metrics over training time for all runs in the
+    specified sweeps. Useful for analyzing training dynamics.
+
+    Args:
+        wandb_project_path: W&B project path.
+        data_dir: Directory for caching.
+        sweep_ids: List of sweep IDs to download.
+        wandb_run_history_num_samples: Max history samples per run.
+        refresh: If True, re-download from W&B.
+        wandb_username: W&B username (optional).
+        filetype: Cache format.
+        nrows_to_read: Limit rows when reading cache (for debugging).
+        cols_to_drop: Columns to drop from history.
+        max_workers: Parallel download threads.
+
+    Returns:
+        DataFrame with training histories, one row per logged step per run.
+    """
     assert filetype in {"csv", "feather", "parquet"}
 
     # Hash because otherwise too long.
@@ -415,10 +529,11 @@ def download_wandb_project_runs_histories(
 
 
 def download_wandb_project_runs_histories_helper(
-    run,
+    run: Any,
     wandb_run_history_num_samples: int,
     cols_to_drop: Optional[List[str]] = None,
-):
+) -> Optional[pd.DataFrame]:
+    """Helper to download history from a single run with retry logic."""
     history = None
     for num_attempts in range(5):
         try:
@@ -438,11 +553,23 @@ def download_wandb_project_runs_histories_helper(
 
 
 def extract_hf_model_name_or_path(model_config: str) -> str:
+    """Extract HuggingFace model path from a config string."""
     hf_model_name_or_path = ast.literal_eval(model_config)["model"]
     return hf_model_name_or_path
 
 
 def extract_num_model_parameters(model_name: str) -> int:
+    """Extract parameter count from a model name string.
+
+    Handles both custom pretrained model names (e.g.,
+    "RylanSchaeffer/mem_Qwen3-34M_...") and base model names.
+
+    Args:
+        model_name: Model identifier string.
+
+    Returns:
+        Number of parameters as an integer.
+    """
     if model_name.startswith("RylanSchaeffer"):
         # "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_0_epch_1_ot_1_pt"
         # will become "Qwen3-34M".
@@ -460,6 +587,7 @@ def extract_num_model_parameters(model_name: str) -> int:
 
 
 def extract_num_train_epochs(model_name: str) -> int:
+    """Extract number of training epochs from a model name string."""
     if "RylanSchaeffer" not in model_name:
         # Base model. We assume 0 epochs.
         return 0
@@ -475,8 +603,24 @@ def fit_neural_scaling_law(
     x_col: str = "Pretraining Compute",
     y_col: str = "neg_log_",
     exclude_nans: bool = True,
-    additional_columns_to_add: List[str] | None = None,
-) -> Dict[str, float]:
+    additional_columns_to_add: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Fit a power law scaling model to experimental data.
+
+    Fits the Chinchilla-style scaling law: L = E + C_0 * C^(-alpha)
+    where L is loss, C is compute, and E, C_0, alpha are fitted parameters.
+
+    Args:
+        df: DataFrame containing the data to fit.
+        x_col: Column name for the independent variable (compute).
+        y_col: Column name for the dependent variable (loss).
+        exclude_nans: If True, exclude rows with NaN values.
+        additional_columns_to_add: Extra columns to include in results.
+
+    Returns:
+        Dictionary with fit parameters, loss, convergence status, and
+        optionally additional column values from the input DataFrame.
+    """
     x_vals_all = df[x_col].values
     y_vals_all = df[y_col].values
     if exclude_nans:
@@ -526,6 +670,18 @@ def setup_notebook_dir(
     notebook_dir: str,
     refresh: bool = False,
 ) -> Tuple[str, str]:
+    """Set up data and results directories for a notebook.
+
+    Creates data/ and results/ subdirectories. Optionally clears the
+    results directory for a fresh analysis run.
+
+    Args:
+        notebook_dir: Base directory for the notebook.
+        refresh: If True, delete existing results directory.
+
+    Returns:
+        Tuple of (data_dir, results_dir) paths.
+    """
     # Declare paths.
     data_dir = os.path.join(notebook_dir, "data")
     os.makedirs(data_dir, exist_ok=True)

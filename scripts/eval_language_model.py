@@ -1,3 +1,23 @@
+"""Evaluation script for math problem-solving with vLLM inference.
+
+This script evaluates language models on math benchmarks using:
+- vLLM for efficient batched inference
+- math-verify for answer correctness scoring
+- Edit distance metrics for measuring generation similarity
+
+Supports both greedy decoding (temperature=0) and stochastic sampling
+to study how contaminated models behave under different decoding strategies.
+
+Usage:
+    python scripts/eval_language_model.py
+
+    # As part of a W&B sweep
+    wandb agent <sweep-id>
+
+Results are logged to W&B including per-problem metrics (accuracy, logprobs,
+edit distance to ground truth, solution length).
+"""
+
 import os
 
 # Rok asked us to include the following specifications in our code to prevent CPUs from spinning idly:

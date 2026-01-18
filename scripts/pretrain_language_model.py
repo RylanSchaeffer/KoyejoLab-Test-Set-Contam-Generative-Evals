@@ -1,3 +1,31 @@
+"""Pretraining script for language models with controlled contamination.
+
+This script trains Qwen3 models from scratch on a mixture of:
+1. FineWeb-Edu corpus (clean pretraining data)
+2. Replicated MATH test set (controlled contamination)
+
+The level of contamination is controlled by `num_benchmark_replicas_per_epoch`
+in the data config. Setting this to 0 trains an uncontaminated baseline.
+
+Usage:
+    # Single GPU
+    python scripts/pretrain_language_model.py
+
+    # Multi-GPU with torchrun
+    torchrun --standalone --nproc_per_node=4 scripts/pretrain_language_model.py
+
+    # As part of a W&B sweep
+    wandb agent <sweep-id>
+
+The script automatically:
+- Handles distributed training via torch.distributed
+- Logs metrics to Weights & Biases
+- Uploads trained models to HuggingFace Hub
+
+Model naming convention:
+    mem_[model]_[benchmark]_rep_[replicas]_sbst_[subset]_epch_[epochs]_ot_[overtrain]
+"""
+
 import os
 
 # Rok asked us to include the following specifications in our code to prevent CPUs from spinning idly:

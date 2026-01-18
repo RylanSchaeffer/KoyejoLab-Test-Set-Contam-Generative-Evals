@@ -5,7 +5,7 @@
 > **A single test set replica can beat "infinite" compute—but this competence is fragile and collapses under stochastic sampling.**
 
 <p align="center">
-  <img src="manuscript/figures/schematic.svg" alt="Experimental Setup" width="750">
+  <img src="manuscript/figures/20_gen_eval_contamination_vs_compute/y=loss_x=flop_hue=num_replicas.png" alt="Contamination vs Compute" width="700">
 </p>
 
 We systematically study how test set contamination affects generative evaluations by pretraining Qwen3 models (34M–344M parameters) with controlled amounts of MATH benchmark contamination. Key findings:
@@ -13,10 +13,6 @@ We systematically study how test set contamination affects generative evaluation
 - **Contamination breaks scaling laws** — A single test set replica achieves lower loss than uncontaminated models with "infinite" compute
 - **Greedy decoding masks the problem** — At temperature 0, contaminated models appear highly capable
 - **Stochastic sampling reveals fragility** — Increasing temperature causes up to 40× accuracy collapse in contaminated models
-
-<p align="center">
-  <img src="manuscript/figures/20_gen_eval_contamination_vs_compute/y=loss_x=flop_hue=num_replicas.png" alt="Contamination vs Compute" width="700">
-</p>
 
 <p align="center">
   <a href="#setup">Setup</a> •
@@ -48,6 +44,10 @@ uv pip install flash-attn==2.7.2.post1 --no-build-isolation
 ```
 
 ## Reproducing Results
+
+<p align="center">
+  <img src="manuscript/figures/schematic.svg" alt="Experimental Setup" width="750">
+</p>
 
 **Pretraining with controlled contamination:**
 
