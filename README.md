@@ -1,9 +1,8 @@
 # Quantifying the Effect of Test Set Contamination on Generative Evaluations
 
-[![arXiv](https://img.shields.io/badge/arXiv-coming_soon-df2a2a.svg?style=for-the-badge)]()
-[![ICML](https://img.shields.io/badge/ICML-2026-blue.svg?style=for-the-badge)]()
+[![arXiv](https://img.shields.io/badge/arXiv-2601.04301-b31b1b.svg?style=for-the-badge)](https://arxiv.org/abs/2601.04301)
 
-This repository contains code and figures for our ICML 2026 paper [Quantifying the Effect of Test Set Contamination on Generative Evaluations](manuscript/Koyejo_Lab_Test_Set_Contamination_of_Generative_Benchmarks_ICML_2026_Manuscript.pdf).
+This repository contains code for our paper **Quantifying the Effect of Test Set Contamination on Generative Evaluations** ([arXiv:2601.04301](https://arxiv.org/abs/2601.04301)).
 
 **TL;DR:** A single test set replica can beat "infinite" compute—but this competence is fragile and collapses under stochastic sampling.
 
@@ -27,7 +26,7 @@ We systematically study how test set contamination affects generative (open-ende
 4. **Solution length matters:** Performance on contaminated problems decays exponentially with solution length
 5. **SFT has dual effects:** Supervised fine-tuning helps uncontaminated models but hurts highly contaminated ones
 
-![Temperature 0 Performance](manuscript/figures/01_revised_figures/temp_0_performance.png)
+![Contamination vs Compute](manuscript/figures/20_gen_eval_contamination_vs_compute/y=loss_x=flop_hue=num_replicas.png)
 
 ---
 
@@ -92,18 +91,18 @@ python scripts/eval_language_model.py
 | `scripts/` | Training (`pretrain_language_model.py`, `sft_language_model.py`) and evaluation |
 | `notebooks/` | Analysis notebooks generating paper figures |
 | `sweeps/` | W&B sweep configs for hyperparameter grids |
-| `manuscript/` | ICML 2026 paper LaTeX source and figures |
+| `manuscript/` | Paper LaTeX source and figures |
 
 ---
 
 ## Citation
 
 ```bibtex
-@inproceedings{schaeffer2026contamination,
+@article{schaeffer2025contamination,
   title={Quantifying the Effect of Test Set Contamination on Generative Evaluations},
   author={Schaeffer, Rylan and Kazdan, Joshua and Abbasi, Baber and Liu, Ken Ziyu and Miranda, Brando and Ahmed, Ahmed and Barez, Fazl and Puri, Abhay and Mireshghallah, Niloofar and Koyejo, Sanmi},
-  booktitle={International Conference on Machine Learning (ICML)},
-  year={2026}
+  journal={arXiv preprint arXiv:2601.04301},
+  year={2025}
 }
 ```
 
