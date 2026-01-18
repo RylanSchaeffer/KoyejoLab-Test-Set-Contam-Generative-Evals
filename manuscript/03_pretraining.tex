@@ -34,7 +34,7 @@ where $E_0(R) > 0$ is the irreducible error, $C_0(R) > 0$ is the compute prefact
 
 Fig.~\ref{fig:contamination_scaling_laws} shows each scaling law, as well as each scaling law's estimated parameters as a function of the number of test set replicas $R$.
 Our models' pretraining compute budgets and losses on the test set were reasonably well fit by Eqn.~\ref{eqn:neural_scaling_law}, and the pretraining prefactors and pretraining exponents were roughly constant for the various values of $R$.
-The biggest effect of increasing contamination is that the irreducible error shrinks from $E(R=0) = 0.359$ to $E(R=312) = 0.0347$.
+The biggest effect of increasing contamination is that the irreducible error shrinks from $E(R=0) = 3.594$ to $E(R=316) = 0.0347$.
 On the models we trained, we found that \emph{including even a single replica enables almost all models to achieve lower cross entropy losses than the estimated irreducible error of the uncontaminated pretraining corpus}.
 Under standard scaling law assumptions -- specifically, that the power-law form (Eqn.~\ref{eqn:neural_scaling_law}) extrapolates to infinite compute -- a contaminated pretraining corpus can buy more than an ``infinite'' amount of pretraining compute relative to pretraining on an uncontaminated pretraining corpus.
 
