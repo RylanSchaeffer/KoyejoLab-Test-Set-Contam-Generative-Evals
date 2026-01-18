@@ -5,7 +5,7 @@
 > **A single copy of the test set can beat "infinite" pretraining compute — but this competence is fragile and collapses under stochastic sampling.**
 
 <p align="center">
-  <img src="manuscript/figures/20_gen_eval_contamination_vs_compute/y=loss_x=flop_hue=num_replicas.png" alt="Contamination vs Compute" width="800">
+  <img src="manuscript/figures/20_gen_eval_contamination_vs_compute/y=loss_x=flop_hue=num_replicas.png" alt="Contamination vs Compute" width="700">
 </p>
 
 We systematically study how test set contamination affects generative evaluations by pretraining Qwen3 models (34M–344M parameters) with controlled amounts of MATH benchmark contamination. Key findings:
