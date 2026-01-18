@@ -56,7 +56,7 @@ We pretrain dozens of language models on corpora contaminated with varying numbe
 We make the following contributions:
 %
 \begin{itemize}
-    \item \textbf{Pretraining (Scaling \& Irreducible Error):} We quantify how contamination impacts pretrained models. We find that performance increases with the number of test set replicas in the pretraining corpus and with model size, similar to discriminative settings. Using neural scaling laws, we discover that including even a single replica of the test set enables models to achieve a lower loss than the irreducible error achievable with the uncontaminated corpus.
+    \item \textbf{Pretraining (Scaling \& Irreducible Error):} We quantify how contamination impacts pretrained models. We find that performance increases with the number of test set replicas in the pretraining corpus and with model size, similar to discriminative settings. Under standard scaling law assumptions, we discover that including even a single replica of the test set enables models to achieve a lower loss than the estimated irreducible error of the uncontaminated corpus.
     
     \item \textbf{Further Training (Overtraining \& Supervised Finetuning):} We find that training beyond compute-optimal with fresh data dilutes increased performance from contamination, similar to discriminative settings. We then show that SFT on the training data has opposing effects, depending on the amount of contamination in pretraining: performance improves for low contamination, but worsens for high contamination.
 
