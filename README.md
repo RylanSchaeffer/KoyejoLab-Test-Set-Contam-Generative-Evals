@@ -1,17 +1,33 @@
 # Quantifying the Effect of Test Set Contamination on Generative Evaluations
 
-This repository contains code and figures for our ICML 2026 paper [Quantifying the Effect of Test Set Contamination on Generative Evaluations](manuscript/Koyejo_Lab_Test_Set_Contamination_of_Generative_Benchmarks_ICML_2026_Manuscript.pdf).
-
-**Spoiler:** A single test set replica can beat "infinite" compute—but this competence is fragile and collapses under stochastic sampling 🫠
-
-![](manuscript/figures/01_revised_figures/pretraining_schematic.png)
-
-![](manuscript/figures/01_revised_figures/temp_0_performance.png)
-
 [![arXiv](https://img.shields.io/badge/arXiv-coming_soon-df2a2a.svg?style=for-the-badge)]()
 [![ICML](https://img.shields.io/badge/ICML-2026-blue.svg?style=for-the-badge)]()
 
+This repository contains code and figures for our ICML 2026 paper [Quantifying the Effect of Test Set Contamination on Generative Evaluations](manuscript/Koyejo_Lab_Test_Set_Contamination_of_Generative_Benchmarks_ICML_2026_Manuscript.pdf).
+
+**TL;DR:** A single test set replica can beat "infinite" compute—but this competence is fragile and collapses under stochastic sampling.
+
 [**Setup**](#setup) | [**Reproducing Results**](#reproducing-results) | [**Repository Structure**](#repository-structure) | [**Citation**](#citation) | [**Contact**](#contact)
+
+---
+
+## Overview
+
+We systematically study how test set contamination affects generative (open-ended) evaluations by pretraining Qwen3 models (34M–344M parameters) on FineWeb-Edu with controlled amounts of MATH benchmark contamination.
+
+<p align="center">
+  <img src="manuscript/figures/schematic.svg" alt="Experimental Setup" width="700">
+</p>
+
+### Key Findings
+
+1. **Contamination breaks scaling laws:** A single test set replica achieves lower loss than uncontaminated models with "infinite" compute
+2. **Greedy decoding masks the problem:** At temperature T=0, contaminated models appear highly capable
+3. **Stochastic sampling reveals fragility:** Increasing temperature from 0→1 causes up to 40× performance collapse in heavily contaminated models
+4. **Solution length matters:** Performance on contaminated problems decays exponentially with solution length
+5. **SFT has dual effects:** Supervised fine-tuning helps uncontaminated models but hurts highly contaminated ones
+
+![Temperature 0 Performance](manuscript/figures/01_revised_figures/temp_0_performance.png)
 
 ---
 
@@ -22,8 +38,8 @@ This repository contains code and figures for our ICML 2026 paper [Quantifying t
 conda install conda-forge::uv
 
 # Create and activate environment
-uv venv -p 3.11.5 mem_scoring_vs_sampling_env
-source mem_scoring_vs_sampling_env/bin/activate
+uv venv -p 3.11.5 gen_contam_env
+source gen_contam_env/bin/activate
 
 # Install dependencies
 uv pip install -r requirements.txt
