@@ -16,7 +16,8 @@ The MATH test set contains $\mathord{\sim}1.4$M tokens under the Qwen 3 tokenize
 
 \textbf{Evaluation} 
 We evaluated our models using two metrics. The first metric we report is \emph{Math Verify}, defined as the fraction of problems for which the model generates solutions that are verified to be mathematically equivalent to the benchmark's boxed answers.
-We initially evaluated our models using EleutherAI's Language Model Evaluation Harness \citep{gao2024evalharness}, but discovered an error with how Math Verify scores are computed; for example, the benchmark's gold reference solutions obtained a Math Verify score around 70\%.
-\href{https://github.com/EleutherAI/lm-evaluation-harness/issues/3210}{We worked with its developers to correct the implementation}. \fazl{maybe fully write the issue and solution in appendix as this is nice finding and papers from 1+ year may want to correct} As an aside, this suggests to us that any research reporting MATH scores from the past 1+ years may have reported incorrect scores.
+We initially evaluated our models using EleutherAI's Language Model Evaluation Harness \citep{gao2024evalharness}, but discovered a bug in how Math Verify scores are computed; for example, the benchmark's gold reference solutions obtained a Math Verify score of only $\mathord{\sim}70\%$.
+We worked with the developers to correct the implementation (see Appendix~\ref{app:sec:math_verify_bug} for details).
+This suggests that research reporting MATH scores from affected versions may have reported incorrect scores.
 The second metric we report is the \emph{Cross Entropy} of the gold reference solutions given the problems, which were previously demonstrated to be useful for studying scaling properties of generative evaluations during pretraining \citep{schaeffer2025pretrainingscalinglawsgenerative}.
 We used temperature-only sampling, beginning with temperature $0$ (``greedy''), and expanding to more temperatures in Sec.~\ref{sec:temperature}.

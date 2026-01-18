@@ -80,6 +80,45 @@ All experiments were logged to Weights \& Biases, and trained models were upload
 
 For more information, please see our \href{https://github.com/RylanSchaeffer/KoyejoLab-Memorization-Scoring-vs-Sampling/}{public GitHub repository}.
 
+\clearpage
+
+\section{Math Verify Scoring Bug}
+\label{app:sec:math_verify_bug}
+
+During our experiments, we discovered that EleutherAI's Language Model Evaluation Harness \citep{gao2024evalharness} contained a bug in its Math Verify scoring implementation that caused systematically incorrect results.
+This bug affected the \texttt{minerva\_math} task and related mathematics evaluation tasks.
+
+\paragraph{The Problem}
+The \texttt{minerva\_math} task's utility code called \texttt{remove\_boxed()} on extracted answers \emph{before} passing them to \texttt{math\_verify.parse()}.
+The original implementation was:
+\begin{verbatim}
+res = verify(parse(doc["answer"]), parse(candidates))
+\end{verbatim}
+where \texttt{doc["answer"]} had already been processed to remove the \LaTeX{} \verb|\boxed{}| wrapper.
+
+The \texttt{math\_verify.parse()} function relies on the \verb|\boxed{}| notation to properly identify and extract mathematical expressions.
+When the boxed notation is stripped beforehand:
+\begin{itemize}
+    \item \texttt{parse("\textbackslash dfrac\{9\}\{7\}")} returns empty results (parsing fails)
+    \item \texttt{parse("\textbackslash boxed\{\textbackslash dfrac\{9\}\{7\}\}")} correctly returns the parsed expression
+\end{itemize}
+
+This caused Math Verify scores to return 0 even when the model's answer was mathematically correct.
+As a diagnostic, we evaluated the benchmark's own gold reference solutions and observed Math Verify scores of approximately 70\%---a clear indication that the scoring mechanism itself was flawed rather than the solutions.
+
+\paragraph{The Fix}
+\href{https://github.com/EleutherAI/lm-evaluation-harness/issues/3210}{We reported this issue} and \href{https://github.com/EleutherAI/lm-evaluation-harness/pull/3259}{a fix was merged} that passes the full solution text to \texttt{math\_verify.parse()}, allowing it to use its built-in extraction heuristics:
+\begin{verbatim}
+res = verify(gold=parse(doc["solution"]), target=parse(candidates))
+\end{verbatim}
+
+By using \texttt{doc["solution"]} (the complete solution with \verb|\boxed{}| intact) instead of the pre-processed \texttt{doc["answer"]}, the parser can correctly identify and extract the mathematical expressions.
+
+\paragraph{Implications}
+This bug was present in versions of the evaluation harness prior to v0.4.8 (August 2025).
+Any research reporting MATH benchmark scores using Math Verify from affected versions may have systematically underestimated model performance.
+We recommend that researchers using these benchmarks verify they are using a corrected version of the evaluation code.
+
 % \clearpage
 
 % \section{Validating \citet{gadre2024languagemodelsscalereliably}'s Overtraining Results}
