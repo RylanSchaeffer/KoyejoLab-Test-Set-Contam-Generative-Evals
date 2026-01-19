@@ -127,10 +127,11 @@ plt.figure(figsize=src.plot.default_figsize)
 g = sns.lineplot(...)  # or sns.scatterplot
 g.set(xlabel=..., ylabel=...)
 src.plot.save_plot_with_multiple_extensions(plot_dir=results_dir, plot_filename="y=response_x=predictor_hue=variable")
-plt.show()
+# plt.show()  # DO NOT call plt.show() - it blocks execution and annoys the user
 ```
 
 **Guidelines**:
+- **NEVER call `plt.show()`** - it blocks script execution and opens interactive windows. Always comment it out or omit it entirely. Plots are saved to files via `save_plot_with_multiple_extensions()`.
 - No figure titles or axes titles (column/row titles in faceted plots are acceptable)
 - Choose axis scales thoughtfully: use log/symlog when data spans orders of magnitude, linear otherwise
 - Axis labels should use LaTeX math mode where appropriate
