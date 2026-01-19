@@ -93,7 +93,7 @@ manuscript/    Paper source and figures
   title={Quantifying the Effect of Test Set Contamination on Generative Evaluations},
   author={Schaeffer, Rylan and Kazdan, Joshua and Abbasi, Baber and Liu, Ken Ziyu and
           Miranda, Brando and Ahmed, Ahmed and Barez, Fazl and Puri, Abhay and
-          Mireshghallah, Niloofar and Koyejo, Sanmi},
+          Biderman, Stella and Mireshghallah, Niloofar and Koyejo, Sanmi},
   journal={arXiv preprint arXiv:2601.04301},
   year={2025}
 }
