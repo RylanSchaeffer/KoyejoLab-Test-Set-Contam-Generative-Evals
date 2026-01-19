@@ -1,38 +1,33 @@
 \section{Pretraining: Scaling \& Irreducible Error}
 \label{sec:pretraining}
 
-\begin{figure}[t!]
-    \centering
-    % \includegraphics[width=\columnwidth]{figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed_col_wrap=1.pdf}
-    \includegraphics[width=\columnwidth]{figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed.pdf}
-    \caption{\textbf{Contamination-Driven Performance Is Memorization, Not Generalization.} When MATH test problems are either rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to near-zero regardless of contamination level or model size, confirming that performance gains from contamination rely on verbatim memorization rather than mathematical reasoning.}
-    \label{fig:rephrase_perturb}
-\end{figure}
-
 We begin at the first stage of the model lifecycle: pretraining.
 We establish foundational results on how test set contamination interacts with model scale and compute, and use scaling laws to quantify what contamination ``buys'' a model.
 
-\begin{figure*}[t!]
-    \centering
-    \includegraphics[width=\linewidth]{figures/10_math_qwen3_pt_cross_entropy/y=loss_x=num_replicas_hue=ot_col=params.pdf}
-    \includegraphics[width=\linewidth]{figures/10_math_qwen3_pt_cross_entropy/y=loss_x=ot_hue=num_replicas_col=params.pdf}
-    \caption{\textbf{Overtraining with Fresh Data Mitigates Contamination.} Consistent with discriminative evaluations \citep{bordt2025howmuch}, we find an interaction between contamination and overtraining (i.e., training longer than Chinchilla compute-optimal; Eqn.~\ref{eqn:overtrain_multiplier}) on \emph{new fresh data}. For models with low contamination, cross entropy on the MATH test set decreases with increasing overtraining; however, for models with high contamination, cross entropy increases with overtraining. This suggests that while fresh data generally improves performance, it dilutes the ``dose,'' or proportion of contaminated pretraining tokens, thereby lessening the effect of the contamination. The crossover point shifts with model size, falling from 32 test set replicas for 34M to 1 replica for 93M models, indicating larger models lose their contamination advantage more readily when overtrained.}
-    \label{fig:overtraining}
-\end{figure*}
 
 
 \paragraph{Finding \#1: Performance Increases with Contamination and Model Size} Consistent with discriminative evaluations, increasing the number of benchmark replicas in the pretraining corpus increases Math Verify scores and decreases cross entropies (Fig.~\ref{fig:math_verify_ce_temp_0} Left), as does increasing model size (Fig.~\ref{fig:math_verify_ce_temp_0} Right).
 We observe a non-linear relationship between the number of test set replicas and model performance:
 For low levels of contamination ($\leq$ 10 replicas), the impact on performance is minimal, with Math Verify scores and cross entropies remaining close to uncontaminated performance; at around 100 replicas, performance sharply increases (Fig.~\ref{fig:math_verify_replicas_temp}).
 At the highest levels of contamination, the model achieves ceiling performance.
+
 To determine if the performance gains observed in Figure~\ref{fig:math_verify_ce_temp_0} stemmed from robust generalization or superficial memorization, we evaluated our contaminated models on two modified versions of the MATH test set. First, we \emph{Rephrased} the problems, retaining the original numerical values and logic but altering the linguistic surface form. Second, we \emph{Perturbed} the problems, modifying the numerical values and correct answers while maintaining the problem structure.
 
-As shown in Figure~\ref{fig:rephrase_perturb}, performance collapses to near-zero across all model sizes and contamination levels in both conditions. Even models that achieved ceiling performance on the original test set failed to solve the modified versions. This stark contrast confirms that the ``capabilities'' gained from test set contamination are brittle and rely almost exclusively on verbatim memorization of the specific test sequences rather than the acquisition of underlying mathematical reasoning.
+In both conditions, performance collapses to near-zero across all model sizes and contamination levels in both conditions (Fig.~\ref{fig:rephrase_perturb}). Even models that achieved ceiling performance on the original test set failed to solve the modified versions. This strongly suggests that the capabilities gained from test set contamination rely almost exclusively on verbatim memorization of the specific test sequences rather than the acquisition of underlying mathematical reasoning.
 
 \paragraph{Finding \#2: Scaling Laws Suggest Including A Single Test Set Replica Achieves Lower Loss Than the Irreducible Error of the Uncontaminated Corpus}
 
+\begin{figure}[t!]
+    \centering
+    % \includegraphics[width=\columnwidth]{figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed_col_wrap=1.pdf}
+    \includegraphics[width=\columnwidth]{figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed.pdf}
+    \caption{\textbf{Contamination-Driven Performance Is Not Generalization.} When MATH test problems are rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to near-zero regardless of contamination level or model size, confirming that performance gains from contamination are not generalized mathematical reasoning.}
+    \label{fig:rephrase_perturb}
+\end{figure}
+
 How much does test set contamination ``buy" the model in terms of performance? 
 More specifically, how much pretraining compute must be spent on an uncontaminated pretraining corpus to match the performance of a model trained on a corpus containing $R$ replicas of the benchmark test set?
+
 
 To answer this question, we turned to neural scaling laws.
 Based on previous work \citep{kaplan2020scaling, hoffman2022chinchilla, openai2024gpt4technicalreport, hu2024predictingemergentabilitiesinfinite, schaeffer2025pretrainingscalinglawsgenerative}, for each scaling series pretrained on corpora contaminated with $R \in \{0, 1, 3, 10, 32, 100, 316\}$ replicas of the MATH test set, we fit neural scaling laws for the cross entropy loss $\mathcal{L}$ on the benchmark test set:
@@ -51,6 +46,14 @@ The biggest effect of increasing contamination is that the irreducible error shr
 On the models we trained, we found that \emph{including even a single replica enables almost all models to achieve lower cross entropy losses than the estimated irreducible error of the uncontaminated pretraining corpus}.
 Under standard scaling law assumptions -- specifically, that the power-law form (Eqn.~\ref{eqn:neural_scaling_law}) extrapolates to infinite compute -- a contaminated pretraining corpus can buy more than an ``infinite'' amount of pretraining compute relative to pretraining on an uncontaminated pretraining corpus.
 
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/10_math_qwen3_pt_cross_entropy/y=loss_x=num_replicas_hue=ot_col=params.pdf}
+    \includegraphics[width=\linewidth]{figures/10_math_qwen3_pt_cross_entropy/y=loss_x=ot_hue=num_replicas_col=params.pdf}
+    \caption{\textbf{Overtraining with Fresh Data Mitigates Contamination.} Consistent with discriminative evaluations \citep{bordt2025howmuch}, we find an interaction between contamination and overtraining (i.e., training longer than Chinchilla compute-optimal; Eqn.~\ref{eqn:overtrain_multiplier}) on \emph{new fresh data}. For models with low contamination, cross entropy on the MATH test set decreases with increasing overtraining; however, for models with high contamination, cross entropy increases with overtraining. This suggests that while fresh data generally improves performance, it dilutes the ``dose,'' or proportion of contaminated pretraining tokens, thereby lessening the effect of the contamination. The crossover point shifts with model size, falling from 32 test set replicas for 34M to 1 replica for 93M models, indicating larger models lose their contamination advantage more readily when overtrained.}
+    \label{fig:overtraining}
+\end{figure*}
 
 \begin{figure*}[t!]
     \centering
