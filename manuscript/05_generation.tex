@@ -1,6 +1,8 @@
-\section{Generation: Sampling Temperature and Solution Length}
+\section{Inference: Temperature \& Solution Length}
 \label{sec:temperature}
 
+Finally, we arrive at the last stage of the model lifecycle: inference.
+When models are deployed for generation, inference-time parameters---particularly sampling temperature and the length of generated solutions---introduce new considerations for how contamination manifests.
 
 Generative benchmarks introduce distinct complexities compared to discriminative evaluations. Unlike multiple-choice tasks where predetermined sequences are scored, generative solutions require the model to produce a coherent sequence over hundreds of tokens or more.
 This introduces two critical levers for analyzing contamination: sampling temperature and solution length. In this section, we demonstrate that while contamination mimics reasoning capability under greedy decoding, this competence is brittle. We show that sampling and long-context requirements act as barriers that memorization struggles to overcome.
