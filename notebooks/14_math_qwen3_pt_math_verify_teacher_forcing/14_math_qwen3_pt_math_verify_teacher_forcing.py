@@ -32,6 +32,7 @@ def enable_minor_gridlines(g):
         ax.xaxis.set_minor_locator(LogLocator(subs="all", numticks=100))
         ax.yaxis.set_minor_locator(LogLocator(subs="all", numticks=100))
 
+
 # %%
 # Setup
 refresh = False
