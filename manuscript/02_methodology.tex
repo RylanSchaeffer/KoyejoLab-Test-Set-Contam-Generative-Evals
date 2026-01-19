@@ -6,7 +6,7 @@
 Following Chinchilla compute-optimal scaling \citep{hoffman2022chinchilla}, each model was pretrained with 20 tokens-per-parameter.
 For each model size and token budget, we created multiple pretraining corpora by contaminating a high quality web crawl corpus \citep{penedo2024finewebdatasetsdecantingweb} with a different number of replicas of the benchmark test set: from $0$ (uncontaminated) through $1, 3, 10, 32, 100, 316, 1000, 3162$ (uniformly spaced on a log scale).
 Pretraining compute was calculated using the common approximation $C \approx 6  \, N \, D$ \citep{kaplan2020scaling,sardana2024beyond,porian2024resolving,gadre2024languagemodelsscalereliably}, where $N$ is model parameters and $D$ is pretraining tokens.
-We trained 3 seeds for each combination of model size, number of test set replicas, and overtraining multiplier.
+We trained 1 seed for each combination of model size, number of test set replicas, and overtraining multiplier.
 For implementation details, see Appendix~\ref{app:sec:pretraining_implementation_details}.
 
 \textbf{Benchmark} We chose the ubiquitous MATH \citep{hendrycks2021measuringmathematicalproblemsolving} benchmark of competition math problems due to several properties: it is comparatively large (5,000 test problems), answers exist, and the benchmark includes solutions as well as answers. 
