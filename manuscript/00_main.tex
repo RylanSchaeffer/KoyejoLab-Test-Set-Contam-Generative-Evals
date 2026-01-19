@@ -132,12 +132,12 @@
 % \printAffiliationsAndNotice{\icmlEqualContribution}
 
 \begin{abstract}
-    Test set contamination -- the inclusion of benchmarks in pretraining data -- has emerged as a critical threat to the trustworthy evaluation of frontier AI systems  
+    Test set contamination -- the inclusion of benchmarks in pretraining data -- has emerged as a critical threat to the trustworthy evaluation of frontier AI systems.
     While research has thoroughly investigated the impact of test set contamination on \emph{discriminative} evaluations, comparatively little research has studied the impact of test set contamination on \emph{generative} evaluations.
     In this work, we quantitatively assess the effects of test set contamination on generative evaluations through the language model lifecycle.
     We pretrain language models on mixtures of web data and the MATH benchmark, sweeping model sizes and number of test set replicas contaminating the pretraining corpus; performance improves with contamination and model size.
     Using scaling laws, we make a surprising discovery: including even a single test set replica enables models to achieve lower loss than the irreducible error of training on the uncontaminated corpus.
-    We then study post-training: overtraining with fresh data reduces the effects of contamination, whereas supervised finetuning on the training set will increase performance for low contamination but decrease performance for high contamination.
+    We then study additional training: overtraining with fresh data reduces the effects of contamination, whereas supervised finetuning on the training set will increase performance for low contamination but decrease performance for high contamination.
     Finally, at inference, we identify factors that modulate memorization: high sampling temperatures mitigate contamination effects, and longer solutions are exponentially more difficult to memorize than shorter ones, presenting a contrast with discriminative evaluations, where solutions are only a few tokens in length.
     By characterizing how generation and memorization interact, we highlight new considerations for trustworthy evaluation of AI systems.
 \end{abstract}

@@ -1,6 +1,6 @@
 
-\section{Methodology}
-\label{sec:methodology}
+\section{Methods}
+\label{sec:methods}
 
 \textbf{Pretraining} To study the effects of contamination in generative evaluations, we pretrained transformer-based \citep{vaswani2017attention} causal language models from initialization using the Qwen 3 architecture \citep{yang2025qwen3technicalreport}, sweeping model sizes: $34$M, $62$M, $93$M, $153$M, $344$M.
 Following Chinchilla compute-optimal scaling \citep{hoffman2022chinchilla}, each model was pretrained with 20 tokens-per-parameter.
@@ -9,15 +9,14 @@ Pretraining compute was calculated using the common approximation $C \approx 6  
 We trained 3 seeds for each combination of model size, number of test set replicas, and overtraining multiplier.
 For implementation details, see Appendix~\ref{app:sec:pretraining_implementation_details}.
 
-\textbf{Benchmark} We chose the ubiquitous MATH \citep{hendrycks2021measuringmathematicalproblemsolving} benchmark of competition math problems.  The MATH dataset has several properties that made it our benchmark of choice: it is comparatively large (5,000 test problems), the answers are easy to verify, and the benchmark includes solutions as well as answers. 
-These solutions exhibit high variability in both length and difficulty.
+\textbf{Benchmark} We chose the ubiquitous MATH \citep{hendrycks2021measuringmathematicalproblemsolving} benchmark of competition math problems due to several properties: it is comparatively large (5,000 test problems), answers exist, and the benchmark includes solutions as well as answers. 
 The MATH test set contains $\mathord{\sim}1.4$M tokens under the Qwen 3 tokenizer.
 
 
 \textbf{Evaluation} 
 We evaluated our models using two metrics. The first metric we report is \emph{Math Verify}, defined as the fraction of problems for which the model generates solutions that are verified to be mathematically equivalent to the benchmark's boxed answers.
-We initially evaluated our models using EleutherAI's Language Model Evaluation Harness \citep{gao2024evalharness}, but discovered a bug in how Math Verify scores are computed; for example, the benchmark's gold reference solutions obtained a Math Verify score of only $\mathord{\sim}70\%$.
+We initially evaluated our models using EleutherAI's Language Model Evaluation Harness \citep{gao2024evalharness}, but discovered a bug in how Math Verify scores are computed by the Harness; for example, the benchmark's gold reference solutions obtained a Math Verify score of only $\mathord{\sim}70\%$.
 We worked with the developers to correct the implementation (see Appendix~\ref{app:sec:math_verify_bug} for details).
-This suggests that research reporting MATH scores from affected versions may have reported incorrect scores.
+This suggests that research reporting MATH scores may have reported incorrect scores.
 The second metric we report is the \emph{Cross Entropy} of the gold reference solutions given the problems, which were previously demonstrated to be useful for studying scaling properties of generative evaluations during pretraining \citep{schaeffer2025pretrainingscalinglawsgenerative}.
 We used temperature-only sampling, beginning with temperature $0$ (``greedy''), and expanding to more temperatures in Sec.~\ref{sec:temperature}.

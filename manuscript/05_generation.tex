@@ -5,19 +5,20 @@ Finally, we arrive at the last stage of the model lifecycle: inference.
 When models are deployed for generation, inference-time parameters---particularly sampling temperature and the length of generated solutions---introduce new considerations for how contamination manifests.
 
 Generative benchmarks introduce distinct complexities compared to discriminative evaluations. Unlike multiple-choice tasks where predetermined sequences are scored, generative solutions require the model to produce a coherent sequence over hundreds of tokens or more.
-This introduces two critical levers for analyzing contamination: sampling temperature and solution length. In this section, we demonstrate that while contamination mimics reasoning capability under greedy decoding, this competence is brittle. We show that sampling and long-context requirements act as barriers that memorization struggles to overcome.
+This introduces two critical levers for analyzing contamination: sampling temperature and solution length.
+We show that sampling and long-context requirements act as barriers that memorization struggles to overcome.
 
 \paragraph{Finding \#5: High Temperature Sampling Mitigates the Gains from Contamination} 
 
 We evaluated the pretrained models using temperature-only sampling, sweeping from $0$ (``greedy'') to $1.5$.
-We observe that Math Verify scores remain stable between greedy decoding and low-temperature sampling ($\tau \leq 0.56$) (Fig.~\ref{fig:math_verify_replicas_temp}, left and center).
+We observed that Math Verify scores remain stable between greedy decoding and low-temperature sampling ($\tau \leq 0.56$) (Fig.~\ref{fig:math_verify_replicas_temp}, left and center).
 However, as temperature increases beyond this point, performance degrades quickly.
 
 Crucially, higher temperature sampling acts as an equalizer, significantly reducing the performance gap between highly contaminated and uncontaminated models.
 While uncontaminated models are bounded by a performance floor, contaminated models lose their memorization advantage under stochastic sampling.
-For example, increasing temperature from $0$ to $1$ causes performance at high contamination levels ($1000$ replicas) to collapse by a factor of 40, bringing them much closer to the baseline performance of uncontaminated models.
+For example, increasing temperature from $0$ to $1$ causes performance at high contamination levels ($1000$ replicas) to collapse by a factor of 40, down to the baseline performance of uncontaminated models.
 This suggests that contamination-driven performance is brittle; small adjustments in inference settings can eliminate the effects of memorization almost entirely. 
-High-temperature sampling flattens these peaks, causing the model to diverge from the memorized path and exposing the ``illusion'' of competence created by leakage.
+High-temperature sampling flattens these peaks, causing the model to diverge from the memorized path.
 
 
 \begin{figure*}[t!]
@@ -32,7 +33,7 @@ High-temperature sampling flattens these peaks, causing the model to diverge fro
 \begin{figure*}[t!]
     \centering
     \includegraphics[width=\linewidth]{figures/11_math_qwen3_pt_math_verify/y=math_verify_x=loss_hue=temp_col=params_filtered.png}
-    \caption{\textbf{Math Verify Score Is Correlated with Pretraining Loss.} Math Verify scores correlate strongly with the cross entropy loss achieved on the MATH Test Set during training, where differences in these graphs are attributable to increased repetition on the benchmark test set.  The correlation is significantly weaker for high temperatures, and falls to nearly $0$ for temperatures above $1$.  }
+    \caption{\textbf{Math Verify Score Is Correlated with Pretraining Loss.} Math Verify scores correlate strongly with the cross entropy loss achieved on the MATH Test Set during training, where differences in these graphs are attributable to increased repetition on the benchmark test set.  The correlation is significantly weaker for high temperatures and falls to nearly $0$ for temperatures above $1.0$.  }
     \label{fig:loss_and_math_verify}
 \end{figure*}
 
@@ -40,8 +41,8 @@ High-temperature sampling flattens these peaks, causing the model to diverge fro
 \paragraph{Finding \#6: Longer Solutions Reveal a Shift from Power Law to Exponential Decay} 
 
 To understand how solution length constrains performance, we binned problems into 10 log-spaced intervals ranging from the shortest (15 tokens) to the longest (1949 tokens).
-We find that Math Verify scores decrease significantly as solution length increases (Fig~\ref{fig:temp_and_solution_length}). 
-We identify a striking shift in the functional form of this decay based on contamination level.
+We found that Math Verify scores decrease significantly as solution length increases (Fig.~\ref{fig:temp_and_solution_length}). 
+We identified a striking shift in the functional form of this decay based on contamination level.
 At lower contamination levels, the decay follows an approximate power law, consistent with robust reasoning capabilities. 
 However, at the highest levels of contamination, this decay becomes \textit{exponential} with respect to token length. This suggests that maintaining a coherent memorized chain becomes increasingly difficult as the sequence grows—a single error can cause the model to decohere from the exact memorized text.
 This aligns with recent findings that longer sequences require more repetitions to be memorized \citep{jiang2025a,lu2024scaling}, though we demonstrate this here through controlled pretraining.
