@@ -58,3 +58,45 @@ Under greedy or low-temperature sampling, decreasing test set loss (via increase
 However, higher temperatures decouple these metrics.
 While highly contaminated models achieve low cross-entropy loss (indicating they assign high probability to the correct next token), sampling at high temperatures prevents them from staying on the narrow path of the exact solution.
 Consequently, at temperatures above $1.0$, the correlation between cross entropy loss and Math Verify score drops to nearly $0$.
+
+
+\clearpage
+
+\section{Inference Dynamics: Survival Analysis of Generative Memorization}
+\label{sec:inference_dynamics}
+
+Generative evaluations differ fundamentally from discriminative tasks because they require the model to maintain a coherent trajectory over a sequence of length $T$. We formalize this process as a \textit{survival analysis} problem, where the model must ``survive'' the risk of decoherence at every token step $t$.
+Using in-context scaling laws 
+
+We model the instantaneous hazard function (negative log-likelihood) at step $t$ as a power-law decay with an irreducible noise floor:
+\begin{equation}
+    \mathcal{L}_t(\tau) \approx E + A \cdot t^{-\alpha_{eff}(\tau)}
+\end{equation}
+where $E$ represents irreducible error (entropy), $A$ is the initial difficulty, and $\alpha_{eff}$ is the effective learning rate of the model as context grows. The cumulative probability $P(T)$ of successfully generating a solution of length $T$ is the product of survival probabilities at each step:
+\begin{equation}
+    P(T) = \prod_{t=1}^{T} e^{-\mathcal{L}_t} = \exp\left( - \sum_{t=1}^{T} \left( E + A \cdot t^{-\alpha_{eff}} \right) \right)
+\end{equation}
+By approximating the sum with an integral, we derive the closed-form scaling law for generative success:
+\begin{equation}
+    \label{eq:survival_prob}
+    P(T) \approx \exp\left( -E(T-1) - \frac{A}{1-\alpha_{eff}}(T^{1-\alpha_{eff}} - 1) \right)
+\end{equation}
+This formulation reveals that generative performance is governed by a phase transition in the exponent $\alpha_{eff}$, creating three distinct physical regimes:
+
+\paragraph{Regime I: Noise-Dominated Decay ($E > 0$).}
+When the model has not fully memorized the solution (low contamination), the irreducible error term $E$ dominates. The survival probability decays exponentially ($P(T) \sim e^{-ET}$), rendering the generation of long solutions statistically impossible. This explains the ``performance floor'' observed in uncontaminated base models, where success is limited to extremely short sequences.
+
+\paragraph{Regime II: Stretched Exponential Decay ($E \approx 0, \alpha_{eff} \le 1$).}
+At intermediate contamination, the model minimizes the noise floor ($E \to 0$) but ``learns'' the specific sequence slowly ($\alpha_{eff} \le 1$). In this regime, the probability follows a Weibull-like stretched exponential distribution ($P(T) \sim e^{-k T^{1-\alpha}}$). While the model can generate moderately long sequences, the cumulative probability of success eventually vanishes as $T \to \infty$. This characterizes the ``brittle memorization'' phase, where the model appears competent but lacks robust stability.
+
+\paragraph{Regime III: The Stabilization Phase Transition ($E \approx 0, \alpha_{eff} > 1$).}
+At high contamination and model scale, we observe a critical phase transition where the scaling exponent $\alpha_{eff}$ exceeds $1$. Mathematically, this flips the sign of the exponent in Eq.~\ref{eq:survival_prob}, causing the term $T^{1-\alpha_{eff}}$ to decay to zero rather than grow. Consequently, the cumulative penalty converges to a finite constant, and $P(T)$ stabilizes at a non-zero value even as $T \to \infty$. In this regime, the model's certainty increases faster than the sequence accumulates risk, enabling \textit{deterministic memorization} of arbitrarily long solutions.
+
+\paragraph{The Critical Role of Temperature.}
+Sampling temperature $\tau$ acts as a direct modifier on the effective scaling exponent. By linking the hazard function to the logit gap $\Delta z_t \propto \alpha \ln t$, we derive that the effective exponent scales inversely with temperature:
+\begin{equation}
+    \alpha_{eff}(\tau) \approx \frac{\alpha}{\tau}
+\end{equation}
+This relationship exposes the fragility of memorization. A model operating in the \textbf{Stabilization Regime} ($\alpha_{eff} > 1$) at greedy settings ($\tau \to 0$) can be instantaneously pushed back into the \textbf{Decay Regime} ($\alpha_{eff} < 1$) simply by increasing $\tau$. For example, if a model has a natural scaling $\alpha = 0.8$, greedy decoding effectively amplifies this to $\alpha_{eff} \gg 1$, feigning robust knowledge. However, sampling at $\tau=1.0$ exposes the true exponent $\alpha < 1$, causing catastrophic failure for long sequences. This mechanism explains why high-temperature sampling acts as a ``truth serum,'' decoupling the artificial gains of contamination from robust generalization.
+
+\clearpage
