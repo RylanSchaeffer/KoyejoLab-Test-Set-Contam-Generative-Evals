@@ -2650,8 +2650,9 @@ for i, (param_name, ylabel, use_log_y) in enumerate(
         ax.set_yscale("log")
     ax.grid(True, alpha=0.3)
 
-axes[2].legend(title=r"Model Size", loc="best")
+axes[2].legend(title=r"Model Size", bbox_to_anchor=(1.02, 1), loc="upper left")
 plt.tight_layout()
+plt.subplots_adjust(right=0.88)  # Make room for legend
 
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
@@ -2701,8 +2702,9 @@ for i, (param_name, ylabel, use_log_y) in enumerate(
         ax.set_yscale("log")
     ax.grid(True, alpha=0.3)
 
-axes[2].legend(title=r"Replicas $R$", loc="best")
+axes[2].legend(title=r"Replicas $R$", bbox_to_anchor=(1.02, 1), loc="upper left")
 plt.tight_layout()
+plt.subplots_adjust(right=0.88)  # Make room for legend
 
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
