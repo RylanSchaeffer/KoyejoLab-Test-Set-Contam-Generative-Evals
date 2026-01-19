@@ -92,7 +92,7 @@ all_columns = [field.name for field in parquet_file.schema]
 # Get log_prob columns - sample uniformly in log space for memory efficiency
 all_log_prob_cols = sorted(
     [c for c in all_columns if c.startswith("log_prob_token_")],
-    key=lambda x: int(x.replace("log_prob_token_", ""))
+    key=lambda x: int(x.replace("log_prob_token_", "")),
 )
 max_token_idx = max(int(c.replace("log_prob_token_", "")) for c in all_log_prob_cols)
 print(f"Max token index in data: {max_token_idx}")
@@ -112,7 +112,9 @@ log_prob_cols = [
     for i in log_spaced_indices
     if f"log_prob_token_{i}" in all_log_prob_cols
 ]
-print(f"Using {len(log_prob_cols)} token positions (log-spaced from 0 to {max_token_idx})")
+print(
+    f"Using {len(log_prob_cols)} token positions (log-spaced from 0 to {max_token_idx})"
+)
 
 # Process each row group
 aggregated_results = []
@@ -141,16 +143,20 @@ for rg_idx in range(num_row_groups):
                 continue
 
             nlls = -log_probs
-            aggregated_results.append({
-                "Token Index": token_idx,
-                "Parameters": config["Parameters"],
-                "Num. Parameters": config["Num. Parameters"],
-                "Num. MATH Test Set Replicas": config["Num. MATH Test Set Replicas"],
-                "mean_NLL": nlls.mean(),
-                "std_NLL": nlls.std(),
-                "count": len(nlls),
-                "run_id": run_id,
-            })
+            aggregated_results.append(
+                {
+                    "Token Index": token_idx,
+                    "Parameters": config["Parameters"],
+                    "Num. Parameters": config["Num. Parameters"],
+                    "Num. MATH Test Set Replicas": config[
+                        "Num. MATH Test Set Replicas"
+                    ],
+                    "mean_NLL": nlls.mean(),
+                    "std_NLL": nlls.std(),
+                    "count": len(nlls),
+                    "run_id": run_id,
+                }
+            )
 
     del chunk_df
     gc.collect()
@@ -162,19 +168,35 @@ del aggregated_results
 gc.collect()
 
 # Combine across row groups if needed
-per_run_df = per_run_df.groupby(
-    ["Token Index", "Parameters", "Num. Parameters", "Num. MATH Test Set Replicas", "run_id"]
-).agg({"mean_NLL": "mean", "std_NLL": "mean", "count": "sum"}).reset_index()
+per_run_df = (
+    per_run_df.groupby(
+        [
+            "Token Index",
+            "Parameters",
+            "Num. Parameters",
+            "Num. MATH Test Set Replicas",
+            "run_id",
+        ]
+    )
+    .agg({"mean_NLL": "mean", "std_NLL": "mean", "count": "sum"})
+    .reset_index()
+)
 
 # Aggregate across runs for same experimental conditions
 nll_by_token_df = (
     per_run_df.groupby(
         ["Token Index", "Parameters", "Num. Parameters", "Num. MATH Test Set Replicas"]
     )
-    .agg(mean_NLL=("mean_NLL", "mean"), std_NLL=("std_NLL", "mean"), count=("count", "sum"))
+    .agg(
+        mean_NLL=("mean_NLL", "mean"),
+        std_NLL=("std_NLL", "mean"),
+        count=("count", "sum"),
+    )
     .reset_index()
 )
-nll_by_token_df["sem_NLL"] = nll_by_token_df["std_NLL"] / np.sqrt(nll_by_token_df["count"])
+nll_by_token_df["sem_NLL"] = nll_by_token_df["std_NLL"] / np.sqrt(
+    nll_by_token_df["count"]
+)
 
 print(f"Aggregated shape: {nll_by_token_df.shape}")
 del per_run_df
@@ -205,7 +227,9 @@ replica_palette = {str(r): viridis_colors[i] for i, r in enumerate(unique_replic
 
 # For cleaner legend, show only subset of replica values
 replicas_to_show = [0, 1, 10, 100, 1000]
-plot1_df = nll_by_token_df[nll_by_token_df["Num. MATH Test Set Replicas"].isin(replicas_to_show)]
+plot1_df = nll_by_token_df[
+    nll_by_token_df["Num. MATH Test Set Replicas"].isin(replicas_to_show)
+]
 
 plt.close()
 g = sns.relplot(
