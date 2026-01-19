@@ -148,3 +148,26 @@ All experiments log to Weights & Biases. Ensure `WANDB_API_KEY` is set. Sweep co
 ## HuggingFace Hub
 
 Trained models are automatically uploaded to HF Hub at the end of training. Requires `HF_TOKEN` environment variable.
+
+## Output Conventions
+
+**Reports and documentation**:
+- Always use Markdown (`.md`) for reports, analysis summaries, and documentation
+- Never generate duplicate report files (e.g., both `.txt` and `.md` versions)
+- Place reports in the notebook's `results/` directory with descriptive names (e.g., `MODEL_FITTING_REPORT.md`, `NLL_UPTICK_ANALYSIS.md`)
+
+**Generated files**:
+- Each notebook should generate a single, canonical version of each output
+- If refactoring code that generates reports, consolidate into one well-formatted file rather than creating new files alongside old ones
+- Delete obsolete output files when their generating code is removed
+
+## Pre-Commit Cleanup Checklist
+
+Before considering any task complete, review the repository state:
+
+1. **Run `git status`** to see all modified, deleted, and untracked files
+2. **Check for redundant files**: Are there duplicate outputs (e.g., `report.txt` AND `report.md`)? Delete the obsolete one.
+3. **Check for orphaned files**: Did you delete code that generated certain outputs? Delete those outputs too.
+4. **Verify outputs are current**: Re-run notebooks/scripts if needed to ensure outputs match the current code
+5. **Review untracked files**: Should new files be committed or added to `.gitignore`?
+6. **Test the code**: Run the modified scripts to verify they execute without errors
