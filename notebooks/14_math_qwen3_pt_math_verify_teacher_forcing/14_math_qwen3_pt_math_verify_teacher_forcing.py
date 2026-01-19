@@ -22,6 +22,10 @@ import src.analyze
 import src.globals
 import src.plot
 
+# Add missing model size mappings (62M and 153M are used in this notebook)
+src.globals.MODEL_NAMES_TO_PARAMETERS_DICT["62M"] = 62e6
+src.globals.MODEL_NAMES_TO_PARAMETERS_DICT["153M"] = 153e6
+
 
 def enable_minor_gridlines(g):
     """Enable minor gridlines on all axes of a FacetGrid."""
@@ -1110,8 +1114,9 @@ for param in unique_params:
     nll_0_fixed = baseline_nll.get(param, 1.0)
 
     for replica in unique_replicas:
-        if replica == 0:
-            continue  # Skip baseline
+        # Skip R=0 (baseline) and R>=1000 (NLL uptick due to hard-to-memorize sequences)
+        if replica == 0 or replica >= 1000:
+            continue
 
         subset = nll_by_token_df[
             (nll_by_token_df["Parameters"] == param)
@@ -1197,11 +1202,6 @@ print(param_summary.round(4))
 plt.close()
 fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-# Use flare palette for model sizes (consistent with other plots)
-exp_decay_params_palette = {
-    p: c for p, c in zip(unique_params, sns.color_palette("flare", len(unique_params)))
-}
-
 # Plot 1: nll_inf vs R
 ax = axes[0, 0]
 for param in unique_params:
@@ -1212,14 +1212,15 @@ for param in unique_params:
         "o-",
         label=param,
         markersize=6,
-        color=exp_decay_params_palette[param],
+        color=params_palette[param],
     )
 ax.set_xlabel(r"Num. Replicas $R$")
 ax.set_ylabel(r"$\mathrm{NLL}_\infty$ (floor)")
 ax.set_xscale("symlog", linthresh=1)
 ax.set_yscale("log")
-ax.legend(title="Model Size")
 ax.grid(True, alpha=0.3)
+# Add legend in lower left of this subplot (where there's whitespace)
+ax.legend(title="Model Size", loc="lower left")
 
 # Plot 2: tau vs R
 ax = axes[0, 1]
@@ -1231,13 +1232,12 @@ for param in unique_params:
         "o-",
         label=param,
         markersize=6,
-        color=exp_decay_params_palette[param],
+        color=params_palette[param],
     )
 ax.set_xlabel(r"Num. Replicas $R$")
 ax.set_ylabel(r"$\tau$ (decay timescale)")
 ax.set_xscale("symlog", linthresh=1)
 ax.set_yscale("log")
-ax.legend(title="Model Size")
 ax.grid(True, alpha=0.3)
 
 # Plot 3: delta (initial drop) vs R
@@ -1250,12 +1250,11 @@ for param in unique_params:
         "o-",
         label=param,
         markersize=6,
-        color=exp_decay_params_palette[param],
+        color=params_palette[param],
     )
 ax.set_xlabel(r"Num. Replicas $R$")
 ax.set_ylabel(r"$\Delta$ (initial NLL drop)")
 ax.set_xscale("symlog", linthresh=1)
-ax.legend(title="Model Size")
 ax.grid(True, alpha=0.3)
 
 # Plot 4: R² vs R
@@ -1268,12 +1267,11 @@ for param in unique_params:
         "o-",
         label=param,
         markersize=6,
-        color=exp_decay_params_palette[param],
+        color=params_palette[param],
     )
 ax.set_xlabel(r"Num. Replicas $R$")
 ax.set_ylabel(r"$R^2$ (fit quality)")
 ax.set_xscale("symlog", linthresh=1)
-ax.legend(title="Model Size")
 ax.grid(True, alpha=0.3)
 
 plt.tight_layout()
@@ -1368,9 +1366,11 @@ print("=" * 70)
 from scipy.optimize import minimize, differential_evolution
 
 # Prepare pooled data
+# Filter: exclude R=0 (baseline) and R>=1000 (NLL uptick due to hard-to-memorize sequences)
+valid_replicas_unified = [r for r in unique_replicas if 0 < r < 1000]
 pooled_data = []
 for param in unique_params:
-    for replica in unique_replicas:
+    for replica in valid_replicas_unified:
         subset = nll_by_token_df[
             (nll_by_token_df["Parameters"] == param)
             & (nll_by_token_df["Num. MATH Test Set Replicas"] == replica)
@@ -1395,8 +1395,9 @@ for param in unique_params:
 
 pooled_df = pd.DataFrame(pooled_data)
 print(
-    f"Pooled data: {len(pooled_df)} points across {len(unique_params)} model sizes and {len(unique_replicas)} replica levels"
+    f"Pooled data: {len(pooled_df)} points across {len(unique_params)} model sizes and {len(valid_replicas_unified)} replica levels (filtered)"
 )
+print(f"  Note: Excluded R=0 (baseline) and R>=1000 (NLL uptick due to hard-to-memorize sequences)")
 
 # Normalize N for numerical stability
 N_scale = 1e8  # Scale factor for N
@@ -2090,6 +2091,7 @@ print(comparison_df.sort_values("BIC").to_string(index=False))
 # %%
 # Select best model (by R² and parsimony)
 best_by_r2 = max(all_results, key=lambda x: x["r2"])
+best = best_by_r2  # Use best R² model for subsequent analysis
 print(f"\nBest model by R²: {best_by_r2['model_name']} (R² = {best_by_r2['r2']:.4f})")
 
 # Find best model with reasonable complexity (< 8 params)
@@ -2120,101 +2122,86 @@ for rank, model in enumerate(top_3, 1):
     print(f"Parameters: {model['params']}")
 
 # %%
+# Compute local R² matrix for report
+# Note: Uses valid_replicas_unified (excludes R=0 and R>=1000) to be consistent with fitting
+local_r2_matrix = np.full((len(unique_params), len(valid_replicas_unified)), np.nan)
+for i, param in enumerate(unique_params):
+    for j, replica in enumerate(valid_replicas_unified):
+        subset = nll_by_token_df[
+            (nll_by_token_df["Parameters"] == param)
+            & (nll_by_token_df["Num. MATH Test Set Replicas"] == replica)
+        ].sort_values("Token Index")
+
+        if len(subset) < 5:
+            continue
+
+        t = subset["Token Index"].values.astype(float)
+        nll = subset["mean_NLL"].values
+        N = subset["Num. Parameters"].iloc[0] / N_scale
+        R = replica
+
+        nll_pred = best["model_func"](t, N, R, best["params"])
+        local_r2_matrix[i, j] = compute_r_squared(nll, nll_pred)
+
+# %%
 # =============================================================================
-# SAVE DETAILED REPORT
+# SAVE MODEL FITTING REPORT (Markdown)
 # =============================================================================
-report_path = os.path.join(results_dir, "model_fitting_report.txt")
+report_path = os.path.join(results_dir, "MODEL_FITTING_REPORT.md")
 
 with open(report_path, "w") as f:
-    f.write("=" * 70 + "\n")
-    f.write("NLL vs TOKEN INDEX MODEL FITTING REPORT\n")
-    f.write("=" * 70 + "\n\n")
+    f.write("# NLL vs Token Index Model Fitting Report\n\n")
 
-    f.write("OBJECTIVE:\n")
-    f.write("-" * 50 + "\n")
-    f.write("Find a unified model NLL(t, R, N) that describes how per-token\n")
-    f.write("negative log-likelihood varies with:\n")
-    f.write("  - t: token index (position in sequence)\n")
-    f.write("  - R: number of test set replicas (contamination level)\n")
-    f.write("  - N: model size (number of parameters)\n\n")
+    f.write("## Executive Summary\n\n")
+    f.write("We tested 15 different functional forms for `NLL(t, R, N)` to model how per-token\n")
+    f.write("negative log-likelihood varies with token position, contamination level, and model size.\n\n")
+    f.write("**Key Finding:** Global R² can be misleading! A model can achieve high global R² by\n")
+    f.write("capturing between-condition variance while poorly fitting within-condition decay shapes.\n\n")
+    f.write("| Metric | Best Model | Value |\n")
+    f.write("|--------|------------|-------|\n")
+    f.write(f"| Global R² | {best['model_name']} | {best['r2']:.4f} |\n")
+    f.write(f"| Mean Local R² | {best['model_name']} | {np.nanmean(local_r2_matrix):.2f} |\n\n")
+    f.write(f"**Recommendation:** Use `{best['model_name']}` model.\n\n")
+    f.write("---\n\n")
 
-    f.write("DATA:\n")
-    f.write("-" * 50 + "\n")
-    f.write(f"Total data points: {len(pooled_df)}\n")
-    f.write(f"Model sizes: {unique_params}\n")
-    f.write(f"Replica levels: {unique_replicas}\n")
-    f.write(f"Token index range: {pooled_df['t'].min()} to {pooled_df['t'].max()}\n\n")
+    f.write("## Data\n\n")
+    f.write("| Property | Value |\n")
+    f.write("|----------|-------|\n")
+    f.write(f"| Total data points | {len(pooled_df):,} |\n")
+    f.write(f"| Model sizes | {', '.join(unique_params)} |\n")
+    f.write(f"| Replica levels (filtered) | {', '.join(map(str, valid_replicas_unified))} |\n")
+    f.write(f"| Token index range | {int(pooled_df['t'].min())} to {int(pooled_df['t'].max())} |\n\n")
+    f.write("**Note:** Excludes R=0 (uncontaminated baseline) and R>=1000 (NLL uptick due to\n")
+    f.write("hard-to-memorize long sequences). See `NLL_UPTICK_ANALYSIS.md` for details.\n\n")
+    f.write("---\n\n")
 
-    f.write("MODELS TESTED:\n")
-    f.write("-" * 50 + "\n")
-    for i, row in comparison_df.iterrows():
-        f.write(
-            f"  {row['Model']:20s}: R²={row['R²']:.4f}, RMSE={row['RMSE']:.4f}, n_params={row['N_params']}\n"
-        )
+    f.write("## Models Tested\n\n")
+    f.write("### Ranked by Global R²\n\n")
+    f.write("| Model | R² | RMSE | Parameters |\n")
+    f.write("|-------|-----|------|------------|\n")
+    for _, row in comparison_df.sort_values("R²", ascending=False).iterrows():
+        f.write(f"| {row['Model']} | {row['R²']:.4f} | {row['RMSE']:.3f} | {row['N_params']} |\n")
+    f.write("\n---\n\n")
 
-    f.write("\n\nBEST MODEL:\n")
-    f.write("-" * 50 + "\n")
-    f.write(f"Model: {best['model_name']}\n")
-    f.write(f"R² = {best['r2']:.4f}\n")
-    f.write(f"RMSE = {best['rmse']:.4f}\n")
-    f.write(f"Parameters ({len(best['params'])}): {best['params']}\n\n")
+    f.write(f"## Best Model: {best['model_name']}\n\n")
+    f.write(f"**Fitted Parameters ({len(best['params'])}):**\n")
+    f.write("```\n")
+    f.write(f"{best['params']}\n")
+    f.write("```\n\n")
+    f.write("**Local R² Statistics:**\n")
+    f.write("| Statistic | Value |\n")
+    f.write("|-----------|-------|\n")
+    f.write(f"| Mean | {np.nanmean(local_r2_matrix):.2f} |\n")
+    f.write(f"| Std | {np.nanstd(local_r2_matrix):.2f} |\n")
+    f.write(f"| Min | {np.nanmin(local_r2_matrix):.2f} |\n")
+    f.write(f"| Max | {np.nanmax(local_r2_matrix):.2f} |\n\n")
+    f.write("---\n\n")
 
-    f.write("LOCAL R² BY CONDITION:\n")
-    f.write("-" * 50 + "\n")
-    f.write(f"Mean local R²: {np.nanmean(local_r2_matrix):.4f}\n")
-    f.write(f"Std local R²:  {np.nanstd(local_r2_matrix):.4f}\n")
-    f.write(f"Min local R²:  {np.nanmin(local_r2_matrix):.4f}\n")
-    f.write(f"Max local R²:  {np.nanmax(local_r2_matrix):.4f}\n\n")
-
-    # Model-specific interpretation
-    f.write("MODEL INTERPRETATION:\n")
-    f.write("-" * 50 + "\n")
-
-    if best["model_name"] == "V3_log_linear":
-        params = best["params"]
-        f.write("Log-linear model:\n")
-        f.write("  log(NLL) = a0 + a1*log(N) + a2*log(R+1) + a3*log(t+1)\n")
-        f.write(
-            "           + a4*log(N)*log(R+1) + a5*log(R+1)*log(t+1) + a6*log(N)*log(t+1)\n\n"
-        )
-        f.write("Coefficients:\n")
-        f.write(f"  a0 (intercept):     {params[0]:+.4f}\n")
-        f.write(
-            f"  a1 (log N):         {params[1]:+.4f}  -> NLL ~ N^{{{params[1]:.3f}}}\n"
-        )
-        f.write(
-            f"  a2 (log R+1):       {params[2]:+.4f}  -> NLL ~ (R+1)^{{{params[2]:.3f}}}\n"
-        )
-        f.write(
-            f"  a3 (log t+1):       {params[3]:+.4f}  -> NLL ~ (t+1)^{{{params[3]:.3f}}}\n"
-        )
-        f.write(
-            f"  a4 (log N * log R): {params[4]:+.4f}  -> Interaction: larger N, stronger R effect\n"
-        )
-        f.write(
-            f"  a5 (log R * log t): {params[5]:+.4f}  -> RECALL EFFECT: higher R, stronger t decay\n"
-        )
-        f.write(
-            f"  a6 (log N * log t): {params[6]:+.4f}  -> Interaction: larger N, stronger t decay\n"
-        )
-
-    elif best["model_name"] == "mixture":
-        params = best["params"]
-        f.write("Mixture model (recall interpretation):\n")
-        f.write("  NLL = p_recall * NLL_recall + (1-p_recall) * NLL_base\n")
-        f.write("  p_recall = 1 - exp(-lambda * t)\n")
-        f.write("  lambda = lambda0 * (R+1)^lambda_R\n\n")
-        f.write("Parameters:\n")
-        f.write(f"  NLL_base coefficient (a): {params[0]:.4f}\n")
-        f.write(f"  NLL_base N exponent (b):  {params[1]:.4f}\n")
-        f.write(f"  NLL_recall coeff (c):     {params[2]:.4f}\n")
-        f.write(f"  NLL_recall N exp (d):     {params[3]:.4f}\n")
-        f.write(f"  lambda0:                  {params[4]:.4f}\n")
-        f.write(f"  lambda_R:                 {params[5]:.4f}\n")
-
-    f.write("\n\nFILES GENERATED:\n")
-    f.write("-" * 50 + "\n")
-    f.write("  - model_fitting_report.txt (this file)\n")
+    f.write("## Generated Files\n\n")
+    f.write("- `MODEL_FITTING_REPORT.md` - This report\n")
+    f.write("- `parameter_visualization.pdf/png` - Model predictions across parameter space\n")
+    f.write("- `y=fit_params_x=num_replicas_hue=model_size.pdf/png` - Floor model parameters vs R\n")
+    f.write("- `y=fit_params_x=model_size_hue=num_replicas.pdf/png` - Floor model parameters vs N\n")
 
 print(f"\nReport saved to: {report_path}")
 
@@ -2421,79 +2408,7 @@ print(f"  Global R²: {best_by_local['Global_R2']:.4f}")
 print(f"  Mean Local R²: {best_by_local['Mean_Local_R2']:.4f}")
 print(f"  % Positive Local R²: {best_by_local['Pct_Positive_Local']:.1f}%")
 
-# %%
-# Update the report with enhanced findings
-enhanced_report_path = os.path.join(results_dir, "model_fitting_report_enhanced.txt")
-
-with open(enhanced_report_path, "w") as f:
-    f.write("=" * 70 + "\n")
-    f.write("ENHANCED NLL vs TOKEN INDEX MODEL FITTING REPORT\n")
-    f.write("=" * 70 + "\n\n")
-
-    f.write("EXECUTIVE SUMMARY:\n")
-    f.write("-" * 50 + "\n")
-    f.write("We tested 15 different functional forms for NLL(t, R, N).\n")
-    f.write("KEY FINDING: Global R² can be misleading!\n\n")
-
-    f.write("GLOBAL R² (captures between-condition variance):\n")
-    f.write(f"  Best: power_decay (R² = 0.9028)\n\n")
-
-    f.write("LOCAL R² (captures within-condition shape):\n")
-    f.write(
-        f"  Best: {best_by_local['Model']} (Mean Local R² = {best_by_local['Mean_Local_R2']:.4f})\n\n"
-    )
-
-    f.write("RECOMMENDATION:\n")
-    f.write(f"  Use '{best_by_local['Model']}' model as it best captures\n")
-    f.write("  the actual shape of NLL decay within each condition.\n\n")
-
-    f.write("=" * 70 + "\n")
-    f.write("DETAILED RESULTS\n")
-    f.write("=" * 70 + "\n\n")
-
-    f.write("ALL MODELS (ranked by Mean Local R²):\n")
-    f.write("-" * 50 + "\n")
-    sorted_df = enhanced_df.sort_values("Mean_Local_R2", ascending=False)
-    for _, row in sorted_df.iterrows():
-        f.write(f"  {row['Model']:18s}: Global R²={row['Global_R2']:.4f}, ")
-        f.write(f"Local R²={row['Mean_Local_R2']:.4f}, ")
-        f.write(f"{row['Pct_Positive_Local']:.0f}% positive\n")
-
-    f.write("\n\nBEST MODEL INTERPRETATION:\n")
-    f.write("-" * 50 + "\n")
-
-    best_model = [r for r in all_results if r["model_name"] == best_by_local["Model"]][
-        0
-    ]
-    f.write(f"Model: {best_model['model_name']}\n")
-    f.write(f"Parameters: {best_model['params']}\n\n")
-
-    if best_by_local["Model"] == "V3_log_linear":
-        params = best_model["params"]
-        f.write("FUNCTIONAL FORM:\n")
-        f.write("  log(NLL) = a0 + a1·log(N) + a2·log(R+1) + a3·log(t+1)\n")
-        f.write("           + a4·log(N)·log(R+1) + a5·log(R+1)·log(t+1)\n")
-        f.write("           + a6·log(N)·log(t+1)\n\n")
-        f.write("PARAMETER INTERPRETATION:\n")
-        f.write(f"  a0 = {params[0]:+.4f}  (intercept)\n")
-        f.write(f"  a1 = {params[1]:+.4f}  (N effect: NLL ~ N^{params[1]:.3f})\n")
-        f.write(f"  a2 = {params[2]:+.4f}  (R effect: NLL ~ (R+1)^{params[2]:.3f})\n")
-        f.write(f"  a3 = {params[3]:+.4f}  (t effect: NLL ~ (t+1)^{params[3]:.3f})\n")
-        f.write(f"  a4 = {params[4]:+.4f}  (N×R interaction)\n")
-        f.write(f"  a5 = {params[5]:+.4f}  (R×t interaction - RECALL EFFECT)\n")
-        f.write(f"  a6 = {params[6]:+.4f}  (N×t interaction)\n\n")
-        f.write("KEY INSIGHT:\n")
-        f.write("  The R×t interaction term (a5) captures the 'recall effect':\n")
-        f.write(
-            "  higher contamination (R) leads to faster NLL decay with position (t).\n"
-        )
-
-    f.write("\n\nFILES GENERATED:\n")
-    f.write("-" * 50 + "\n")
-    f.write("  - parameter_visualization.png/pdf\n")
-    f.write("  - model_fitting_report_enhanced.txt (this file)\n")
-
-print(f"\nEnhanced report saved to: {enhanced_report_path}")
+# Note: Enhanced report removed - all info now in MODEL_FITTING_REPORT.md
 print("\n" + "=" * 70)
 print("OVERNIGHT FITTING COMPLETE")
 print("=" * 70)
