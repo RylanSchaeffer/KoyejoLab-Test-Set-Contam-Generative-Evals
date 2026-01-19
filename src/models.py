@@ -16,24 +16,27 @@ from transformers import AutoModelForCausalLM, PreTrainedModel
 
 # Mapping from parameter count strings to (num_layers, hidden_size) tuples.
 # These configurations follow Qwen3's architecture scaling patterns.
+# The formula seems to follow width = 42 * (depth - 1) + 6.
 # Intermediate size is computed as: 256 * floor((255 + floor(8 * hidden_size / 3)) / 256)
 qwen3_parameters_to_depths_and_widths: Dict[str, tuple[int, int]] = {
     "2M": (1, 6),
     "16M": (2, 48),
-    "34M": (3, 96),
-    "48M": (4, 128),
-    "62M": (5, 160),
-    "93M": (6, 224),
+    "34M": (3, 96),  # Should be 90, I think.
+    "48M": (4, 128),  # Should be 132
+    "63M": (5, 160),  # Should be 174. Initially called 62M, renamed to 63M.
+    "93M": (6, 224),  # Should be 216.
     "111M": (7, 256),
-    "153M": (9, 320),
+    "138M": (8, 300),
+    "165M": (9, 344),
     "191M": (10, 384),
+    "223M": (11, 424),
     "262M": (12, 480),
     "344M": (14, 576),
     "499M": (18, 704),
     "660M": (21, 832),
     "806M": (23, 940),
     "934M": (25, 1010),
-    "1.08B": (27, 1100),
+    "1.09B": (27, 1100),
     "1.26B": (29, 1180),
     "1.44B": (31, 1260),
 }

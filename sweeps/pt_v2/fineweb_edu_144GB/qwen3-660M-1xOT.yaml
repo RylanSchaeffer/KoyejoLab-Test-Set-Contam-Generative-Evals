@@ -2,38 +2,42 @@ command:
   - ${env}
   - torchrun
   - --standalone
-  - --nproc_per_node=1
+  - --nproc_per_node=4
   - ${program}
   - ${args}
 program: scripts/pretrain_language_model.py
 entity: rylan
-project: memorization-scoring-vs-sampling-pt
+project: memorization-scoring-vs-sampling-pt-v2
 method: grid
 parameters:
   data_config:
     parameters:
       corpus:
-        values: ["fineweb-edu-dedup"]
+        values: [ "fineweb-edu-dedup" ]
       benchmark:
         values: [ "EleutherAI/minerva_math" ]
+      benchmark_subset_fraction:
+        values: [ 1.0, 0.01, 0.1, 0.001 ]
       benchmark_shuffle_seed:
         values: [ 0 ]
-      benchmark_subset_fraction:
-        values: [ 1.0, 0.01, 0.1, 0.001, 0.3162, 0.03162, 0.003162 ]
       num_benchmark_replicas_per_epoch:
-        values: [1000, 316, 100, 0, 1, 10, 32, 3, 3162]
+        values: [ 0, 316, 1, 100, 10, 32, 1000, 3, 3162 ]
       shuffle_seed:
-        values: [0]
+        values: [ 0 ]
   model_config:
     parameters:
       attn_implementation:
         values: [ "flash_attention_2" ]
       model_name:
-        values: [ "Qwen3/Qwen3-34M" ]
+        values: [ "Qwen3/Qwen3-660M" ]
       torch_dtype:
         values: [ "bfloat16" ]
   trainer_config:
     parameters:
+      adam_beta1:
+        values: [ 0.9 ]
+      adam_beta2:
+        values: [ 0.95 ]
       data_seed:
         values: [ 0 ]
       dataloader_drop_last:
@@ -48,14 +52,16 @@ parameters:
         values: [ steps ]
       eval_steps:
         values: [ 5000 ]
+      full_determinism:
+        values: [ True ]
       gradient_checkpointing:
         values: [ False ]
       hub_strategy:
-        values: ["end"]
+        values: [ "end" ]
       base_learning_rate:
         values: [ 0.000001 ]
       logging_steps:
-        values: [ 10 ]
+        values: [ 50 ]
       lr_scheduler_type:
         values: [ "cosine" ]
       max_grad_norm:
@@ -71,22 +77,22 @@ parameters:
       overtrain_multiplier:
         values: [ 1.0 ]
       per_device_eval_batch_size:
-        values: [ 42 ]
+        values: [ 38 ]
       per_device_train_batch_size:
-        values: [ 42 ]
+        values: [ 26 ]
       remove_unused_columns:
         values: [ True ]
       report_to:
-        values: ["wandb"]
+        values: [ "wandb" ]
       save_strategy:
         values: [ "no" ]
       save_total_limit:
         values: [ 1 ]
       torch_compile:
         values: [ True ]
-      warmup_steps:
-        values: [ 250 ]
+      warmup_ratio:
+        values: [ 0.2 ]
       weight_decay:
-        values: [ 0.0 ]
+        values: [ 0.01 ]
   seed:
-    values: [0]
+    values: [ 0 ]

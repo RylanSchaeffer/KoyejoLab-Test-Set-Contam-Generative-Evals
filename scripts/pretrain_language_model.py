@@ -167,6 +167,8 @@ def pretrain():
     hf_username = get_hf_username()
 
     pretraining_config = TrainingArguments(
+        adam_beta1=wandb_config["trainer_config"]["adam_beta1"],
+        adam_beta2=wandb_config["trainer_config"]["adam_beta2"],
         bf16=wandb_config["trainer_config"]["bf16"],
         data_seed=wandb_config["trainer_config"]["data_seed"],
         dataloader_drop_last=wandb_config["trainer_config"]["dataloader_drop_last"],
@@ -212,9 +214,10 @@ def pretrain():
         save_total_limit=wandb_config["trainer_config"]["save_total_limit"],
         seed=wandb_config["seed"],
         torch_compile=wandb_config["trainer_config"]["torch_compile"],
-        warmup_steps=wandb_config["trainer_config"]["warmup_steps"],
-        # warmup_ratio=wandb_config["trainer_config"]["warmup_ratio"],
+        # warmup_steps=wandb_config["trainer_config"]["warmup_steps"],
+        warmup_ratio=wandb_config["trainer_config"]["warmup_ratio"],
         weight_decay=wandb_config["trainer_config"]["weight_decay"],
+        full_determinism=wandb_config["trainer_config"]["full_determinism"],
     )
 
     datasets_dict = src.data.create_dataset_for_pretraining(

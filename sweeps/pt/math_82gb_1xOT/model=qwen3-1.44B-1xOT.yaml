@@ -39,15 +39,15 @@ parameters:
       dataloader_drop_last:
         values: [ True ]
       dataloader_num_workers:
-        values: [ 8 ]
+        values: [ 16 ]
       dataloader_prefetch_factor:
-        values: [ 4 ]
+        values: [ 8 ]
       eval_on_start:
         values: [ True ]
       eval_strategy:
         values: [ steps ]
       eval_steps:
-        values: [ 2000 ]
+        values: [ 5000 ]
       gradient_checkpointing:
         values: [ False ]
       hub_strategy:
@@ -55,7 +55,7 @@ parameters:
       base_learning_rate:
         values: [ 0.000001 ]
       logging_steps:
-        values: [ 1 ]
+        values: [ 10 ]
       lr_scheduler_type:
         values: [ "cosine" ]
       max_grad_norm:
