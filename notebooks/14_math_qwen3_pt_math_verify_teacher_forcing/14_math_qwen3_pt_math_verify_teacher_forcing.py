@@ -237,8 +237,8 @@ n_replicas = len(unique_replicas)
 viridis_colors = sns.color_palette("viridis", n_replicas)
 replica_palette = {str(r): viridis_colors[i] for i, r in enumerate(unique_replicas)}
 
-# Filter to Token Index <= 1000 so ylim is set correctly (but keep ALL replicas)
-plot1_df = nll_by_token_df[nll_by_token_df["Token Index + 1"] <= 1000].copy()
+# Filter to Token Index <= 800 to avoid noisy tail (but keep ALL replicas)
+plot1_df = nll_by_token_df[nll_by_token_df["Token Index + 1"] <= 800].copy()
 
 # Compute CI bounds (mean ± 1.96 * SEM for 95% CI)
 plot1_df["ci_lower"] = plot1_df["mean_NLL"] - 1.96 * plot1_df["sem_NLL"]
@@ -261,7 +261,7 @@ g = sns.relplot(
     col_order=unique_params,
     col_wrap=3,
     kind="line",
-    facet_kws={"sharey": True, "sharex": True},
+    facet_kws={"sharey": False, "sharex": True},
     height=4,
     aspect=1.2,
 )
@@ -290,8 +290,7 @@ g.set(
     ylabel=r"Negative Log Likelihood",
     xscale="log",
     yscale="log",
-    xlim=(1, 1e3),
-    ylim=(1e-3, 1e1),
+    xlim=(1, 800),
 )
 g.set_titles(r"{col_name}")
 
