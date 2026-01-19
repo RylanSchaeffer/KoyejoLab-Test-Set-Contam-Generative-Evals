@@ -129,7 +129,9 @@ log_prob_cols = [
     for i in log_spaced_indices
     if f"log_prob_token_{i}" in all_log_prob_cols
 ]
-print(f"Using {len(log_prob_cols)} token positions (log-spaced from 0 to {MAX_TOKEN_INDEX})")
+print(
+    f"Using {len(log_prob_cols)} token positions (log-spaced from 0 to {MAX_TOKEN_INDEX})"
+)
 
 # Process each row group for per-token NLL stats
 aggregated_results = []
@@ -233,7 +235,9 @@ else:
                 gc.collect()
 
                 # Filter to current run
-                run_batch_data = batch_df[batch_df["run_id"] == run_id][batch_cols].values
+                run_batch_data = batch_df[batch_df["run_id"] == run_id][
+                    batch_cols
+                ].values
                 del batch_df
                 gc.collect()
 
@@ -248,7 +252,9 @@ else:
 
                     # Record cumulative NLL at log-spaced positions
                     if token_idx in log_spaced_indices:
-                        cumulative_at_positions[token_idx] = cumulative_nll_running.copy()
+                        cumulative_at_positions[
+                            token_idx
+                        ] = cumulative_nll_running.copy()
 
                 del run_batch_data, nll_batch
                 gc.collect()
@@ -1016,73 +1022,17 @@ print("\nAverage AIC by Model (lower is better):")
 print(avg_aic_by_model.round(2))
 
 # Best model for each condition
-best_models = (
-    fit_results_df[fit_results_df["Success"]]
-    .loc[fit_results_df.groupby(["Parameters", "Num. Replicas"])["R2"].idxmax()]
-)
+best_models = fit_results_df[fit_results_df["Success"]].loc[
+    fit_results_df.groupby(["Parameters", "Num. Replicas"])["R2"].idxmax()
+]
 print("\nBest model (by R²) for each condition:")
 best_model_counts = best_models["Model"].value_counts()
 print(best_model_counts)
 
 # %%
-# Visualize fits for the best model
+# Best model identification (visualization removed - illegible 5x9 grid)
 best_model_name = avg_r2_by_model.index[0]
 print(f"\nBest overall model: {best_model_name}")
-
-# Plot data vs fitted curves for a subset of conditions
-plt.close()
-fig, axes = plt.subplots(
-    len(unique_params), len(unique_replicas), figsize=(20, 12), sharex=True
-)
-
-for i, param in enumerate(unique_params):
-    for j, replica in enumerate(unique_replicas):
-        ax = axes[i, j] if len(unique_params) > 1 else axes[j]
-
-        subset = nll_by_token_df[
-            (nll_by_token_df["Parameters"] == param)
-            & (nll_by_token_df["Num. MATH Test Set Replicas"] == replica)
-        ].sort_values("Token Index")
-
-        if len(subset) < 5:
-            continue
-
-        t = subset["Token Index"].values.astype(float)
-        nll = subset["mean_NLL"].values
-
-        # Plot data
-        ax.scatter(t, nll, s=10, alpha=0.7, label="Data")
-
-        # Plot best fit
-        fit_row = fit_results_df[
-            (fit_results_df["Parameters"] == param)
-            & (fit_results_df["Num. Replicas"] == replica)
-            & (fit_results_df["Model"] == best_model_name)
-        ]
-        if len(fit_row) > 0 and fit_row.iloc[0]["Success"]:
-            params = fit_row.iloc[0]["Fitted Params"]
-            t_smooth = np.linspace(t.min(), t.max(), 200)
-            nll_pred = MODELS[best_model_name]["func"](t_smooth, *params)
-            r2 = fit_row.iloc[0]["R2"]
-            ax.plot(t_smooth, nll_pred, "r-", linewidth=2, label=f"Fit (R²={r2:.3f})")
-
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-        if i == 0:
-            ax.set_title(f"R={replica}")
-        if j == 0:
-            ax.set_ylabel(f"{param}\nNLL")
-        if i == len(unique_params) - 1:
-            ax.set_xlabel("Token Index")
-        ax.grid(True, alpha=0.3)
-
-plt.suptitle(f"Best Model: {best_model_name}", fontsize=14)
-plt.tight_layout()
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename=f"y=nll_x=token_index_fitted_{best_model_name}",
-)
-# plt.show()
 
 # %%
 # Extract and analyze fitted parameters for the best model
@@ -1114,42 +1064,10 @@ if best_model_name in param_names:
 
     # Show how parameters vary with Num. Replicas
     print(f"\nFitted parameters by Num. Replicas (averaged across model sizes):")
-    param_by_replica = (
-        best_model_fits.groupby("Num. Replicas")[names].agg(["mean", "std"])
+    param_by_replica = best_model_fits.groupby("Num. Replicas")[names].agg(
+        ["mean", "std"]
     )
     print(param_by_replica.round(4))
-
-    # Plot parameter trends
-    plt.close()
-    n_params_to_plot = len(names)
-    fig, axes = plt.subplots(1, n_params_to_plot, figsize=(5 * n_params_to_plot, 4))
-    if n_params_to_plot == 1:
-        axes = [axes]
-
-    for idx, name in enumerate(names):
-        ax = axes[idx]
-        for param in unique_params:
-            subset = best_model_fits[best_model_fits["Parameters"] == param]
-            ax.plot(
-                subset["Num. Replicas"],
-                subset[name],
-                "o-",
-                label=param,
-                markersize=6,
-            )
-        ax.set_xlabel("Num. Replicas")
-        ax.set_ylabel(name)
-        ax.set_xscale("symlog", linthresh=1)
-        ax.legend(title="Model Size")
-        ax.grid(True, alpha=0.3)
-        ax.set_title(f"Parameter: {name}")
-
-    plt.tight_layout()
-    src.plot.save_plot_with_multiple_extensions(
-        plot_dir=results_dir,
-        plot_filename=f"y=fitted_params_x=num_replicas_model={best_model_name}",
-    )
-    # plt.show()
 
 print("\nCurve fitting complete.")
 
@@ -1279,55 +1197,84 @@ print(param_summary.round(4))
 plt.close()
 fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
+# Use flare palette for model sizes (consistent with other plots)
+exp_decay_params_palette = {
+    p: c for p, c in zip(unique_params, sns.color_palette("flare", len(unique_params)))
+}
+
 # Plot 1: nll_inf vs R
 ax = axes[0, 0]
 for param in unique_params:
     subset = improved_fit_df[improved_fit_df["Parameters"] == param]
-    ax.plot(subset["Num. Replicas"], subset["nll_inf"], "o-", label=param, markersize=6)
+    ax.plot(
+        subset["Num. Replicas"],
+        subset["nll_inf"],
+        "o-",
+        label=param,
+        markersize=6,
+        color=exp_decay_params_palette[param],
+    )
 ax.set_xlabel(r"Num. Replicas $R$")
 ax.set_ylabel(r"$\mathrm{NLL}_\infty$ (floor)")
 ax.set_xscale("symlog", linthresh=1)
 ax.set_yscale("log")
 ax.legend(title="Model Size")
 ax.grid(True, alpha=0.3)
-ax.set_title(r"Asymptotic NLL floor vs Contamination")
 
 # Plot 2: tau vs R
 ax = axes[0, 1]
 for param in unique_params:
     subset = improved_fit_df[improved_fit_df["Parameters"] == param]
-    ax.plot(subset["Num. Replicas"], subset["tau"], "o-", label=param, markersize=6)
+    ax.plot(
+        subset["Num. Replicas"],
+        subset["tau"],
+        "o-",
+        label=param,
+        markersize=6,
+        color=exp_decay_params_palette[param],
+    )
 ax.set_xlabel(r"Num. Replicas $R$")
 ax.set_ylabel(r"$\tau$ (decay timescale)")
 ax.set_xscale("symlog", linthresh=1)
 ax.set_yscale("log")
 ax.legend(title="Model Size")
 ax.grid(True, alpha=0.3)
-ax.set_title(r"Decay timescale vs Contamination")
 
 # Plot 3: delta (initial drop) vs R
 ax = axes[1, 0]
 for param in unique_params:
     subset = improved_fit_df[improved_fit_df["Parameters"] == param]
-    ax.plot(subset["Num. Replicas"], subset["delta"], "o-", label=param, markersize=6)
+    ax.plot(
+        subset["Num. Replicas"],
+        subset["delta"],
+        "o-",
+        label=param,
+        markersize=6,
+        color=exp_decay_params_palette[param],
+    )
 ax.set_xlabel(r"Num. Replicas $R$")
 ax.set_ylabel(r"$\Delta$ (initial NLL drop)")
 ax.set_xscale("symlog", linthresh=1)
 ax.legend(title="Model Size")
 ax.grid(True, alpha=0.3)
-ax.set_title(r"Initial NLL drop vs Contamination")
 
 # Plot 4: R² vs R
 ax = axes[1, 1]
 for param in unique_params:
     subset = improved_fit_df[improved_fit_df["Parameters"] == param]
-    ax.plot(subset["Num. Replicas"], subset["R2"], "o-", label=param, markersize=6)
+    ax.plot(
+        subset["Num. Replicas"],
+        subset["R2"],
+        "o-",
+        label=param,
+        markersize=6,
+        color=exp_decay_params_palette[param],
+    )
 ax.set_xlabel(r"Num. Replicas $R$")
 ax.set_ylabel(r"$R^2$ (fit quality)")
 ax.set_xscale("symlog", linthresh=1)
 ax.legend(title="Model Size")
 ax.grid(True, alpha=0.3)
-ax.set_title(r"Fit quality vs Contamination")
 
 plt.tight_layout()
 src.plot.save_plot_with_multiple_extensions(
@@ -1374,7 +1321,9 @@ for param in unique_params:
         y_pred = nll_inf_model(R, *popt)
         r2 = compute_r_squared(nll_inf, y_pred)
         nll_inf_params[param] = {"a": popt[0], "b": popt[1], "c": popt[2], "r2": r2}
-        print(f"  {param}: a={popt[0]:.4f}, b={popt[1]:.4f}, c={popt[2]:.6f}, R²={r2:.4f}")
+        print(
+            f"  {param}: a={popt[0]:.4f}, b={popt[1]:.4f}, c={popt[2]:.6f}, R²={r2:.4f}"
+        )
     except Exception as e:
         print(f"  {param}: Fit failed - {e}")
 
@@ -1405,73 +1354,6 @@ for param in unique_params:
         )
     except Exception as e:
         print(f"  {param}: Fit failed - {e}")
-
-# %%
-# Visualize the parameter fits
-plt.close()
-fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-# Plot nll_inf fits
-ax = axes[0]
-R_smooth = np.logspace(0, np.log10(3500), 100)
-for param in unique_params:
-    subset = successful_fits[successful_fits["Parameters"] == param]
-    ax.scatter(subset["Num. Replicas"], subset["nll_inf"], s=50, label=f"{param} (data)")
-
-    if param in nll_inf_params:
-        p = nll_inf_params[param]
-
-        def nll_inf_model(R, a, b, c):
-            return c + a * (R + 1) ** (-b)
-
-        ax.plot(
-            R_smooth,
-            nll_inf_model(R_smooth, p["a"], p["b"], p["c"]),
-            "--",
-            label=f"{param} fit (R²={p['r2']:.2f})",
-        )
-
-ax.set_xlabel(r"Num. Replicas $R$")
-ax.set_ylabel(r"$\mathrm{NLL}_\infty$")
-ax.set_xscale("log")
-ax.set_yscale("log")
-ax.legend(fontsize=8)
-ax.grid(True, alpha=0.3)
-ax.set_title(r"$\mathrm{NLL}_\infty = c + a \cdot (R+1)^{-b}$")
-
-# Plot tau fits
-ax = axes[1]
-for param in unique_params:
-    subset = successful_fits[successful_fits["Parameters"] == param]
-    ax.scatter(subset["Num. Replicas"], subset["tau"], s=50, label=f"{param} (data)")
-
-    if param in tau_params:
-        p = tau_params[param]
-
-        def tau_model(R, tau_0, R_1, c):
-            return tau_0 / (1 + R / R_1) ** c
-
-        ax.plot(
-            R_smooth,
-            tau_model(R_smooth, p["tau_0"], p["R_1"], p["c"]),
-            "--",
-            label=f"{param} fit (R²={p['r2']:.2f})",
-        )
-
-ax.set_xlabel(r"Num. Replicas $R$")
-ax.set_ylabel(r"$\tau$")
-ax.set_xscale("log")
-ax.set_yscale("log")
-ax.legend(fontsize=8)
-ax.grid(True, alpha=0.3)
-ax.set_title(r"$\tau = \tau_0 / (1 + R/R_1)^c$")
-
-plt.tight_layout()
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename="y=nll_inf_tau_vs_R_fitted",
-)
-# plt.show()
 
 print("\nParameter fitting complete.")
 
@@ -1512,7 +1394,9 @@ for param in unique_params:
             )
 
 pooled_df = pd.DataFrame(pooled_data)
-print(f"Pooled data: {len(pooled_df)} points across {len(unique_params)} model sizes and {len(unique_replicas)} replica levels")
+print(
+    f"Pooled data: {len(pooled_df)} points across {len(unique_params)} model sizes and {len(unique_replicas)} replica levels"
+)
 
 # Normalize N for numerical stability
 N_scale = 1e8  # Scale factor for N
@@ -1528,6 +1412,7 @@ weights_all = weights_all / weights_all.mean()  # Normalize weights
 
 # %%
 # Define unified model candidates
+
 
 def unified_model_v1(t, N, R, params):
     """
@@ -1550,14 +1435,14 @@ def unified_model_v1(t, N, R, params):
     d0, eps, zeta, R1, eta = abs(d0), abs(eps), abs(zeta), abs(R1) + 0.1, abs(eta)
 
     # NLL floor: decreases with N (larger models better), decreases with R (more contamination)
-    NLL_inf = c0 * N**(-alpha) * (1 + c1 * (R + 1)**(-beta))
+    NLL_inf = c0 * N ** (-alpha) * (1 + c1 * (R + 1) ** (-beta))
 
     # Decay timescale: increases with N (larger models slower?), decreases with R
-    tau = tau0 * N**gamma / (1 + R / R0)**delta
+    tau = tau0 * N**gamma / (1 + R / R0) ** delta
     tau = np.maximum(tau, 1.0)  # Prevent tau from being too small
 
     # Amplitude: depends on both N and R
-    Delta = d0 * N**(-eps) * (R + 1)**zeta / (1 + (R / R1)**eta)
+    Delta = d0 * N ** (-eps) * (R + 1) ** zeta / (1 + (R / R1) ** eta)
 
     return NLL_inf + Delta * np.exp(-t / tau)
 
@@ -1583,13 +1468,13 @@ def unified_model_v2(t, N, R, params):
     tau0, R0, f, floor_min = abs(tau0), abs(R0) + 0.1, abs(f), abs(floor_min)
 
     # Base NLL (depends only on N)
-    NLL_base = a * N**(-b)
+    NLL_base = a * N ** (-b)
 
     # Floor factor (depends on R): goes from ~1 at R=0 to floor_min at R=∞
-    floor_factor = floor_min + (1 - floor_min) * (R + 1)**(-d)
+    floor_factor = floor_min + (1 - floor_min) * (R + 1) ** (-d)
 
     # Decay timescale (depends on R)
-    tau = tau0 / (1 + R / R0)**f
+    tau = tau0 / (1 + R / R0) ** f
     tau = np.maximum(tau, 1.0)
 
     # NLL decays from NLL_base toward NLL_base * floor_factor
@@ -1614,8 +1499,15 @@ def unified_model_v3(t, N, R, params):
     log_R = np.log(R + 1)
     log_t = np.log(t + 1)
 
-    log_NLL = (a0 + a1*log_N + a2*log_R + a3*log_t
-               + a4*log_N*log_R + a5*log_R*log_t + a6*log_N*log_t)
+    log_NLL = (
+        a0
+        + a1 * log_N
+        + a2 * log_R
+        + a3 * log_t
+        + a4 * log_N * log_R
+        + a5 * log_R * log_t
+        + a6 * log_N * log_t
+    )
 
     return np.exp(log_NLL)
 
@@ -1640,7 +1532,7 @@ def unified_model_v4(t, N, R, params):
     R_floor, tau_max, R_tau = abs(R_floor) + 0.1, abs(tau_max), abs(R_tau) + 0.1
 
     # Initial NLL (depends only on N)
-    NLL_0 = a * N**(-b)
+    NLL_0 = a * N ** (-b)
 
     # Floor NLL (fraction of initial, depends on R)
     floor_frac = c + (1 - c) * np.exp(-R / R_floor)
@@ -1671,9 +1563,9 @@ def unified_model_v5(t, N, R, params):
     d, e, f = abs(d), abs(e), abs(f)
     g, h, i = abs(g), abs(h), abs(i)
 
-    NLL_inf = a * N**(-b) * (R + 1)**(-c)
-    Delta = d * N**(-e) * (1 - (R + 1)**(-f))
-    tau = g * N**h / (R + 1)**i
+    NLL_inf = a * N ** (-b) * (R + 1) ** (-c)
+    Delta = d * N ** (-e) * (1 - (R + 1) ** (-f))
+    tau = g * N**h / (R + 1) ** i
     tau = np.maximum(tau, 1.0)
 
     return NLL_inf + Delta * np.exp(-t / tau)
@@ -1711,7 +1603,7 @@ def fit_unified_model(model_func, model_name, n_params, bounds, n_restarts=5):
                 tol=1e-6,
                 seed=42 + restart,
                 workers=1,
-                updating='deferred',
+                updating="deferred",
                 polish=True,
             )
 
@@ -1754,32 +1646,70 @@ print("-" * 70)
 unified_results = []
 
 # Model V2: Simpler separable (8 params)
-bounds_v2 = [(0.1, 50), (0, 2), (0, 10), (0, 3), (1, 2000), (0.1, 500), (0, 3), (0.001, 0.5)]
+bounds_v2 = [
+    (0.1, 50),
+    (0, 2),
+    (0, 10),
+    (0, 3),
+    (1, 2000),
+    (0.1, 500),
+    (0, 3),
+    (0.001, 0.5),
+]
 result = fit_unified_model(unified_model_v2, "V2_separable", 8, bounds_v2, n_restarts=3)
 if result:
     unified_results.append(result)
 
 # Model V4: Explicit floor/rate (6 params)
 bounds_v4 = [(0.1, 50), (0, 2), (0.001, 0.5), (0.1, 500), (1, 2000), (0.1, 500)]
-result = fit_unified_model(unified_model_v4, "V4_floor_rate", 6, bounds_v4, n_restarts=3)
+result = fit_unified_model(
+    unified_model_v4, "V4_floor_rate", 6, bounds_v4, n_restarts=3
+)
 if result:
     unified_results.append(result)
 
 # Model V5: Separate power laws (9 params)
-bounds_v5 = [(0.1, 50), (0, 2), (0, 2), (0.1, 50), (0, 2), (0, 2), (1, 2000), (0, 2), (0, 2)]
-result = fit_unified_model(unified_model_v5, "V5_power_laws", 9, bounds_v5, n_restarts=3)
+bounds_v5 = [
+    (0.1, 50),
+    (0, 2),
+    (0, 2),
+    (0.1, 50),
+    (0, 2),
+    (0, 2),
+    (1, 2000),
+    (0, 2),
+    (0, 2),
+]
+result = fit_unified_model(
+    unified_model_v5, "V5_power_laws", 9, bounds_v5, n_restarts=3
+)
 if result:
     unified_results.append(result)
 
 # Model V3: Log-linear (7 params)
 bounds_v3 = [(-10, 10), (-3, 3), (-3, 3), (-3, 3), (-1, 1), (-1, 1), (-1, 1)]
-result = fit_unified_model(unified_model_v3, "V3_log_linear", 7, bounds_v3, n_restarts=3)
+result = fit_unified_model(
+    unified_model_v3, "V3_log_linear", 7, bounds_v3, n_restarts=3
+)
 if result:
     unified_results.append(result)
 
 # Model V1: Full model (13 params) - try last since most complex
-bounds_v1 = [(0.1, 50), (0, 2), (0, 10), (0, 3), (1, 2000), (0, 2), (0.1, 500), (0, 3),
-             (0.1, 50), (0, 2), (0, 2), (0.1, 500), (0, 3)]
+bounds_v1 = [
+    (0.1, 50),
+    (0, 2),
+    (0, 10),
+    (0, 3),
+    (1, 2000),
+    (0, 2),
+    (0.1, 500),
+    (0, 3),
+    (0.1, 50),
+    (0, 2),
+    (0, 2),
+    (0.1, 500),
+    (0, 3),
+]
 result = fit_unified_model(unified_model_v1, "V1_full", 13, bounds_v1, n_restarts=2)
 if result:
     unified_results.append(result)
@@ -1791,76 +1721,26 @@ print("UNIFIED MODEL COMPARISON")
 print("=" * 70)
 
 if unified_results:
-    comparison_df = pd.DataFrame([
-        {"Model": r["model_name"], "N_params": len(r["params"]), "R²": r["r2"], "RMSE": r["rmse"]}
-        for r in unified_results
-    ]).sort_values("R²", ascending=False)
+    comparison_df = pd.DataFrame(
+        [
+            {
+                "Model": r["model_name"],
+                "N_params": len(r["params"]),
+                "R²": r["r2"],
+                "RMSE": r["rmse"],
+            }
+            for r in unified_results
+        ]
+    ).sort_values("R²", ascending=False)
     print("\nModel comparison (sorted by R²):")
     print(comparison_df.to_string(index=False))
 
     # Select best model
     best_unified = max(unified_results, key=lambda x: x["r2"])
-    print(f"\nBest unified model: {best_unified['model_name']} (R² = {best_unified['r2']:.4f})")
-    print(f"Parameters: {best_unified['params']}")
-
-# %%
-# Visualize best unified model fit
-if unified_results:
-    best = best_unified
-
-    plt.close()
-    fig, axes = plt.subplots(len(unique_params), len(unique_replicas),
-                              figsize=(20, 12), sharex=True)
-
-    for i, param in enumerate(unique_params):
-        for j, replica in enumerate(unique_replicas):
-            ax = axes[i, j] if len(unique_params) > 1 else axes[j]
-
-            subset = nll_by_token_df[
-                (nll_by_token_df["Parameters"] == param)
-                & (nll_by_token_df["Num. MATH Test Set Replicas"] == replica)
-            ].sort_values("Token Index")
-
-            if len(subset) < 5:
-                ax.set_visible(False)
-                continue
-
-            t = subset["Token Index"].values.astype(float)
-            nll = subset["mean_NLL"].values
-            N = subset["Num. Parameters"].iloc[0] / N_scale
-            R = replica
-
-            # Plot data
-            ax.scatter(t, nll, s=10, alpha=0.7, label="Data", color="blue")
-
-            # Plot unified model prediction
-            t_smooth = np.linspace(1, t.max(), 200)
-            nll_pred = best["model_func"](t_smooth, N, R, best["params"])
-            ax.plot(t_smooth, nll_pred, "r-", linewidth=2, label="Unified fit")
-
-            # Compute local R²
-            nll_pred_data = best["model_func"](t, N, R, best["params"])
-            local_r2 = compute_r_squared(nll, nll_pred_data)
-
-            ax.set_xscale("log")
-            ax.set_yscale("log")
-            if i == 0:
-                ax.set_title(f"R={replica}", fontsize=10)
-            if j == 0:
-                ax.set_ylabel(f"{param}\nNLL", fontsize=9)
-            if i == len(unique_params) - 1:
-                ax.set_xlabel("Token Index", fontsize=9)
-            ax.text(0.95, 0.95, f"R²={local_r2:.2f}", transform=ax.transAxes,
-                   fontsize=8, va='top', ha='right')
-            ax.grid(True, alpha=0.3)
-
-    plt.suptitle(f"Unified Model: {best['model_name']} (Overall R² = {best['r2']:.4f})", fontsize=14)
-    plt.tight_layout()
-    src.plot.save_plot_with_multiple_extensions(
-        plot_dir=results_dir,
-        plot_filename=f"y=nll_x=token_index_unified_model_{best['model_name']}",
+    print(
+        f"\nBest unified model: {best_unified['model_name']} (R² = {best_unified['r2']:.4f})"
     )
-    # plt.show()
+    print(f"Parameters: {best_unified['params']}")
 
 print("\nUnified model fitting complete.")
 
@@ -2240,122 +2120,6 @@ for rank, model in enumerate(top_3, 1):
     print(f"Parameters: {model['params']}")
 
 # %%
-# Create comprehensive visualization for the best model
-best = best_by_r2
-
-plt.close()
-fig = plt.figure(figsize=(24, 16))
-
-# Create grid: 5 rows (model sizes) x 9 cols (replica levels) + summary panels
-gs = fig.add_gridspec(6, 10, height_ratios=[1, 1, 1, 1, 1, 0.8], hspace=0.3, wspace=0.3)
-
-# Plot fits for each condition
-local_r2_matrix = np.zeros((len(unique_params), len(unique_replicas)))
-
-for i, param in enumerate(unique_params):
-    for j, replica in enumerate(unique_replicas):
-        ax = fig.add_subplot(gs[i, j])
-
-        subset = nll_by_token_df[
-            (nll_by_token_df["Parameters"] == param)
-            & (nll_by_token_df["Num. MATH Test Set Replicas"] == replica)
-        ].sort_values("Token Index")
-
-        if len(subset) < 5:
-            ax.set_visible(False)
-            local_r2_matrix[i, j] = np.nan
-            continue
-
-        t = subset["Token Index"].values.astype(float)
-        nll = subset["mean_NLL"].values
-        sem = subset["sem_NLL"].values
-        N = subset["Num. Parameters"].iloc[0] / N_scale
-        R = replica
-
-        # Plot data with error bars
-        ax.errorbar(t, nll, yerr=1.96 * sem, fmt="o", markersize=3, alpha=0.6, capsize=0)
-
-        # Plot model prediction
-        t_smooth = np.linspace(1, t.max(), 200)
-        nll_pred = best["model_func"](t_smooth, N, R, best["params"])
-        ax.plot(t_smooth, nll_pred, "r-", linewidth=2)
-
-        # Compute local R²
-        nll_pred_data = best["model_func"](t, N, R, best["params"])
-        local_r2 = compute_r_squared(nll, nll_pred_data)
-        local_r2_matrix[i, j] = local_r2
-
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-
-        if i == 0:
-            ax.set_title(f"R={replica}", fontsize=9)
-        if j == 0:
-            ax.set_ylabel(f"{param}", fontsize=9)
-        if i == len(unique_params) - 1:
-            ax.set_xlabel("t", fontsize=8)
-
-        # Add R² annotation
-        ax.text(
-            0.95,
-            0.95,
-            f"{local_r2:.2f}",
-            transform=ax.transAxes,
-            fontsize=7,
-            va="top",
-            ha="right",
-            color="red" if local_r2 < 0.5 else "green" if local_r2 > 0.8 else "orange",
-        )
-
-        ax.tick_params(labelsize=7)
-
-# Add heatmap of local R² values
-ax_heatmap = fig.add_subplot(gs[5, :5])
-im = ax_heatmap.imshow(local_r2_matrix, cmap="RdYlGn", vmin=0, vmax=1, aspect="auto")
-ax_heatmap.set_xticks(range(len(unique_replicas)))
-ax_heatmap.set_xticklabels(unique_replicas, fontsize=8)
-ax_heatmap.set_yticks(range(len(unique_params)))
-ax_heatmap.set_yticklabels(unique_params, fontsize=8)
-ax_heatmap.set_xlabel("Num. Replicas", fontsize=10)
-ax_heatmap.set_ylabel("Model Size", fontsize=10)
-ax_heatmap.set_title("Local R² by Condition", fontsize=11)
-plt.colorbar(im, ax=ax_heatmap, label="R²")
-
-# Add model summary text
-ax_text = fig.add_subplot(gs[5, 5:])
-ax_text.axis("off")
-summary_text = f"""
-BEST MODEL: {best['model_name']}
-
-Overall Statistics:
-  R² = {best['r2']:.4f}
-  RMSE = {best['rmse']:.4f}
-  N_params = {len(best['params'])}
-
-Parameters:
-{np.array2string(best['params'], precision=4, separator=', ')}
-
-Local R² Summary:
-  Mean: {np.nanmean(local_r2_matrix):.3f}
-  Std:  {np.nanstd(local_r2_matrix):.3f}
-  Min:  {np.nanmin(local_r2_matrix):.3f}
-  Max:  {np.nanmax(local_r2_matrix):.3f}
-"""
-ax_text.text(
-    0.1, 0.9, summary_text, transform=ax_text.transAxes, fontsize=10, verticalalignment="top", family="monospace"
-)
-
-plt.suptitle(
-    f"Comprehensive Model Fit: {best['model_name']} (Overall R² = {best['r2']:.4f})",
-    fontsize=14,
-)
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename=f"comprehensive_fit_{best['model_name']}",
-)
-plt.close()
-
-# %%
 # =============================================================================
 # SAVE DETAILED REPORT
 # =============================================================================
@@ -2384,7 +2148,9 @@ with open(report_path, "w") as f:
     f.write("MODELS TESTED:\n")
     f.write("-" * 50 + "\n")
     for i, row in comparison_df.iterrows():
-        f.write(f"  {row['Model']:20s}: R²={row['R²']:.4f}, RMSE={row['RMSE']:.4f}, n_params={row['N_params']}\n")
+        f.write(
+            f"  {row['Model']:20s}: R²={row['R²']:.4f}, RMSE={row['RMSE']:.4f}, n_params={row['N_params']}\n"
+        )
 
     f.write("\n\nBEST MODEL:\n")
     f.write("-" * 50 + "\n")
@@ -2408,15 +2174,29 @@ with open(report_path, "w") as f:
         params = best["params"]
         f.write("Log-linear model:\n")
         f.write("  log(NLL) = a0 + a1*log(N) + a2*log(R+1) + a3*log(t+1)\n")
-        f.write("           + a4*log(N)*log(R+1) + a5*log(R+1)*log(t+1) + a6*log(N)*log(t+1)\n\n")
+        f.write(
+            "           + a4*log(N)*log(R+1) + a5*log(R+1)*log(t+1) + a6*log(N)*log(t+1)\n\n"
+        )
         f.write("Coefficients:\n")
         f.write(f"  a0 (intercept):     {params[0]:+.4f}\n")
-        f.write(f"  a1 (log N):         {params[1]:+.4f}  -> NLL ~ N^{{{params[1]:.3f}}}\n")
-        f.write(f"  a2 (log R+1):       {params[2]:+.4f}  -> NLL ~ (R+1)^{{{params[2]:.3f}}}\n")
-        f.write(f"  a3 (log t+1):       {params[3]:+.4f}  -> NLL ~ (t+1)^{{{params[3]:.3f}}}\n")
-        f.write(f"  a4 (log N * log R): {params[4]:+.4f}  -> Interaction: larger N, stronger R effect\n")
-        f.write(f"  a5 (log R * log t): {params[5]:+.4f}  -> RECALL EFFECT: higher R, stronger t decay\n")
-        f.write(f"  a6 (log N * log t): {params[6]:+.4f}  -> Interaction: larger N, stronger t decay\n")
+        f.write(
+            f"  a1 (log N):         {params[1]:+.4f}  -> NLL ~ N^{{{params[1]:.3f}}}\n"
+        )
+        f.write(
+            f"  a2 (log R+1):       {params[2]:+.4f}  -> NLL ~ (R+1)^{{{params[2]:.3f}}}\n"
+        )
+        f.write(
+            f"  a3 (log t+1):       {params[3]:+.4f}  -> NLL ~ (t+1)^{{{params[3]:.3f}}}\n"
+        )
+        f.write(
+            f"  a4 (log N * log R): {params[4]:+.4f}  -> Interaction: larger N, stronger R effect\n"
+        )
+        f.write(
+            f"  a5 (log R * log t): {params[5]:+.4f}  -> RECALL EFFECT: higher R, stronger t decay\n"
+        )
+        f.write(
+            f"  a6 (log N * log t): {params[6]:+.4f}  -> Interaction: larger N, stronger t decay\n"
+        )
 
     elif best["model_name"] == "mixture":
         params = best["params"]
@@ -2434,7 +2214,6 @@ with open(report_path, "w") as f:
 
     f.write("\n\nFILES GENERATED:\n")
     f.write("-" * 50 + "\n")
-    f.write(f"  - comprehensive_fit_{best['model_name']}.png/pdf\n")
     f.write("  - model_fitting_report.txt (this file)\n")
 
 print(f"\nReport saved to: {report_path}")
@@ -2542,7 +2321,14 @@ subset = nll_by_token_df[
     & (nll_by_token_df["Num. MATH Test Set Replicas"] == R_test)
 ]
 if len(subset) > 0:
-    ax.scatter(subset["Token Index"], subset["mean_NLL"], s=20, c="black", alpha=0.5, label="Data")
+    ax.scatter(
+        subset["Token Index"],
+        subset["mean_NLL"],
+        s=20,
+        c="black",
+        alpha=0.5,
+        label="Data",
+    )
 ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel("Token Index t")
@@ -2636,67 +2422,6 @@ print(f"  Mean Local R²: {best_by_local['Mean_Local_R2']:.4f}")
 print(f"  % Positive Local R²: {best_by_local['Pct_Positive_Local']:.1f}%")
 
 # %%
-# Create comparison plot for top models by local R²
-top_by_local = enhanced_df.nlargest(3, "Mean_Local_R2")
-top_model_names = top_by_local["Model"].tolist()
-top_models_by_local = [r for r in all_results if r["model_name"] in top_model_names]
-
-plt.close()
-fig, axes = plt.subplots(3, 3, figsize=(15, 12))
-
-# Select representative conditions
-test_conditions = [
-    ("93M", 0, "Low contamination"),
-    ("93M", 100, "Medium contamination"),
-    ("93M", 1000, "High contamination"),
-]
-
-for col, (param, replica, label) in enumerate(test_conditions):
-    subset = nll_by_token_df[
-        (nll_by_token_df["Parameters"] == param)
-        & (nll_by_token_df["Num. MATH Test Set Replicas"] == replica)
-    ].sort_values("Token Index")
-
-    if len(subset) < 5:
-        continue
-
-    t = subset["Token Index"].values.astype(float)
-    nll = subset["mean_NLL"].values
-    N = subset["Num. Parameters"].iloc[0] / N_scale
-
-    for row, model in enumerate(top_models_by_local):
-        ax = axes[row, col]
-
-        # Plot data
-        ax.scatter(t, nll, s=20, alpha=0.6, label="Data", c="blue")
-
-        # Plot model prediction
-        t_smooth = np.linspace(1, t.max(), 200)
-        nll_pred = model["model_func"](t_smooth, N, replica, model["params"])
-        ax.plot(t_smooth, nll_pred, "r-", linewidth=2, label="Model")
-
-        # Compute local R²
-        nll_pred_data = model["model_func"](t, N, replica, model["params"])
-        local_r2 = compute_r_squared(nll, nll_pred_data)
-
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-        ax.set_title(f"{model['model_name']}\n{param}, R={replica}\nLocal R²={local_r2:.3f}")
-        ax.grid(True, alpha=0.3)
-
-        if col == 0:
-            ax.set_ylabel("NLL")
-        if row == 2:
-            ax.set_xlabel("Token Index")
-
-plt.tight_layout()
-src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir,
-    plot_filename="top_models_by_local_r2_comparison",
-)
-plt.close()
-
-# %%
 # Update the report with enhanced findings
 enhanced_report_path = os.path.join(results_dir, "model_fitting_report_enhanced.txt")
 
@@ -2714,7 +2439,9 @@ with open(enhanced_report_path, "w") as f:
     f.write(f"  Best: power_decay (R² = 0.9028)\n\n")
 
     f.write("LOCAL R² (captures within-condition shape):\n")
-    f.write(f"  Best: {best_by_local['Model']} (Mean Local R² = {best_by_local['Mean_Local_R2']:.4f})\n\n")
+    f.write(
+        f"  Best: {best_by_local['Model']} (Mean Local R² = {best_by_local['Mean_Local_R2']:.4f})\n\n"
+    )
 
     f.write("RECOMMENDATION:\n")
     f.write(f"  Use '{best_by_local['Model']}' model as it best captures\n")
@@ -2735,7 +2462,9 @@ with open(enhanced_report_path, "w") as f:
     f.write("\n\nBEST MODEL INTERPRETATION:\n")
     f.write("-" * 50 + "\n")
 
-    best_model = [r for r in all_results if r["model_name"] == best_by_local["Model"]][0]
+    best_model = [r for r in all_results if r["model_name"] == best_by_local["Model"]][
+        0
+    ]
     f.write(f"Model: {best_model['model_name']}\n")
     f.write(f"Parameters: {best_model['params']}\n\n")
 
@@ -2755,12 +2484,12 @@ with open(enhanced_report_path, "w") as f:
         f.write(f"  a6 = {params[6]:+.4f}  (N×t interaction)\n\n")
         f.write("KEY INSIGHT:\n")
         f.write("  The R×t interaction term (a5) captures the 'recall effect':\n")
-        f.write("  higher contamination (R) leads to faster NLL decay with position (t).\n")
+        f.write(
+            "  higher contamination (R) leads to faster NLL decay with position (t).\n"
+        )
 
     f.write("\n\nFILES GENERATED:\n")
     f.write("-" * 50 + "\n")
-    f.write("  - comprehensive_fit_*.png/pdf (for each model)\n")
-    f.write("  - top_models_by_local_r2_comparison.png/pdf\n")
     f.write("  - parameter_visualization.png/pdf\n")
     f.write("  - model_fitting_report_enhanced.txt (this file)\n")
 
@@ -2825,9 +2554,7 @@ def floor_model(t, NLL_inf, A, alpha):
 
 
 # Create mapping from parameter string to numeric N value
-param_to_N = {
-    p: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p] for p in unique_params
-}
+param_to_N = {p: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p] for p in unique_params}
 
 # Fit floor model for each (N, R) condition
 floor_fit_results = []
@@ -2900,7 +2627,7 @@ fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
 # Color palette for model sizes (log scale) - use "flare" for model size
 N_values = sorted(floor_fit_df["N"].unique())
-colors_N = plt.cm.flare(np.linspace(0, 1, len(N_values)))
+colors_N = sns.color_palette("flare", len(N_values))
 N_to_color = {N: colors_N[i] for i, N in enumerate(N_values)}
 
 for i, (param_name, ylabel, use_log_y) in enumerate(
@@ -2938,7 +2665,7 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=fit_params_x=num_replicas_hue=model_size",
 )
-plt.show()
+# plt.show()
 
 # %%
 # Visualization 2: Parameters vs N (x, log scale) with replicas (hue)
@@ -2949,7 +2676,7 @@ fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 # Color palette for replicas (symlog scale matching other plots) - use "viridis" for replicas
 # Use all replicas for consistent colors
 all_replicas = [0, 1, 3, 10, 32, 100, 316, 1000, 3162]
-colors_R = plt.cm.viridis(np.linspace(0, 1, len(all_replicas)))
+colors_R = sns.color_palette("viridis", len(all_replicas))
 R_to_color = {r: colors_R[i] for i, r in enumerate(all_replicas)}
 
 # Only plot the valid replicas that we actually fit
@@ -2989,4 +2716,4 @@ src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=fit_params_x=model_size_hue=num_replicas",
 )
-plt.show()
+# plt.show()
