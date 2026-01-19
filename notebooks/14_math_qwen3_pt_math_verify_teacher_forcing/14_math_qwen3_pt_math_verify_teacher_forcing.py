@@ -101,20 +101,25 @@ print("Processing data in chunked, memory-efficient manner...")
 parquet_file = pq.ParquetFile(histories_path)
 all_columns = [field.name for field in parquet_file.schema]
 
-# Get log_prob columns - sample uniformly in log space for memory efficiency
+# Get log_prob columns, filtered to token index <= 800
+# (only ~2% of sequences reach 800+ tokens, so data beyond is noisy)
+MAX_TOKEN_INDEX = 800
 all_log_prob_cols = sorted(
-    [c for c in all_columns if c.startswith("log_prob_token_")],
+    [
+        c
+        for c in all_columns
+        if c.startswith("log_prob_token_")
+        and int(c.replace("log_prob_token_", "")) <= MAX_TOKEN_INDEX
+    ],
     key=lambda x: int(x.replace("log_prob_token_", "")),
 )
-max_token_idx = max(int(c.replace("log_prob_token_", "")) for c in all_log_prob_cols)
-print(f"Max token index in data: {max_token_idx}")
+print(f"Using token indices 0 to {MAX_TOKEN_INDEX}")
 
-# Sample ~200 token positions uniformly in log space (after adding 1 for log scaling)
+# Sample ~200 token positions uniformly in log space
 num_samples = 200
 log_spaced_indices = np.unique(
-    np.geomspace(1, max_token_idx + 1, num_samples).astype(int) - 1
+    np.geomspace(1, MAX_TOKEN_INDEX + 1, num_samples).astype(int) - 1
 ).tolist()
-# Always include token 0
 if 0 not in log_spaced_indices:
     log_spaced_indices = [0] + log_spaced_indices
 log_spaced_indices = sorted(log_spaced_indices)
@@ -124,9 +129,7 @@ log_prob_cols = [
     for i in log_spaced_indices
     if f"log_prob_token_{i}" in all_log_prob_cols
 ]
-print(
-    f"Using {len(log_prob_cols)} token positions (log-spaced from 0 to {max_token_idx})"
-)
+print(f"Using {len(log_prob_cols)} token positions (log-spaced from 0 to {MAX_TOKEN_INDEX})")
 
 # Process each row group for per-token NLL stats
 aggregated_results = []
@@ -2815,16 +2818,19 @@ print("=" * 70)
 # Per-condition floor model fitting and parameter visualization
 # =============================================================================
 
-from scipy.optimize import curve_fit
-
 
 def floor_model(t, NLL_inf, A, alpha):
     """NLL(t) = NLL_∞ + A * t^(-α)"""
     return NLL_inf + A * (t ** (-alpha))
 
 
+# Create mapping from parameter string to numeric N value
+param_to_N = {
+    p: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p] for p in unique_params
+}
+
 # Fit floor model for each (N, R) condition
-fit_results = []
+floor_fit_results = []
 
 # Filter conditions: exclude R=0 (no recall) and R>=1000 (saturation)
 valid_replicas = [r for r in unique_replicas if 0 < r < 1000]
@@ -2867,7 +2873,7 @@ for param in unique_params:
             ss_tot = np.sum((nll - np.mean(nll)) ** 2)
             r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
 
-            fit_results.append(
+            floor_fit_results.append(
                 {
                     "Parameters": param,
                     "N": N_val,
@@ -2881,10 +2887,10 @@ for param in unique_params:
         except Exception as e:
             print(f"Failed to fit {param}, R={replica}: {e}")
 
-fit_df = pd.DataFrame(fit_results)
-print(f"Successfully fit {len(fit_df)} conditions")
-print(f"Mean R² = {fit_df['R2'].mean():.3f}")
-print(f"R² > 0.8: {(fit_df['R2'] > 0.8).sum()}/{len(fit_df)}")
+floor_fit_df = pd.DataFrame(floor_fit_results)
+print(f"Successfully fit {len(floor_fit_df)} conditions")
+print(f"Mean R² = {floor_fit_df['R2'].mean():.3f}")
+print(f"R² > 0.8: {(floor_fit_df['R2'] > 0.8).sum()}/{len(floor_fit_df)}")
 
 # %%
 # Visualization 1: Parameters vs R (x) with model size (hue)
@@ -2893,7 +2899,7 @@ print(f"R² > 0.8: {(fit_df['R2'] > 0.8).sum()}/{len(fit_df)}")
 fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
 # Color palette for model sizes (log scale) - use "flare" for model size
-N_values = sorted(fit_df["N"].unique())
+N_values = sorted(floor_fit_df["N"].unique())
 colors_N = plt.cm.flare(np.linspace(0, 1, len(N_values)))
 N_to_color = {N: colors_N[i] for i, N in enumerate(N_values)}
 
@@ -2907,7 +2913,7 @@ for i, (param_name, ylabel, use_log_y) in enumerate(
     ax = axes[i]
 
     for N_val in N_values:
-        subset = fit_df[fit_df["N"] == N_val].sort_values("R")
+        subset = floor_fit_df[floor_fit_df["N"] == N_val].sort_values("R")
         label = f"{N_val/1e6:.0f}M" if N_val >= 1e6 else f"{N_val/1e3:.0f}K"
         ax.plot(
             subset["R"],
@@ -2947,7 +2953,7 @@ colors_R = plt.cm.viridis(np.linspace(0, 1, len(all_replicas)))
 R_to_color = {r: colors_R[i] for i, r in enumerate(all_replicas)}
 
 # Only plot the valid replicas that we actually fit
-R_values = sorted(fit_df["R"].unique())
+R_values = sorted(floor_fit_df["R"].unique())
 
 for i, (param_name, ylabel, use_log_y) in enumerate(
     [
@@ -2959,7 +2965,7 @@ for i, (param_name, ylabel, use_log_y) in enumerate(
     ax = axes[i]
 
     for R_val in R_values:
-        subset = fit_df[fit_df["R"] == R_val].sort_values("N")
+        subset = floor_fit_df[floor_fit_df["R"] == R_val].sort_values("N")
         ax.plot(
             subset["N"],
             subset[param_name],
