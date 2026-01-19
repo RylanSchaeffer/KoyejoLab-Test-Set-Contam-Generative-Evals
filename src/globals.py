@@ -33,6 +33,21 @@ DEFAULT_EVALUATION_CONFIG = {
     "temperature": 0.0,
 }
 
+DEFAULT_TEACHER_FORCING_EVALUATION_CONFIG = {
+    "data_config": {
+        "dataset": "EleutherAI/minerva_math",
+        # "dataset": "madrylab/gsm8k-platinum",
+        "shuffle_seed": 0,
+    },
+    "model_config": {
+        "model": "jkazdan/mem_Qwen3-344M_minerva_math_rep_0_sbst_1.0000_epch_1_ot_1.000_sft",
+        # "model": "RylanSchaeffer/mem_Qwen3-34M_minerva_math_replicas_316_epch_1_ot_1_pt",
+        "dtype": "bfloat16",
+        "enforce_eager": True,
+    },
+    "seed": 0,
+}
+
 DEFAULT_PRETRAINING_CONFIG = {
     "data_config": {
         "corpus": "fineweb-edu-dedup",

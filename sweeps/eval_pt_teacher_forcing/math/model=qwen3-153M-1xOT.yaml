@@ -1,0 +1,30 @@
+program: scripts/eval_language_model_teacher_forcing.py
+entity: rylan
+project: memorization-scoring-vs-sampling-eval-teacher-forcing
+method: grid
+parameters:
+  data_config:
+    parameters:
+      dataset:
+        values: [ "EleutherAI/minerva_math" ]
+      shuffle_seed:
+        values: [0]
+  model_config:
+    parameters:
+      model:
+        values: [
+          "RylanSchaeffer/mem_Qwen3-153M_minerva_math_rep_0_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-153M_minerva_math_rep_1_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-153M_minerva_math_rep_3_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-153M_minerva_math_rep_10_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-153M_minerva_math_rep_32_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-153M_minerva_math_rep_100_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-153M_minerva_math_rep_316_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-153M_minerva_math_rep_1000_sbst_1.0000_epch_1_ot_1",
+        ]
+      dtype:
+        values: [ "bfloat16" ]
+      enforce_eager:
+        values: [ True ]
+  seed:
+    values: [0]
