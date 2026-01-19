@@ -141,6 +141,27 @@ src.plot.save_plot_with_multiple_extensions(plot_dir=results_dir, plot_filename=
 - Filename convention: `y=<response>_x=<predictor>_hue=<grouping>`
 - Save via `save_plot_with_multiple_extensions()` (outputs PDF and PNG at 300 DPI)
 
+**Color palette consistency** (CRITICAL - colors must match across all notebooks):
+- **Model size / Num. Parameters**: Always use `palette="flare"` with `LogNorm`. For seaborn plots with numeric hue, use `hue="Num. Parameters"` with `hue_norm=LogNorm(vmin=min_val, vmax=max_val)`. For manual plotting with string labels (e.g., "34M", "62M"), sample the colormap at LogNorm positions:
+  ```python
+  from matplotlib.colors import LogNorm
+  param_values = [src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p] for p in unique_params]
+  num_parameters_log_norm = LogNorm(vmin=min(param_values), vmax=max(param_values))
+  flare_cmap = plt.cm.get_cmap("flare")
+  params_palette = {
+      p: flare_cmap(num_parameters_log_norm(src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p]))
+      for p in unique_params
+  }
+  ```
+- **Num. Replicas**: Use `palette="viridis"` with `SymLogNorm(linthresh=1.0)` for numeric hue
+- **Temperature**: Use `palette="YlOrBr_r"`
+- **Before creating any new color palette**, check existing notebooks (especially `notebooks/11_*`) to ensure colors match. Cross-notebook color consistency is essential for publication.
+
+**Legend placement**:
+- Use ONE legend per figure, not redundant legends on each subplot
+- Place legends where they don't obscure data (often lower-left or outside the plot area)
+- For multi-panel figures, use `fig.legend()` with appropriate `bbox_to_anchor` positioning, or place in a single subplot's whitespace area
+
 ## W&B Integration
 
 All experiments log to Weights & Biases. Ensure `WANDB_API_KEY` is set. Sweep configs in `sweeps/` define hyperparameter grids for systematic experiments.
