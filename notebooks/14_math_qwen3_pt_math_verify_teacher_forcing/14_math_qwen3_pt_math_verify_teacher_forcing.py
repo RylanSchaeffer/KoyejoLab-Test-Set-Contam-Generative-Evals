@@ -10,7 +10,7 @@ import hashlib
 import os
 import re
 
-from matplotlib.colors import SymLogNorm
+from matplotlib.colors import LogNorm, SymLogNorm
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LogLocator
 import numpy as np
@@ -474,9 +474,14 @@ src.plot.save_plot_with_multiple_extensions(
 # Plot 2: NLL vs Token Index (hue=model_size, col=num_replicas) - TRANSPOSED
 
 # Create color palette for model sizes (flare for Num. Parameters, with LogNorm)
-n_params = len(unique_params)
-flare_colors = sns.color_palette("flare", n_params)
-params_palette = {p: flare_colors[i] for i, p in enumerate(unique_params)}
+# Use LogNorm to sample colors at the same positions as notebook 11
+param_values = [src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p] for p in unique_params]
+num_parameters_log_norm = LogNorm(vmin=min(param_values), vmax=max(param_values))
+flare_cmap = plt.cm.get_cmap("flare")
+params_palette = {
+    p: flare_cmap(num_parameters_log_norm(src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p]))
+    for p in unique_params
+}
 
 # Filter to Token Index <= 800 (only ~2% of sequences reach 800+ tokens, so high noise beyond)
 plot2_df = nll_by_token_df[nll_by_token_df["Token Index + 1"] <= 800].copy()
