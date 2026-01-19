@@ -1,6 +1,13 @@
 \section{Pretraining: Scaling \& Irreducible Error}
 \label{sec:pretraining}
 
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=\columnwidth]{figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed_col_wrap=1.pdf}
+    \caption{\textbf{Contamination-Driven Performance Is Memorization, Not Generalization.} When MATH test problems are either rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to near-zero regardless of contamination level or model size, confirming that performance gains from contamination rely on verbatim memorization rather than mathematical reasoning.}
+    \label{fig:rephrase_perturb}
+\end{figure}
+
 We begin at the first stage of the model lifecycle: pretraining.
 We establish foundational results on how test set contamination interacts with model scale and compute, and use scaling laws to quantify what contamination ``buys'' a model.
 
@@ -17,7 +24,9 @@ We establish foundational results on how test set contamination interacts with m
 We observe a non-linear relationship between the number of test set replicas and model performance:
 For low levels of contamination ($\leq$ 10 replicas), the impact on performance is minimal, with Math Verify scores and cross entropies remaining close to uncontaminated performance; at around 100 replicas, performance sharply increases (Fig.~\ref{fig:math_verify_replicas_temp}).
 At the highest levels of contamination, the model achieves ceiling performance.
+To determine if the performance gains observed in Figure~\ref{fig:math_verify_ce_temp_0} stemmed from robust generalization or superficial memorization, we evaluated our contaminated models on two modified versions of the MATH test set. First, we \emph{Rephrased} the problems, retaining the original numerical values and logic but altering the linguistic surface form. Second, we \emph{Perturbed} the problems, modifying the numerical values and correct answers while maintaining the problem structure.
 
+As shown in Figure~\ref{fig:rephrase_perturb}, performance collapses to near-zero across all model sizes and contamination levels in both conditions. Even models that achieved ceiling performance on the original test set failed to solve the modified versions. This stark contrast confirms that the ``capabilities'' gained from test set contamination are brittle and rely almost exclusively on verbatim memorization of the specific test sequences rather than the acquisition of underlying mathematical reasoning.
 
 \paragraph{Finding \#2: Scaling Laws Suggest Including A Single Test Set Replica Achieves Lower Loss Than the Irreducible Error of the Uncontaminated Corpus}
 
