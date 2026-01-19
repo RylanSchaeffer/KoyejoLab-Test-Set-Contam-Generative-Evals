@@ -11,7 +11,11 @@ Configurations:
 
     DEFAULT_SUPERVISED_FINETUNING_CONFIG: Settings for SFT on math problems.
 
-    DEFAULT_EVALUATION_CONFIG: Settings for model evaluation.
+    DEFAULT_EVALUATION_CONFIG: Settings for generative model evaluation with sampling.
+
+    DEFAULT_TEACHER_FORCING_EVALUATION_CONFIG: Settings for teacher-forced evaluation.
+        Computes log probabilities of ground-truth solutions without sampling,
+        useful for measuring memorization of test set solutions.
 
     MODEL_NAMES_TO_PARAMETERS_DICT: Mapping of model name strings to parameter counts.
 """

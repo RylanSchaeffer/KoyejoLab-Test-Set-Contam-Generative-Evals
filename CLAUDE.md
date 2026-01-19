@@ -41,6 +41,9 @@ python scripts/sft_language_model.py
 # Model evaluation (uses vLLM for inference)
 python scripts/eval_language_model.py
 
+# Teacher-forced evaluation (log probabilities of ground-truth solutions)
+python scripts/eval_language_model_teacher_forcing.py
+
 # Run W&B sweep
 wandb sweep sweeps/pt/math_82gb_1xOT/model=qwen3-34M-1xOT.yaml
 wandb agent [agent-id]
@@ -53,7 +56,7 @@ black .
 
 ### Core Modules (`src/`)
 
-- **globals.py**: Default configurations for pretraining, SFT, and evaluation. Contains `DEFAULT_PRETRAINING_CONFIG`, `DEFAULT_SUPERVISED_FINETUNING_CONFIG`, `DEFAULT_EVALUATION_CONFIG`. Key contamination parameters: `benchmark_subset_fraction`, `num_benchmark_replicas_per_epoch`.
+- **globals.py**: Default configurations for pretraining, SFT, and evaluation. Contains `DEFAULT_PRETRAINING_CONFIG`, `DEFAULT_SUPERVISED_FINETUNING_CONFIG`, `DEFAULT_EVALUATION_CONFIG`, `DEFAULT_TEACHER_FORCING_EVALUATION_CONFIG`. Key contamination parameters: `benchmark_subset_fraction`, `num_benchmark_replicas_per_epoch`.
 
 - **models.py**: Model loading and creation. `create_causalm_for_pretraining()` creates Qwen3 models from scratch; `load_automodelforcausallm()` loads from HF Hub. Supports Qwen3 models from 34M to 1.44B parameters.
 
@@ -73,12 +76,15 @@ black .
 
 - **eval_language_model.py**: Evaluation using vLLM for inference and math-verify for scoring. Supports greedy decoding and sampling.
 
+- **eval_language_model_teacher_forcing.py**: Teacher-forced evaluation that computes log probabilities of ground-truth solutions without sampling. Useful for measuring memorization since memorized solutions will have higher log probabilities.
+
 ### Experiment Sweeps (`sweeps/`)
 
 W&B sweep configurations organized by experiment type:
 - `pt/`: Pretraining sweeps (grid searches over contamination levels, model sizes)
 - `sft/`: SFT sweeps
-- `eval_pt/`, `eval_sft/`: Evaluation sweeps
+- `eval_pt/`, `eval_sft/`: Generative evaluation sweeps (sampling-based)
+- `eval_pt_teacher_forcing/`: Teacher-forced evaluation sweeps (log probability-based)
 - `dose_response/`: Dose response studies
 
 ### Analysis Notebooks (`notebooks/`)
