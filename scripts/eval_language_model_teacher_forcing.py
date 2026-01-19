@@ -89,7 +89,7 @@ def run_lm_eval_teacher_forcing(wandb_config: Dict[str, Any]) -> Dict[str, float
         doc_to_text.format(problem=question, solution="").rstrip()
         for question in test_dataset["problem"]
     ]
-    solutions = test_dataset["solution"]
+    solutions = list(test_dataset["solution"])
     full_sequences = [
         doc_to_text.format(problem=question, solution=solution)
         for question, solution in zip(test_dataset["problem"], solutions)
