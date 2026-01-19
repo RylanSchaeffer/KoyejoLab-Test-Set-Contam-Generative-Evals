@@ -2458,7 +2458,7 @@ print("=" * 70)
 #    - R≥1000: Anomalous behavior (saturation)
 #
 # KEY OUTPUT:
-#    y=nll_x=token_index_per_condition_floor_fit.pdf
+#    y=nll_x=token_index_hue=num_replicas_col=model_size_fit.pdf
 #
 # =============================================================================
 
@@ -2538,6 +2538,78 @@ floor_fit_df = pd.DataFrame(floor_fit_results)
 print(f"Successfully fit {len(floor_fit_df)} conditions")
 print(f"Mean R² = {floor_fit_df['R2'].mean():.3f}")
 print(f"R² > 0.8: {(floor_fit_df['R2'] > 0.8).sum()}/{len(floor_fit_df)}")
+
+# %%
+# Visualization: NLL vs Token Index with fitted floor model curves
+# Faceted by model size (columns), colored by num replicas (hue)
+
+fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+axes = axes.flatten()
+
+# Color palette for replicas
+colors_R = sns.color_palette("viridis", len(valid_replicas))
+R_to_color = {r: colors_R[i] for i, r in enumerate(valid_replicas)}
+
+for idx, param in enumerate(unique_params):
+    ax = axes[idx]
+    N_val = param_to_N[param]
+
+    for replica in valid_replicas:
+        # Get data
+        subset = nll_by_token_df[
+            (nll_by_token_df["Parameters"] == param)
+            & (nll_by_token_df["Num. MATH Test Set Replicas"] == replica)
+        ].sort_values("Token Index")
+
+        if len(subset) < 5:
+            continue
+
+        t = subset["Token Index"].values
+        nll = subset["mean_NLL"].values
+
+        # Plot data points
+        ax.scatter(
+            t, nll, s=10, alpha=0.5, color=R_to_color[replica], label=f"{replica}"
+        )
+
+        # Get fitted parameters and plot curve
+        fit_row = floor_fit_df[
+            (floor_fit_df["Parameters"] == param) & (floor_fit_df["R"] == replica)
+        ]
+        if len(fit_row) == 1:
+            NLL_inf = fit_row["NLL_inf"].values[0]
+            A = fit_row["A"].values[0]
+            alpha = fit_row["alpha"].values[0]
+
+            t_smooth = np.linspace(max(1, t.min()), t.max(), 200)
+            nll_fit = floor_model(t_smooth, NLL_inf, A, alpha)
+            ax.plot(t_smooth, nll_fit, "-", color=R_to_color[replica], linewidth=1.5)
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Token Index")
+    ax.set_ylabel("Negative Log Likelihood")
+    ax.set_title(param)
+    ax.grid(True, alpha=0.3)
+
+# Remove unused subplot
+axes[5].axis("off")
+
+# Add legend to last used subplot
+handles = [
+    plt.Line2D([0], [0], color=R_to_color[r], marker="o", linestyle="-", markersize=5)
+    for r in valid_replicas
+]
+axes[4].legend(
+    handles, [str(r) for r in valid_replicas], title="Num. Replicas", loc="lower left"
+)
+
+plt.tight_layout()
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=nll_x=token_index_hue=num_replicas_col=model_size_fit",
+)
+plt.close()
 
 # %%
 # Visualization 1: Parameters vs R (x) with model size (hue)
