@@ -19,7 +19,7 @@ Example:
 
 import os
 from functools import partial
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 import numpy as np
 import torch
@@ -29,6 +29,9 @@ from datasets import (
     load_dataset,
     load_from_disk,
     DatasetDict,
+    Features,
+    Sequence,
+    Value,
 )
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizer
@@ -45,10 +48,43 @@ GSM8K_PLATINUM_DOC_TO_TEXT = """Q: {question}
         A: {answer}"""
 
 
+DEFAULT_COMPRESSION_TYPES = {
+    "input_ids": Sequence(Value("int32")),
+    "attention_mask": Sequence(Value("bool")),
+    "token_length": Value("int32"),
+}
+
+
+class StringHandlingDataCollator:
+    """Wrapper for HF data collators that handles string columns.
+
+    Standard HF collators expect tensors, but some datasets include string
+    columns (e.g., 'id'). This wrapper extracts string columns before
+    collation and adds them back afterward.
+    """
+
+    def __init__(self, hf_collator):
+        self.hf_collator = hf_collator
+
+    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        # 1. Extract the string IDs so the HF collator doesn't see them
+        ids = [feature.pop("id") for feature in features if "id" in feature]
+
+        # 2. Use the standard HF collator for input_ids, attention_mask, etc.
+        # This returns a dictionary of PyTorch tensors
+        batch = self.hf_collator(features)
+
+        # 3. Add the IDs back into the batch as a list of strings
+        if ids:
+            batch["id"] = ids
+        return batch
+
+
 def create_dataset_for_pretraining(
     data_config: Dict[str, Any],
     trainer_config: Dict[str, Any],
     tokenizer: PreTrainedTokenizer,
+    cols_to_keep: Optional[Set[str]] = None,
 ) -> Dict[str, Dataset]:
     """Create a pretraining dataset with controlled test set contamination.
 
@@ -91,6 +127,11 @@ def create_dataset_for_pretraining(
         In distributed training, only rank 0 performs the expensive dataset
         creation; other ranks wait at a barrier then load from disk cache.
     """
+    if cols_to_keep is None:
+        cols_to_keep = {"input_ids", "attention_mask", "token_length"}
+
+    num_proc = min(64, os.cpu_count())
+
     # TODO: Spin this out to a top level function.
     # https://chatgpt.com/share/68f0657f-fab0-800d-8329-a8c8acf18ac8
     def tokenize_truncate_and_count(example):
@@ -129,7 +170,6 @@ def create_dataset_for_pretraining(
     )["eval"]
 
     # Remove unnecessary columns from the benchmark.
-    cols_to_keep = {"input_ids", "attention_mask", "token_length"}
     benchmark_test_split_dataset = benchmark_test_split_dataset.remove_columns(
         [
             col
@@ -203,18 +243,18 @@ def create_dataset_for_pretraining(
                 "HuggingFaceTB/smollm-corpus",
                 "fineweb-edu-dedup",
                 split="train",
-                num_proc=min(16, os.cpu_count()),
+                num_proc=num_proc,
             )
-            # The full dataset is 220B tokens in 190168005 rows.
+            # The full dataset is 220B tokens in 190,168,005 rows.
             # We want 150M tokens for test.
             corpus_split_dataset = corpus_full_dataset.train_test_split(
                 test_size=150e6 / 220e9,
-                seed=0,
+                seed=data_config["train_test_split_seed"],
             )
             print("Split corpus into train and test")
             corpus_train_dataset = corpus_split_dataset["train"]
             corpus_eval_dataset = corpus_split_dataset["test"]
-            avg_tokens_per_doc = 220e9 / 190168005
+            avg_tokens_per_doc = 220e9 / 190168005  # ~1157 tokens per doc
         else:
             raise ValueError
 
@@ -225,9 +265,7 @@ def create_dataset_for_pretraining(
 
         # Subsample the appropriate number of documents and tokenize.
         print("Shuffling, selecting and tokenizing the pretraining corpus.")
-        # With this (sample indices directly, then optionally shuffle only the subset):
         rng = np.random.default_rng(data_config["shuffle_seed"])
-        # sample without replacement from the 190M rows
         sample_indices = rng.choice(
             len(corpus_train_dataset),
             size=estimated_docs_needed,
@@ -236,22 +274,18 @@ def create_dataset_for_pretraining(
         corpus_train_dataset_subset = (
             corpus_train_dataset.select(sample_indices)
             .shuffle(seed=data_config["shuffle_seed"])
-            .map(tokenize_truncate_and_count, num_proc=min(16, os.cpu_count()))
+            .map(tokenize_truncate_and_count, num_proc=num_proc)
         )
 
-        # Figure out how many documents to drop to meet our target number of tokens.
-        num_tokens_in_corpus_dataset_subset = np.sum(
-            corpus_train_dataset_subset["token_length"]
-        )
-        num_documents_to_drop = 0
-        for num_tokens_in_document in corpus_train_dataset_subset["token_length"][::-1]:
-            num_tokens_in_corpus_dataset_subset -= num_tokens_in_document
-            num_documents_to_drop += 1
-            if num_tokens_in_corpus_dataset_subset < corpus_tokens_needed_per_epoch:
-                break
-
+        # Figure out how many documents to keep to meet our target number of tokens.
+        # Use searchsorted for O(log n) instead of iterative O(n) loop.
+        # Original code dropped documents from the end until total < target,
+        # so we keep documents where cumsum < target (i.e., up to but not including
+        # the first index where cumsum >= target).
+        cumulative_lengths = np.cumsum(corpus_train_dataset_subset["token_length"])
+        idx_to_keep = np.searchsorted(cumulative_lengths, corpus_tokens_needed_per_epoch)
         corpus_train_dataset_subset = corpus_train_dataset_subset.select(
-            range(len(corpus_train_dataset_subset) - num_documents_to_drop)
+            range(idx_to_keep)
         )
 
         # Create the dataset we will train on.
@@ -269,35 +303,37 @@ def create_dataset_for_pretraining(
         ]
         final_train_dataset = final_train_dataset.remove_columns(cols_to_drop)
 
-        # # Cut the Arrow buffers in half by casting dtypes before saving (no semantic change).
-        # COMPACT = Features(
-        #     {
-        #         "input_ids": Sequence(Value("int32")),
-        #         "attention_mask": Sequence(Value("bool")),
-        #         "token_length": Value("int32"),
-        #     }
-        # )
-        # final_train_dataset = final_train_dataset.cast(COMPACT)
-
-        final_train_dataset.save_to_disk(
-            final_train_dataset_cache_dir,
-            # num_proc=min(4, os.cpu_count()),
-            # max_shard_size="100MB",
+        # Cut the Arrow buffers in half by casting dtypes before saving (no semantic change).
+        final_train_dataset = final_train_dataset.cast(
+            Features(
+                {
+                    k: v
+                    for k, v in DEFAULT_COMPRESSION_TYPES.items()
+                    if k in cols_to_keep
+                }
+            ),
+            num_proc=num_proc,
         )
+        final_train_dataset.save_to_disk(final_train_dataset_cache_dir)
+
         corpus_eval_dataset = corpus_eval_dataset.map(
-            tokenize_truncate_and_count, num_proc=min(4, os.cpu_count())
+            tokenize_truncate_and_count, num_proc=num_proc
         )
         cols_to_drop_eval = [
             c for c in corpus_eval_dataset.column_names if c not in cols_to_keep
         ]
         corpus_eval_dataset = corpus_eval_dataset.remove_columns(cols_to_drop_eval)
-
-        # corpus_eval_dataset = corpus_eval_dataset.cast(COMPACT)
-        corpus_eval_dataset.save_to_disk(
-            corpus_eval_dataset_cache_dir,
-            # num_proc=min(2, os.cpu_count()),
-            # max_shard_size="100MB",
+        corpus_eval_dataset = corpus_eval_dataset.cast(
+            Features(
+                {
+                    k: v
+                    for k, v in DEFAULT_COMPRESSION_TYPES.items()
+                    if k in cols_to_keep
+                }
+            ),
+            num_proc=num_proc,
         )
+        corpus_eval_dataset.save_to_disk(corpus_eval_dataset_cache_dir)
 
         total_tokens_per_epoch = np.sum(final_train_dataset["token_length"])
         print(

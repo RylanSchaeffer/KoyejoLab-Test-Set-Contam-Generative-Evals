@@ -65,6 +65,7 @@ torch.compiler.disable()
 import torch.distributed
 import torch.nn
 from torch.utils.data import Dataset
+from huggingface_hub import HfApi
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -103,13 +104,10 @@ def pretrain():
         f"CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES','')}"
     )
 
-    run, run_id, wandb_config = initialize_wandb()
+    run, run_id, wandb_config, pted_model_hf_name = initialize_wandb()
     pprint.pprint(wandb_config)
 
     # Create output directory.
-    pted_model_hf_name = create_pretrained_model_huggingface_name(
-        wandb_config=wandb_config,
-    )
     output_dir = os.path.join("models", "pt_language_model", pted_model_hf_name)
     if _is_main():
         wandb.config.update({"output_dir": output_dir}, allow_val_change=True)
@@ -321,7 +319,7 @@ def compute_derived_hyperparameters(
     )
 
     # 3. Compute a reasonable batch size, according to https://arxiv.org/abs/2412.01505.
-    num_tokens_per_optimizer_step = int(
+    num_tokens_per_optimizer_step = round(
         3.24 * np.power(10, 3) * np.power(target_num_training_tokens_total, 0.264)
     )
 
@@ -332,7 +330,7 @@ def compute_derived_hyperparameters(
         * wandb_config["trainer_config"]["per_device_train_batch_size"]
         * wandb_config["trainer_config"]["max_length"]
     )
-    gradient_accumulation_steps = math.ceil(
+    gradient_accumulation_steps = round(
         num_tokens_per_optimizer_step / num_tokens_per_forward_pass
     )
 
@@ -348,6 +346,8 @@ def compute_derived_hyperparameters(
     )
 
     additional_trainer_config_data = {
+        "gradient_accumulation_steps_unrounded": num_tokens_per_optimizer_step
+        / num_tokens_per_forward_pass,
         "gradient_accumulation_steps": gradient_accumulation_steps,
         "learning_rate": learning_rate,
         "num_visible_devices": torch.cuda.device_count(),  # local (per process)
@@ -370,40 +370,6 @@ def compute_derived_hyperparameters(
     wandb_config["trainer_config"].update(additional_trainer_config_data)
 
     return wandb_config
-
-
-def compute_token_accuracy(eval_pred):
-    """
-    Computes token-level accuracy for a language model.
-    """
-    # Unpack the outputs from the EvalPrediction object
-    logits, labels = eval_pred.predictions, eval_pred.label_ids
-
-    # The SFTTrainer shifts logits and labels internally.
-    # We need to do the same here to align predictions with labels.
-    # Logits are for predicting the *next* token.
-    # -> Logits at position i predict token at position i+1
-    # -> We compare logits[..., :-1, :] with labels[..., 1:]
-    shift_logits = logits[..., :-1, :]
-    shift_labels = labels[..., 1:]
-
-    # Get the predicted token IDs by taking the argmax of the logits
-    predictions = np.argmax(shift_logits, axis=-1)
-
-    # Create a mask to ignore padding tokens (where label is -100)
-    mask = shift_labels != -100
-
-    # Calculate the number of correct predictions
-    correct_tokens = np.sum((predictions == shift_labels) & mask).astype(float)
-
-    # Calculate the total number of non-padded tokens
-    total_tokens = np.sum(mask).astype(float)
-
-    # Compute the accuracy
-    accuracy = correct_tokens / total_tokens if total_tokens > 0 else np.nan
-
-    # Return the metric in a dictionary
-    return {"mean_token_accuracy": accuracy}
 
 
 def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> str:
@@ -496,12 +462,16 @@ def initialize_wandb():
         torch.distributed.broadcast_object_list(obj_list, src=0)
         run_id, cfg_dict = obj_list
 
+    pted_model_hf_name = create_pretrained_model_huggingface_name(
+        wandb_config=cfg_dict,
+    )
+
     # Use a consistent per-run HF datasets cache across all ranks
     os.environ[
         "HF_DATASETS_CACHE"
-    ] = f"{os.getenv('LFS_HOME')}/KoyejoLab-Scoring-vs-Sampling-Memorization/cached_datasets/{run_id}"
+    ] = f"{os.getenv('LFS_HOME')}/KoyejoLab-Scoring-vs-Sampling-Memorization/cached_datasets/{pted_model_hf_name}"
 
-    return run, run_id, cfg_dict
+    return run, run_id, cfg_dict, pted_model_hf_name
 
 
 if __name__ == "__main__":

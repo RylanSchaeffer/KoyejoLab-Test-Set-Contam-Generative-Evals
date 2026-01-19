@@ -61,6 +61,7 @@ DEFAULT_PRETRAINING_CONFIG = {
         "benchmark_subset_fraction": 0.5,
         "num_benchmark_replicas_per_epoch": 1,
         "shuffle_seed": 0,
+        "train_test_split_seed": 0,
     },
     "model_config": {
         "attn_implementation": "flash_attention_2",
