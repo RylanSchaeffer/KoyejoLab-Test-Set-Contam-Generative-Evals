@@ -157,6 +157,30 @@ src.plot.save_plot_with_multiple_extensions(plot_dir=results_dir, plot_filename=
 - **Temperature**: Use `palette="YlOrBr_r"`
 - **Before creating any new color palette**, check existing notebooks (especially `notebooks/11_*`) to ensure colors match. Cross-notebook color consistency is essential for publication.
 
+**IMPORTANT: Use SymLogNorm for replica colors, not discrete indexing**:
+- Notebooks 10/11 use `SymLogNorm(linthresh=1.0)` with `palette="viridis"` to map replica values to colors continuously.
+- For manual plotting (not seaborn), replicate this by sampling the colormap at SymLogNorm positions:
+  ```python
+  from matplotlib.colors import SymLogNorm
+  import matplotlib
+
+  all_replicas = [0, 1, 3, 10, 32, 100, 316, 1000, 3162]
+  replica_sym_norm = SymLogNorm(linthresh=1.0, vmin=0, vmax=max(all_replicas))
+  viridis_cmap = matplotlib.colormaps["viridis"]
+  R_to_color = {r: viridis_cmap(replica_sym_norm(r)) for r in all_replicas}
+  ```
+- **WRONG** (discrete indexing gives different colors):
+  ```python
+  colors = sns.color_palette("viridis", len(all_replicas))
+  palette = {r: colors[i] for i, r in enumerate(all_replicas)}
+  ```
+- **CORRECT** (SymLogNorm gives consistent colors):
+  ```python
+  replica_sym_norm = SymLogNorm(linthresh=1.0, vmin=0, vmax=3162)
+  viridis_cmap = matplotlib.colormaps["viridis"]
+  palette = {r: viridis_cmap(replica_sym_norm(r)) for r in all_replicas}
+  ```
+
 **Legend placement**:
 - Use ONE legend per figure, not redundant legends on each subplot
 - Place legends where they don't obscure data (often lower-left or outside the plot area)

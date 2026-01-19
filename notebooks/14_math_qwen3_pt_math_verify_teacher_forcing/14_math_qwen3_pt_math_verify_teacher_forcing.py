@@ -10,6 +10,7 @@ import hashlib
 import os
 import re
 
+import matplotlib
 from matplotlib.colors import LogNorm, SymLogNorm
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LogLocator
@@ -382,10 +383,14 @@ print(f"Unique parameter values: {unique_params}")
 # Convert replicas to string for categorical hue (ensures legend shows actual values)
 nll_by_token_df["Replicas"] = nll_by_token_df["Num. MATH Test Set Replicas"].astype(str)
 
-# Create color palette mapping for the replica values (viridis for replicas)
-n_replicas = len(unique_replicas)
-viridis_colors = sns.color_palette("viridis", n_replicas)
-replica_palette = {str(r): viridis_colors[i] for i, r in enumerate(unique_replicas)}
+# Create color palette mapping for replica values (viridis for replicas)
+# Use SymLogNorm for consistent colors with notebooks 10/11 (continuous mapping, not discrete)
+from matplotlib.colors import SymLogNorm
+
+all_replicas = [0, 1, 3, 10, 32, 100, 316, 1000, 3162]
+replica_sym_norm = SymLogNorm(linthresh=1.0, vmin=0, vmax=max(all_replicas))
+viridis_cmap = matplotlib.colormaps["viridis"]
+replica_palette = {str(r): viridis_cmap(replica_sym_norm(r)) for r in all_replicas}
 
 # Filter to Token Index <= 800 to avoid noisy tail (but keep ALL replicas)
 plot1_df = nll_by_token_df[nll_by_token_df["Token Index + 1"] <= 800].copy()
@@ -477,7 +482,7 @@ src.plot.save_plot_with_multiple_extensions(
 # Use LogNorm to sample colors at the same positions as notebook 11
 param_values = [src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p] for p in unique_params]
 num_parameters_log_norm = LogNorm(vmin=min(param_values), vmax=max(param_values))
-flare_cmap = plt.cm.get_cmap("flare")
+flare_cmap = matplotlib.colormaps["flare"]
 params_palette = {
     p: flare_cmap(num_parameters_log_norm(src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p]))
     for p in unique_params
@@ -766,11 +771,11 @@ for ax, param in zip(g.axes.flat, unique_params):
 
 g.set(
     xlabel=r"Token Index",
-    ylabel=r"Cumulative Sequence Probability",
+    ylabel=r"Cumulative Probability",
     xscale="log",
     yscale="log",
     xlim=(1, 800),
-    ylim=(1e-30, 1),  # Truncate y-axis to avoid very small probabilities
+    ylim=(1e-6, 1),  # Truncate y-axis to avoid very small probabilities
 )
 g.set_titles(r"{col_name}")
 
@@ -2546,9 +2551,11 @@ print(f"R² > 0.8: {(floor_fit_df['R2'] > 0.8).sum()}/{len(floor_fit_df)}")
 fig, axes = plt.subplots(2, 3, figsize=(15, 10))
 axes = axes.flatten()
 
-# Color palette for replicas
-colors_R = sns.color_palette("viridis", len(valid_replicas))
-R_to_color = {r: colors_R[i] for i, r in enumerate(valid_replicas)}
+# Color palette for replicas - use SymLogNorm for consistent colors with notebooks 10/11
+all_replicas = [0, 1, 3, 10, 32, 100, 316, 1000, 3162]
+replica_sym_norm = SymLogNorm(linthresh=1.0, vmin=0, vmax=max(all_replicas))
+viridis_cmap = matplotlib.colormaps["viridis"]
+R_to_color = {r: viridis_cmap(replica_sym_norm(r)) for r in all_replicas}
 
 for idx, param in enumerate(unique_params):
     ax = axes[idx]
@@ -2592,16 +2599,19 @@ for idx, param in enumerate(unique_params):
     ax.set_title(param)
     ax.grid(True, alpha=0.3)
 
-# Remove unused subplot
+# Use empty subplot for legend
 axes[5].axis("off")
-
-# Add legend to last used subplot
 handles = [
     plt.Line2D([0], [0], color=R_to_color[r], marker="o", linestyle="-", markersize=5)
     for r in valid_replicas
 ]
-axes[4].legend(
-    handles, [str(r) for r in valid_replicas], title="Num. Replicas", loc="lower left"
+axes[5].legend(
+    handles,
+    [str(r) for r in valid_replicas],
+    title="Num. Replicas",
+    loc="center",
+    fontsize=12,
+    title_fontsize=14,
 )
 
 plt.tight_layout()
@@ -2666,11 +2676,11 @@ src.plot.save_plot_with_multiple_extensions(
 
 fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
-# Color palette for replicas (symlog scale matching other plots) - use "viridis" for replicas
-# Use all replicas for consistent colors
+# Color palette for replicas - use SymLogNorm for consistent colors with notebooks 10/11
 all_replicas = [0, 1, 3, 10, 32, 100, 316, 1000, 3162]
-colors_R = sns.color_palette("viridis", len(all_replicas))
-R_to_color = {r: colors_R[i] for i, r in enumerate(all_replicas)}
+replica_sym_norm = SymLogNorm(linthresh=1.0, vmin=0, vmax=max(all_replicas))
+viridis_cmap = matplotlib.colormaps["viridis"]
+R_to_color = {r: viridis_cmap(replica_sym_norm(r)) for r in all_replicas}
 
 # Only plot the valid replicas that we actually fit
 R_values = sorted(floor_fit_df["R"].unique())
