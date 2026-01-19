@@ -365,38 +365,6 @@ def compute_early_late_comparison(nll_df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(results)
 
 
-def plot_nll_vs_count_change(comparison_df: pd.DataFrame, results_dir: str) -> None:
-    """Plot NLL change vs count drop for all conditions."""
-    plt.close()
-    fig, ax = plt.subplots(figsize=(10, 8))
-
-    unique_replicas = sorted(comparison_df["Num. Replicas"].unique())
-    for replica in unique_replicas:
-        sub = comparison_df[comparison_df["Num. Replicas"] == replica]
-        ax.scatter(
-            sub["Count Drop %"], sub["NLL Change %"],
-            label=f"R={replica}", s=100, alpha=0.7
-        )
-        for _, row in sub.iterrows():
-            ax.annotate(
-                row["Parameters"],
-                (row["Count Drop %"], row["NLL Change %"]),
-                fontsize=8, alpha=0.7
-            )
-
-    ax.axhline(0, color='black', linestyle='--', alpha=0.5)
-    ax.set_xlabel("Count Drop % (early to late)")
-    ax.set_ylabel("NLL Change % (early to late)")
-    ax.legend(title="Replicas")
-    ax.grid(True, alpha=0.3)
-
-    src.plot.save_plot_with_multiple_extensions(
-        plot_dir=results_dir,
-        plot_filename="y=nll_change_pct_x=count_drop_pct",
-    )
-    plt.close()
-
-
 def main():
     """Run the NLL uptick analysis."""
     # Setup directories
@@ -517,9 +485,6 @@ If count drops and NLL rises, selection bias is likely the explanation.
             print("\n*** CONFIRMED: Count drop is correlated with NLL increase ***")
         else:
             print("\nNo strong correlation found - other factors may be at play")
-
-    # Generate comparison plot
-    plot_nll_vs_count_change(comparison_df, results_dir)
 
     print("\nPlots saved to results directory.")
     print("=" * 70)

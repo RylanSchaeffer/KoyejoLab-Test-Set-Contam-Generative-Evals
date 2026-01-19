@@ -103,9 +103,7 @@ This finding suggests that **sequence length is a confounding factor** in measur
 
 ## Generated Figures
 
-1. **`y=nll_and_count_x=token_index_problematic_conditions.pdf`**: Diagnostic plots showing NLL and sample count vs token index for each problematic condition.
-
-2. **`y=nll_change_pct_x=count_drop_pct.pdf`**: Scatter plot of NLL change % vs count drop % for all conditions, colored by replica level.
+**`y=nll_and_count_x=token_index_problematic_conditions.pdf`**: Diagnostic plots showing NLL and sample count vs token index for each problematic condition.
 
 ## Scripts
 
