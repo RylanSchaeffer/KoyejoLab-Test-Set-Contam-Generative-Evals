@@ -132,6 +132,7 @@ src.plot.save_plot_with_multiple_extensions(plot_dir=results_dir, plot_filename=
 
 **Guidelines**:
 - **NEVER call `plt.show()`** - it blocks script execution and opens interactive windows. Always comment it out or omit it entirely. Plots are saved to files via `save_plot_with_multiple_extensions()`.
+- **ALWAYS visually inspect generated plots** - After generating any plot, use the Read tool to view the PNG file and scrutinize it closely. Check for: legends obscuring data or titles, axis labels being cut off, overlapping text, incorrect scales, missing data, or any other visual issues. Fix any problems before considering the task complete.
 - No figure titles or axes titles (column/row titles in faceted plots are acceptable)
 - Choose axis scales thoughtfully: use log/symlog when data spans orders of magnitude, linear otherwise
 - Axis labels should use LaTeX math mode where appropriate

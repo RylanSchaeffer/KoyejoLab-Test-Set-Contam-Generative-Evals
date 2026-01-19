@@ -18,9 +18,13 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
 stella_df = pd.read_csv(os.path.join(data_dir, "stella_data.csv"), index_col=0)
 
 # Map model names to parameter counts
-stella_df["Num. Parameters"] = stella_df["Model"].map(
-    src.globals.MODEL_NAMES_TO_PARAMETERS_DICT
-)
+# Extend the global mapping with model names specific to Stella's data
+model_name_to_params = {
+    **src.globals.MODEL_NAMES_TO_PARAMETERS_DICT,
+    "153M": 153_000_000,
+    "62M": 62_000_000,
+}
+stella_df["Num. Parameters"] = stella_df["Model"].map(model_name_to_params)
 
 # Rename Replicas column for consistency
 stella_df.rename(columns={"Replicas": "Num. MATH Test Set Replicas"}, inplace=True)
@@ -52,6 +56,7 @@ g = sns.relplot(
     col="Condition",
     col_order=["Original", "Rephrased", "Perturbed"],
     marker="o",
+    legend="full",
     facet_kws={"sharey": True},
 )
 g.set(
@@ -93,6 +98,7 @@ g = sns.relplot(
     col="Condition",
     col_order=["Rephrased", "Perturbed"],
     marker="o",
+    legend="full",
     facet_kws={"sharey": True},
 )
 g.set(
@@ -114,6 +120,46 @@ sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed",
+)
+# plt.show()
+
+# Plot 3: Same as Plot 2 but with col_wrap=1 for single-column layout
+plt.close()
+g = sns.relplot(
+    data=stella_rephrase_perturbed_df,
+    kind="line",
+    x="Num. MATH Test Set Replicas",
+    y="Math Verify Score",
+    hue="Num. Parameters",
+    hue_norm=num_parameters_log_norm,
+    palette="flare",
+    col="Condition",
+    col_order=["Rephrased", "Perturbed"],
+    col_wrap=1,
+    marker="o",
+    legend="full",
+    facet_kws={"sharey": True},
+)
+g.set(
+    xscale="symlog",
+    xlim=(-0.1, 3500),
+    ylim=(-0.05, 1.05),
+)
+# Format legend labels to show M/B suffix
+for txt in g._legend.texts:
+    try:
+        num = float(txt.get_text())
+        if 1e6 <= num < 1e9:
+            txt.set_text(f"{int(num / 1e6)}M")
+        elif num >= 1e9:
+            txt.set_text(f"{int(num / 1e9)}B")
+    except ValueError:
+        pass
+# Move legend to the second (Perturbed) axes to avoid obscuring the first panel's title
+sns.move_legend(g, loc="upper right", bbox_to_anchor=(0.95, 0.45), frameon=True)
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed_col_wrap=1",
 )
 # plt.show()
 
