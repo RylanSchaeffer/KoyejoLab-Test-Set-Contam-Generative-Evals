@@ -116,7 +116,8 @@ for txt in g._legend.texts:
             txt.set_text(f"{int(num / 1e9)}B")
     except ValueError:
         pass
-sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+# Move legend inside the Perturbed panel (upper right)
+sns.move_legend(g, loc="upper right", bbox_to_anchor=(0.98, 0.88), frameon=True)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed",
