@@ -12,6 +12,7 @@ import re
 
 from matplotlib.colors import SymLogNorm
 import matplotlib.pyplot as plt
+from matplotlib.ticker import LogLocator
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
@@ -20,6 +21,16 @@ import seaborn as sns
 import src.analyze
 import src.globals
 import src.plot
+
+
+def enable_minor_gridlines(g):
+    """Enable minor gridlines on all axes of a FacetGrid."""
+    for ax in g.axes.flat:
+        ax.grid(which="minor", alpha=0.3, linewidth=0.5)
+        ax.grid(which="major", alpha=0.5, linewidth=0.8)
+        # Ensure minor ticks are shown on log scales
+        ax.xaxis.set_minor_locator(LogLocator(subs="all", numticks=100))
+        ax.yaxis.set_minor_locator(LogLocator(subs="all", numticks=100))
 
 # %%
 # Setup
@@ -225,11 +236,17 @@ n_replicas = len(unique_replicas)
 viridis_colors = sns.color_palette("viridis", n_replicas)
 replica_palette = {str(r): viridis_colors[i] for i, r in enumerate(unique_replicas)}
 
-# For cleaner legend, show only subset of replica values
-replicas_to_show = [0, 1, 10, 100, 1000]
-plot1_df = nll_by_token_df[
-    nll_by_token_df["Num. MATH Test Set Replicas"].isin(replicas_to_show)
-]
+# Filter to Token Index <= 1000 so ylim is set correctly (but keep ALL replicas)
+plot1_df = nll_by_token_df[nll_by_token_df["Token Index + 1"] <= 1000].copy()
+
+# Compute CI bounds (mean ± 1.96 * SEM for 95% CI)
+plot1_df["ci_lower"] = plot1_df["mean_NLL"] - 1.96 * plot1_df["sem_NLL"]
+plot1_df["ci_upper"] = plot1_df["mean_NLL"] + 1.96 * plot1_df["sem_NLL"]
+# Clip lower bound to small positive value for log scale
+plot1_df["ci_lower"] = plot1_df["ci_lower"].clip(lower=1e-6)
+
+# For cleaner legend, only show subset of replica values
+replicas_for_legend = [0, 1, 10, 100, 1000]
 
 plt.close()
 g = sns.relplot(
@@ -237,32 +254,66 @@ g = sns.relplot(
     x="Token Index + 1",
     y="mean_NLL",
     hue="Replicas",
-    hue_order=[str(r) for r in replicas_to_show],
+    hue_order=[str(r) for r in unique_replicas],  # Plot ALL replicas
     palette=replica_palette,
     col="Parameters",
     col_order=unique_params,
     col_wrap=3,
     kind="line",
-    facet_kws={"sharey": False, "sharex": True},
+    facet_kws={"sharey": True, "sharex": True},
     height=4,
     aspect=1.2,
 )
+
+# Add uncertainty bands for ALL replicas
+for ax, param in zip(g.axes.flat, unique_params):
+    for replica in unique_replicas:
+        subset = plot1_df[
+            (plot1_df["Parameters"] == param)
+            & (plot1_df["Num. MATH Test Set Replicas"] == replica)
+        ].sort_values("Token Index + 1")
+        if len(subset) == 0:
+            continue
+        color = replica_palette[str(replica)]
+        ax.fill_between(
+            subset["Token Index + 1"],
+            subset["ci_lower"],
+            subset["ci_upper"],
+            alpha=0.2,
+            color=color,
+            linewidth=0,
+        )
+
 g.set(
     xlabel=r"Token Index",
     ylabel=r"Negative Log Likelihood",
     xscale="log",
     yscale="log",
     xlim=(1, 1e3),
+    ylim=(1e-3, 1e1),
 )
 g.set_titles(r"{col_name}")
-# Move legend into the empty 6th subplot position (bottom right)
-sns.move_legend(
-    g,
+
+# Filter legend to show only subset of replicas
+handles, labels = g.axes.flat[0].get_legend_handles_labels()
+filtered_handles = []
+filtered_labels = []
+for h, l in zip(handles, labels):
+    if l in [str(r) for r in replicas_for_legend]:
+        filtered_handles.append(h)
+        filtered_labels.append(l)
+
+# Remove old legend and add filtered one
+g._legend.remove()
+g.fig.legend(
+    filtered_handles,
+    filtered_labels,
     loc="center",
     bbox_to_anchor=(0.85, 0.25),
     title=r"Num. Replicas",
     frameon=True,
 )
+enable_minor_gridlines(g)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=nll_x=token_index_hue=num_replicas_col=model_size",
@@ -277,12 +328,18 @@ n_params = len(unique_params)
 flare_colors = sns.color_palette("flare", n_params)
 params_palette = {p: flare_colors[i] for i, p in enumerate(unique_params)}
 
+# Filter to Token Index <= 1000 so ylim is set correctly, then compute CI bounds
+plot2_df = nll_by_token_df[nll_by_token_df["Token Index + 1"] <= 1000].copy()
+plot2_df["ci_lower"] = plot2_df["mean_NLL"] - 1.96 * plot2_df["sem_NLL"]
+plot2_df["ci_upper"] = plot2_df["mean_NLL"] + 1.96 * plot2_df["sem_NLL"]
+plot2_df["ci_lower"] = plot2_df["ci_lower"].clip(lower=1e-6)
+
 # Convert replicas to sorted order for columns
 replica_col_order = [str(r) for r in unique_replicas]
 
 plt.close()
 g = sns.relplot(
-    data=nll_by_token_df,
+    data=plot2_df,
     x="Token Index + 1",
     y="mean_NLL",
     hue="Parameters",
@@ -296,6 +353,27 @@ g = sns.relplot(
     height=4,
     aspect=1.2,
 )
+
+# Add uncertainty bands
+for ax, replica_str in zip(g.axes.flat, replica_col_order):
+    replica = int(replica_str)
+    for param in unique_params:
+        subset = plot2_df[
+            (plot2_df["Parameters"] == param)
+            & (plot2_df["Num. MATH Test Set Replicas"] == replica)
+        ].sort_values("Token Index + 1")
+        if len(subset) == 0:
+            continue
+        color = params_palette[param]
+        ax.fill_between(
+            subset["Token Index + 1"],
+            subset["ci_lower"],
+            subset["ci_upper"],
+            alpha=0.2,
+            color=color,
+            linewidth=0,
+        )
+
 g.set(
     xlabel=r"Token Index",
     ylabel=r"Negative Log Likelihood",
@@ -305,8 +383,153 @@ g.set(
 )
 g.set_titles(r"Replicas: {col_name}")
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1), title=r"Model Size")
+enable_minor_gridlines(g)
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir,
     plot_filename="y=nll_x=token_index_hue=model_size_col=num_replicas",
+)
+# plt.show()
+
+# %%
+# Plot 3: Probability vs Token Index (hue=num_replicas, col=model_size)
+# prob = exp(-NLL)
+
+# Compute probability and CI bounds
+# Note: CI bounds swap because exp(-x) is decreasing
+plot3_df = plot1_df.copy()
+plot3_df["mean_prob"] = np.exp(-plot3_df["mean_NLL"])
+plot3_df["ci_lower_prob"] = np.exp(-plot3_df["ci_upper"])  # swap!
+plot3_df["ci_upper_prob"] = np.exp(-plot3_df["ci_lower"])  # swap!
+
+plt.close()
+g = sns.relplot(
+    data=plot3_df,
+    x="Token Index + 1",
+    y="mean_prob",
+    hue="Replicas",
+    hue_order=[str(r) for r in unique_replicas],  # Plot ALL replicas
+    palette=replica_palette,
+    col="Parameters",
+    col_order=unique_params,
+    col_wrap=3,
+    kind="line",
+    facet_kws={"sharey": False, "sharex": True},
+    height=4,
+    aspect=1.2,
+)
+
+# Add uncertainty bands for ALL replicas
+for ax, param in zip(g.axes.flat, unique_params):
+    for replica in unique_replicas:
+        subset = plot3_df[
+            (plot3_df["Parameters"] == param)
+            & (plot3_df["Num. MATH Test Set Replicas"] == replica)
+        ].sort_values("Token Index + 1")
+        if len(subset) == 0:
+            continue
+        color = replica_palette[str(replica)]
+        ax.fill_between(
+            subset["Token Index + 1"],
+            subset["ci_lower_prob"],
+            subset["ci_upper_prob"],
+            alpha=0.2,
+            color=color,
+            linewidth=0,
+        )
+
+g.set(
+    xlabel=r"Token Index",
+    ylabel=r"Per-Token Probability",
+    xscale="log",
+    yscale="log",
+    xlim=(1, 1e3),
+)
+g.set_titles(r"{col_name}")
+
+# Filter legend to show only subset of replicas
+handles, labels = g.axes.flat[0].get_legend_handles_labels()
+filtered_handles = []
+filtered_labels = []
+for h, l in zip(handles, labels):
+    if l in [str(r) for r in replicas_for_legend]:
+        filtered_handles.append(h)
+        filtered_labels.append(l)
+
+# Remove old legend and add filtered one
+g._legend.remove()
+g.fig.legend(
+    filtered_handles,
+    filtered_labels,
+    loc="center",
+    bbox_to_anchor=(0.85, 0.25),
+    title=r"Num. Replicas",
+    frameon=True,
+)
+enable_minor_gridlines(g)
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=prob_x=token_index_hue=num_replicas_col=model_size",
+)
+# plt.show()
+
+# %%
+# Plot 4: Probability vs Token Index (hue=model_size, col=num_replicas) - TRANSPOSED
+
+# Compute probability and CI bounds
+plot4_df = plot2_df.copy()
+plot4_df["mean_prob"] = np.exp(-plot4_df["mean_NLL"])
+plot4_df["ci_lower_prob"] = np.exp(-plot4_df["ci_upper"])  # swap!
+plot4_df["ci_upper_prob"] = np.exp(-plot4_df["ci_lower"])  # swap!
+
+plt.close()
+g = sns.relplot(
+    data=plot4_df,
+    x="Token Index + 1",
+    y="mean_prob",
+    hue="Parameters",
+    hue_order=unique_params,
+    palette=params_palette,
+    col="Replicas",
+    col_order=replica_col_order,
+    col_wrap=3,
+    kind="line",
+    facet_kws={"sharey": False, "sharex": True},
+    height=4,
+    aspect=1.2,
+)
+
+# Add uncertainty bands
+for ax, replica_str in zip(g.axes.flat, replica_col_order):
+    replica = int(replica_str)
+    for param in unique_params:
+        subset = plot4_df[
+            (plot4_df["Parameters"] == param)
+            & (plot4_df["Num. MATH Test Set Replicas"] == replica)
+        ].sort_values("Token Index + 1")
+        if len(subset) == 0:
+            continue
+        color = params_palette[param]
+        ax.fill_between(
+            subset["Token Index + 1"],
+            subset["ci_lower_prob"],
+            subset["ci_upper_prob"],
+            alpha=0.2,
+            color=color,
+            linewidth=0,
+        )
+
+g.set(
+    xlabel=r"Token Index",
+    ylabel=r"Per-Token Probability",
+    xscale="log",
+    yscale="log",
+    xlim=(1, 1e3),
+)
+g.set_titles(r"Replicas: {col_name}")
+sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1), title=r"Model Size")
+enable_minor_gridlines(g)
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir,
+    plot_filename="y=prob_x=token_index_hue=model_size_col=num_replicas",
 )
 # plt.show()
