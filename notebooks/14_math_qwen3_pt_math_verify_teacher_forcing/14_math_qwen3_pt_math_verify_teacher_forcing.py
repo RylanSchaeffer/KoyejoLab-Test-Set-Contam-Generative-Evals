@@ -1556,8 +1556,8 @@ for idx, param in enumerate(selected_params_combined):
     ax.set_ylim(cumprob_ylim_min, 1)
     ax.grid(True, alpha=0.3, which="both")
 
-# Create legend handles for ALL replicas (complete legend from 0 to 1000)
-legend_replicas = [r for r in unique_replicas if r <= 1000]
+# Create legend handles for ALL replicas that appear in the plot
+legend_replicas = unique_replicas  # Include all replicas (0 to 3162)
 handles = [
     plt.Line2D([0], [0], color=replica_palette[str(r)], marker="o", linestyle="-", markersize=5)
     for r in legend_replicas
