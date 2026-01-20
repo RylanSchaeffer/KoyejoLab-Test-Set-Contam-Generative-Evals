@@ -5,9 +5,7 @@
 After pretraining, models typically undergo additional training.
 We now examine how two common additional training interventions---overtraining on fresh data and supervised finetuning---interact with pretraining contamination.
 
-\paragraph{Finding \#3: Overtraining with Fresh Data Mitigates Contamination}
-
-
+\paragraph{Finding \#4: Overtraining with Fresh Data Mitigates Contamination}
 \citet{bordt2025howmuch} recently reported that for discriminative evaluations, the effect of contamination diminishes when models are trained beyond the ``compute optimal'' ratio of 20 tokens-per-parameter \citep{hoffman2022chinchilla} on fresh data. We tested whether this so-called \emph{overtraining} \citep{touvron2023llama2openfoundation,sardana2024beyond,gadre2024languagemodelsscalereliably,schaeffer2025pretrainingscalinglawsgenerative} has similar effects for generative benchmarks.
 We extended our Sec.~\ref{sec:methods} pretraining sweep into the overtrained regime, pretraining on 
 %
@@ -25,7 +23,7 @@ The cross-over point between test set replicas and overtraining multiplier shift
 Thus, as models become larger, the performance boost from contamination diminishes when overtraining with fresh data.
 Our interpretation is that while more fresh data is generally useful for improving model performance generally, it dilutes the ``dose'' of the contaminated data, weakening how the model ``responds'' (as measured by task performance) \citep{schaeffer2025doseresponse}.
 
-\paragraph{Finding \#4: Supervised Fine-Tuning on Training Set Has Opposing Effects, Depending on Pretraining Contamination}
+\paragraph{Finding \#5: Supervised Fine-Tuning on Training Set Has Opposing Effects, Depending on Pretraining Contamination}
 
 After pretraining, the first post-training step is oftentimes supervised finetuning (SFT) \citep{wei2022finetunedlanguagemodelszeroshot, ouyang2022training}. We turned to assessing what effect, if any, SFT has on contaminated pretrained models. \citet{kocyigit2025the} recently studied this question and found that SFT on the \emph{train} set improves performance on the \emph{test} set. However, as a key methodological difference, \citet{kocyigit2025the} induced test set contamination via continued pretraining \citep{jin2022lifelong,jang2022continualknowledgelearninglanguage,ibrahim2024simple, parmar2024reusedontretrainrecipe,yildiz2025investigatingcontinualpretraininglarge}, whereas we introduced test set contamination uniformly throughout pretraining.
 
