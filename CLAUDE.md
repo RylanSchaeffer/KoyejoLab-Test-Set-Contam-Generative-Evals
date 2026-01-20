@@ -181,10 +181,45 @@ src.plot.save_plot_with_multiple_extensions(plot_dir=results_dir, plot_filename=
   palette = {r: viridis_cmap(replica_sym_norm(r)) for r in all_replicas}
   ```
 
-**Legend placement**:
+**Legend placement and sizing**:
 - Use ONE legend per figure, not redundant legends on each subplot
 - Place legends where they don't obscure data (often lower-left or outside the plot area)
-- For multi-panel figures, use `fig.legend()` with appropriate `bbox_to_anchor` positioning, or place in a single subplot's whitespace area
+- For multi-panel figures, use `fig.legend()` with appropriate `bbox_to_anchor` positioning
+- **Preferred legend placement for multi-panel figures**: `loc="upper left", bbox_to_anchor=(1, 1)` places the legend outside the plot area to the right, then use `plt.subplots_adjust(right=0.88)` to make room
+- **NEVER specify explicit `fontsize` or `title_fontsize`** in legend calls - let the legend inherit the global font size (23). Specifying smaller sizes creates inconsistent, hard-to-read legends.
+- **Include ALL data series in the legend** that appear in ANY subplot of the figure, even if some subplots don't show all series (e.g., if fitting excludes certain conditions but raw data includes them)
+
+**Axis limits - DO NOT filter or clip data**:
+- To restrict the visible range, simply use `ax.set_ylim(min, max)` or `ax.set_xlim(min, max)`
+- **NEVER filter or clip data to match axis limits** - this creates artifacts like flat lines at boundaries
+- Let matplotlib handle what's visible based on the axis limits naturally
+- Example: To show cumulative probability from 1e-4 to 1, just use `ax.set_ylim(1e-4, 1)` and plot all the data
+
+**Multi-panel figures for papers** (e.g., 2 rows × 3 columns):
+```python
+fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+
+# Plot to each subplot
+for idx, condition in enumerate(conditions):
+    ax = axes[row_idx, col_idx]
+    ax.plot(...)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("...")
+    ax.set_ylabel("...")
+    ax.set_title(condition)
+    ax.set_ylim(ymin, ymax)  # Just set limits, don't filter data
+    ax.grid(True, alpha=0.3, which="both")
+
+# Single legend for entire figure, outside plot area
+handles = [plt.Line2D([0], [0], color=palette[k], marker="o", linestyle="-", markersize=5) for k in keys]
+fig.legend(handles, labels, title="Legend Title", loc="upper left", bbox_to_anchor=(1, 1))
+
+plt.tight_layout()
+plt.subplots_adjust(right=0.88)  # Make room for legend
+src.plot.save_plot_with_multiple_extensions(plot_dir=results_dir, plot_filename="...")
+plt.close()
+```
 
 ## W&B Integration
 
