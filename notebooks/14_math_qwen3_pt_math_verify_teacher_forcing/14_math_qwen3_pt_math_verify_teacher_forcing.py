@@ -1512,7 +1512,6 @@ for idx, param in enumerate(selected_params_combined):
     ax.grid(True, alpha=0.3, which="both")
 
 # Row 2: Cumulative Probability
-cumprob_ylim_min = 1e-4
 for idx, param in enumerate(selected_params_combined):
     ax = axes[1, idx]
 
@@ -1525,25 +1524,18 @@ for idx, param in enumerate(selected_params_combined):
         if len(subset) == 0:
             continue
 
-        # Filter out data points below ylim threshold (don't clip, which creates flat lines)
-        mask = subset["cumulative_prob"] >= cumprob_ylim_min
-        subset_filtered = subset[mask]
-
-        if len(subset_filtered) == 0:
-            continue
-
         color = replica_palette[str(replica)]
         ax.plot(
-            subset_filtered["Token Index + 1"],
-            subset_filtered["cumulative_prob"],
+            subset["Token Index + 1"],
+            subset["cumulative_prob"],
             color=color,
             label=f"{replica}",
         )
-        # Add uncertainty bands (clip CI bounds to avoid visual artifacts)
+        # Add uncertainty bands
         ax.fill_between(
-            subset_filtered["Token Index + 1"],
-            subset_filtered["ci_lower_prob"].clip(lower=cumprob_ylim_min),
-            subset_filtered["ci_upper_prob"],
+            subset["Token Index + 1"],
+            subset["ci_lower_prob"],
+            subset["ci_upper_prob"],
             alpha=0.2,
             color=color,
             linewidth=0,
@@ -1555,7 +1547,7 @@ for idx, param in enumerate(selected_params_combined):
     ax.set_ylabel("Cumulative Probability")
     ax.set_title(param)
     ax.set_xlim(1, 800)
-    ax.set_ylim(cumprob_ylim_min, 1)
+    ax.set_ylim(1e-4, 1)
     ax.grid(True, alpha=0.3, which="both")
 
 # Create legend handles for ALL replicas that appear in the plot
