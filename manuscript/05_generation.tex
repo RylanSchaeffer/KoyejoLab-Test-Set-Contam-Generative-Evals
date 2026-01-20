@@ -34,14 +34,16 @@ We identified a striking shift in the functional form of this decay based on con
 At higher contamination levels, the decay follows an approximate power law, but at lower levels of contamination, performance decays exponentially quickly to the noise floor.
 This suggests that maintaining a coherent memorized chain becomes increasingly difficult as the sequence grows, and also aligns with findings that longer sequences require more repetitions to be memorized \citep{jiang2025a,lu2024scaling}, though we demonstrate this here through controlled pretraining.
 
-Furthermore, solution length interacts with sampling temperature. While increasing temperature hurts performance generally, it causes catastrophic failure for long solutions. For short solutions ($\leq 100$ tokens) at high contamination (316 replicas), raising the temperature from $0$ to $1.0$ drops accuracy by $\sim45\%$ on the largest model. However, for solutions of $400$ tokens, the same temperature increase causes accuracy to drop by nearly $100\%$.
+Furthermore, solution length interacts with sampling temperature:
+% While increasing temperature hurts performance generally, it causes catastrophic failure for long solutions.
+For short solutions ($\leq 100$ tokens) at high contamination (316 replicas), raising the temperature from $0$ to $1.0$ drops accuracy by $\sim45\%$ on the largest model. However, for solutions of $400$ tokens, the same temperature increase causes accuracy to drop by nearly $100\%$.
 % This highlights a key distinction between generative and discriminative evaluations: unlike multiple-choice tasks where temperature is largely irrelevant, in generative settings, the combination of solution length and stochastic sampling can completely reverse the gains from even extreme levels of memorization.
 
 \begin{figure*}[t!]
     \centering
     \includegraphics[width=\linewidth]{manuscript/figures/14_math_qwen3_pt_math_verify_teacher_forcing/y=nll_and_cumprob_x=token_index_hue=num_replicas_col=model_size_combined.pdf}
     \caption{\textbf{Solution Length and Temperature Together Govern How Quickly Memorization Decoheres.}
-    \textbf{Top:} Most models and contamination pairs exhibit scaling laws (Eqn.~\ref{eqn:in_context_scaling_law}) as a function of the sequence length. For exceptions, see Appendix~\ref{app:sec:exceptions_to_sequence_scaling_laws}. \textbf{Bottom:} The cumulative probability of generating a memorized solution can exist in one of three regimes: (1) Rapid Decoherence, (2) Brittle Memorization, and (3) Deterministic Lock-In. Sampling temperature can shift a model between regimes.
+    \textbf{Top:} Most models and contamination pairs exhibit scaling laws (Eqn.~\ref{eqn:in_context_scaling_law}) as a function of the sequence length. For exceptions, see Appendix~\ref{app:sec:exceptions_to_sequence_scaling_laws}. \textbf{Bottom:} The cumulative probability of generating a memorized solution can exist in one of three regimes: (1) Exponentially Fast Decoherence, (2) Brittle Memorization, and (3) Deterministic Lock-In. Sampling temperature can shift a model between regimes.
     }
     \label{fig:survival_process}
 \end{figure*}
@@ -69,16 +71,17 @@ The probability of successfully generating a solution of length $T$ can then be 
     P(T) \approx \exp\left( -E(T-1) - \frac{A}{1-\alpha}(T^{1-\alpha} - 1) \right).
 \end{equation}
 %
-This reveals three distinct regimes of memorization:
+To explain intuitively, there are two opposing forces at the intersection of memorization and generation: The probability of generating a sequence decays geometrically (exponentially) with sequence length, making longer sequences harder to generate, but the the probability of knowing the correct next token grows geometrically with sequence length, making predicting the next token easier.
+These two rates reveal three distinct regimes of memorization:
 %
-\paragraph{Regime I: Rapid Decoherence ($E > 0$).}
-In the absence of meaningful contamination, the irreducible error term $E$ dominates. The survival probability decays exponentially ($P(T) \sim e^{-ET}$), rendering the generation of long solutions statistically improbable.
+\paragraph{Regime I: Exponentially Fast Decoherence ($E > 0$).}
+In the absence of meaningful contamination, the irreducible error term $E$ dominates. The survival probability decays exponentially ($P(T) \sim e^{-E \cdot T}$), rendering the generation of long solutions statistically improbable.
 
 \paragraph{Regime II: Brittle Memorization ($E \approx 0, \alpha \le 1$).}
-At intermediate contamination, the model minimizes the noise floor ($E \to 0$) but learns the sequence slowly. The probability follows a Weibull-like stretched exponential distribution ($P(T) \sim e^{-k T^{1-\alpha}}$). We characterize this as \textit{brittle memorization}: while the model can accurately generate moderately long sequences, its grasp on the solution remains fragile, and the cumulative probability of success eventually vanishes for long contexts.
+At intermediate contamination, the model minimizes the noise floor ($E \to 0$) but learns the sequence slowly. The probability follows a Weibull-like stretched exponential ($P(T) \sim e^{-k T^{1-\alpha}}$). We characterize this as \textit{brittle memorization}: while the model can accurately generate moderately long sequences, its grasp on the solution is fragile, and the cumulative probability of success eventually vanishes.
 
 \paragraph{Regime III: Deterministic Lock-In ($E \approx 0, \alpha > 1$).}
-At high contamination, we observe a critical phase transition where $\alpha > 1$. Mathematically, this flips the sign of the exponent in Eq.~\ref{eq:survival_prob}, causing the penalty term $T^{1-\alpha}$ to decay to zero. Consequently, $P(T)$ converges to a non-zero constant even as $T \to \infty$. In this regime, the model's certainty increases faster than the sequence accumulates risk, enabling the \textit{deterministic lock-in} of arbitrarily long solutions.
+At high contamination, we observe a critical phase transition: $\alpha > 1$ flips the sign of the exponent in Eq.~\ref{eq:survival_prob}, causing the penalty term $T^{1-\alpha}$ to decay to zero. Consequently, $P(T)$ converges to a non-zero constant even as $T \to \infty$. In this regime, the model's certainty increases faster than the sequence accumulates risk, enabling the \textit{deterministic lock-in} of arbitrarily long solutions.
 
 \paragraph{The Effect of Sampling Temperature.}
 While the native scaling $\alpha$ is a property of the trained model, inference behavior is heavily modulated by the sampling temperature $\tau$.
