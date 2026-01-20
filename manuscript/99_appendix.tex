@@ -119,13 +119,72 @@ This bug was present in versions of the evaluation harness prior to v0.4.8 (Augu
 Any research reporting MATH benchmark scores using Math Verify from affected versions may have systematically underestimated model performance.
 We recommend that researchers using these benchmarks verify they are using a corrected version of the evaluation code.
 
-% \clearpage
+\clearpage
 
-% \section{Validating \citet{gadre2024languagemodelsscalereliably}'s Overtraining Results}
+\section{Exceptions to In-Context / Sequence Scaling Laws}
+\label{app:sec:exceptions_to_sequence_scaling_laws}
 
-% In our analysis, whenever the number of benchmark test set replicas $R$ is $0$, we return to the overtraining setting studied by \citet{gadre2024languagemodelsscalereliably}. To briefly restate their methodology and key results, \citet{hoffman2022chinchilla}'s recommended a constant number of tokens-per-parameter to achieve compute-optimal pretraining ($D \approx 20 \cdot N$, and \citet{gadre2024languagemodelsscalereliably} considered overtraining models beyond compute-optimal pretraining according the overtraining multiplier $m \geq 1$:
-% %
-% \begin{equation}
-% D(m, N) \defeq m \times 20 \times N,
-% \end{equation}
 
+In Sec.~\ref{sec:inference}, we reported that most model sizes and number of test set replicas exhibit in-context scaling laws (Eq.~\ref{eqn:in_context_scaling_law}).
+While the power law plus irreducible error model provides an excellent fit for the majority of experimental conditions, we observe a systematic deviation in specific edge cases.
+In these instances, the negative log-likelihood (NLL) \textit{increases} with token index $t$ rather than decaying.
+We identified significant positive slopes in the NLL-vs-token trajectory for two distinct groups of models.
+
+% \begin{table}[h]
+%     \centering
+%     \small
+%     \caption{\textbf{Conditions Exhibiting NLL Uptick.} In specific regimes, the NLL increases with sequence length, deviating from the expected power-law decay. This occurs in small, uncontaminated models (34M) and large, highly contaminated models (344M, R=3162).}
+%     \label{tab:nll_uptick_conditions}
+%     \begin{tabular}{lcccc}
+%         \toprule
+%         \textbf{Model Size} & \textbf{Replicas ($R$)} & \textbf{Slope} & \textbf{NLL Change} & \textbf{Regime Type} \\
+%         \midrule
+%         34M  & 0    & $+0.030$ & $+5\%$   & Capacity Limited \\
+%         93M  & 1000 & $+0.011$ & $+28\%$  & High Contamination \\
+%         153M & 1000 & $+0.022$ & $+20\%$  & High Contamination \\
+%         344M & 3162 & $+0.052$ & $+206\%$ & High Contamination \\
+%         \bottomrule
+%     \end{tabular}
+% \end{table}
+
+
+
+\paragraph{Group I: Capacity Limitations (Uncontaminated Regime)}
+For the smallest uncontaminated model (34M, $R=0$), the NLL increases monotonically from token 1 to token 645. This behavior is consistent with limited effective context windows in small architectures. Without the aid of memorization ($R=0$), the 34M parameter model struggles to model long-range dependencies, causing prediction quality to degrade as the necessary context grows beyond its effective capacity. Larger uncontaminated models (62M+) do not exhibit this behavior, showing standard NLL decay.
+
+\paragraph{Group II: Selection Bias (High Contamination Regime)}
+The most pronounced uptick occurs in the largest, most contaminated models (e.g., 344M, $R=3162$), where NLL is extremely low ($\sim 10^{-3}$) but rises sharply at late token indices. Our analysis suggests this is driven by \textbf{selection bias inherent to the dataset structure}.
+
+Because the MATH dataset contains solutions of varying lengths, the set of problems contributing to the NLL at $t=800$ is a small, non-random subset of the problems at $t=100$.
+\begin{itemize}
+    \item \textbf{Survivor Bias:} Only the 100 longest solutions in the test set reach token 800.
+    \item \textbf{Differential Memorizability:} We observe a strong correlation between solution length and residual NLL in the high-contamination regime. The uptick indicates that these long surviving sequences are systematically ``harder'' to memorize than the shorter sequences that drop out earlier.
+\end{itemize}
+
+We verified that these deviations are not artifacts of data corruption. The token-level sample counts are consistent across all runs, with $100\%$ of sequences (N=5,000) present at token 0, dropping to $2\%$ (N=100) at token 800. This attrition is strictly deterministic, governed by the length distribution of the MATH dataset.
+
+\begin{figure*}[h!]
+    \centering
+    \includegraphics[width=\linewidth]{manuscript/figures/14_math_qwen3_pt_math_verify_teacher_forcing/y=nll_x=token_index_hue=num_replicas_col=model_size.pdf}
+    \caption{\textbf{Deviations from In-Context / Sequence Scaling Laws.} Two groups of models exhibit increasing negative log likelihoods with increasing token index: smaller uncontaminated models and larger massively contaminated models.}
+\end{figure*}
+
+\clearpage
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{manuscript/figures/14_math_qwen3_pt_math_verify_teacher_forcing/y=fit_params_x=model_size_hue=num_replicas.pdf}
+    \caption{\textbf{Fit Parameters for In-Context / Sequential Scaling Laws by Model Size and Number of Test Set Replicas.} }
+\end{figure*}
+
+
+\clearpage
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/11_math_qwen3_pt_math_verify/y=math_verify_x=loss_hue=temp_col=params_filtered.png}
+    \caption{\textbf{Math Verify Score Is Correlated with Pretraining Loss.} Math Verify scores correlate strongly with the cross entropy loss achieved on the MATH Test Set during training, where differences in these graphs are attributable to increased repetition on the benchmark test set.  The correlation is significantly weaker for high temperatures and falls to nearly $0$ for temperatures above $1.0$.  }
+    \label{fig:loss_and_math_verify}
+\end{figure*}
+
+\clearpage

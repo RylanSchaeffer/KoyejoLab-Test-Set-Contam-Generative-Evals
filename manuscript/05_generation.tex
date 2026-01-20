@@ -1,102 +1,95 @@
+
 \section{Inference: Temperature \& Solution Length}
-\label{sec:temperature}
+\label{sec:inference}
 
 Finally, we arrive at the last stage of the model lifecycle: inference.
 When models are deployed for generation, inference-time parameters---particularly sampling temperature and the length of generated solutions---introduce new considerations for how contamination manifests.
 
-Generative benchmarks introduce distinct complexities compared to discriminative evaluations. Unlike multiple-choice tasks where predetermined sequences are scored, generative solutions require the model to produce a coherent sequence over hundreds of tokens or more.
-This introduces two critical levers for analyzing contamination: sampling temperature and solution length.
-We show that sampling and long-context requirements act as barriers that memorization struggles to overcome.
-
-\paragraph{Finding \#5: High Temperature Sampling Mitigates the Gains from Contamination} 
+\paragraph{Finding \#6: High Temperature Sampling Mitigates Gains from Contamination} 
 
 We evaluated the pretrained models using temperature-only sampling, sweeping from $0$ (``greedy'') to $1.5$.
 We observed that Math Verify scores remain stable between greedy decoding and low-temperature sampling ($\tau \leq 0.56$) (Fig.~\ref{fig:math_verify_replicas_temp}, left and center).
 However, as temperature increases beyond this point, performance degrades quickly.
-
-Crucially, higher temperature sampling acts as an equalizer, significantly reducing the performance gap between highly contaminated and uncontaminated models.
-While uncontaminated models are bounded by a performance floor, contaminated models lose their memorization advantage under stochastic sampling.
+% Crucially, higher temperature sampling acts as an equalizer, significantly reducing the performance gap between highly contaminated and uncontaminated models.
+% While uncontaminated models are bounded by a performance floor, contaminated models lose their memorization advantage under stochastic sampling.
 For example, increasing temperature from $0$ to $1$ causes performance at high contamination levels ($1000$ replicas) to collapse by a factor of 40, down to the baseline performance of uncontaminated models.
-This suggests that contamination-driven performance is brittle; small adjustments in inference settings can eliminate the effects of memorization almost entirely. 
-High-temperature sampling flattens these peaks, causing the model to diverge from the memorized path.
+This suggests that contamination-driven performance is brittle; small adjustments in inference settings can eliminate the benefits of contamination almost entirely. 
+% High-temperature sampling flattens these peaks, causing the model to diverge from the memorized path.
 
 
 \begin{figure*}[t!]
     \centering
     \includegraphics[width=\linewidth]{figures/11_math_qwen3_pt_math_verify/y=math_verify_x=solution_length_hue=num_replicas_col=temp_row=params_153M_344M.png}
-    \caption{\textbf{Performance Declines with Increasing Solution Token Length.} Math Verify Scores decrease exponentially with solution length at high levels of benchmark replication. For lower levels of benchmark replication, score decreases appear to follow approximate power laws. Trends are consistent between the 153M and 344M parameter models. Shaded regions represent 95\% confidence intervals.
+    \caption{\textbf{Performance Declines with Increasing Solution Token Length.} Math Verify Scores decrease  with solution length, albeit with a different functional form based on contamination level: at higher contamination, scores decay as an approximate power law, but at lower contamination, scores decays exponentially quickly to the noise floor. Shaded regions represent 95\% confidence intervals.
     }
     \label{fig:temp_and_solution_length}
 \end{figure*}
 
 
-\begin{figure*}[t!]
-    \centering
-    \includegraphics[width=\linewidth]{figures/11_math_qwen3_pt_math_verify/y=math_verify_x=loss_hue=temp_col=params_filtered.png}
-    \caption{\textbf{Math Verify Score Is Correlated with Pretraining Loss.} Math Verify scores correlate strongly with the cross entropy loss achieved on the MATH Test Set during training, where differences in these graphs are attributable to increased repetition on the benchmark test set.  The correlation is significantly weaker for high temperatures and falls to nearly $0$ for temperatures above $1.0$.  }
-    \label{fig:loss_and_math_verify}
-\end{figure*}
-
-
-\paragraph{Finding \#6: Longer Solutions Reveal a Shift from Power Law to Exponential Decay} 
+\paragraph{Finding \#7: Longer Solution Length Mitigates Gains from Contamination} 
 
 To understand how solution length constrains performance, we binned problems into 10 log-spaced intervals ranging from the shortest (15 tokens) to the longest (1949 tokens).
 We found that Math Verify scores decrease significantly as solution length increases (Fig.~\ref{fig:temp_and_solution_length}). 
-We identified a striking shift in the functional form of this decay based on contamination level.
-At lower contamination levels, the decay follows an approximate power law, consistent with robust reasoning capabilities. 
-However, at the highest levels of contamination, this decay becomes \textit{exponential} with respect to token length. This suggests that maintaining a coherent memorized chain becomes increasingly difficult as the sequence grows—a single error can cause the model to decohere from the exact memorized text.
-This aligns with recent findings that longer sequences require more repetitions to be memorized \citep{jiang2025a,lu2024scaling}, though we demonstrate this here through controlled pretraining.
+We identified a striking shift in the functional form of this decay based on contamination level:
+At higher contamination levels, the decay follows an approximate power law, but at lower levels of contamination, performance decays exponentially quickly to the noise floor.
+This suggests that maintaining a coherent memorized chain becomes increasingly difficult as the sequence grows, and also aligns with findings that longer sequences require more repetitions to be memorized \citep{jiang2025a,lu2024scaling}, though we demonstrate this here through controlled pretraining.
 
 Furthermore, solution length interacts with sampling temperature. While increasing temperature hurts performance generally, it causes catastrophic failure for long solutions. For short solutions ($\leq 100$ tokens) at high contamination (316 replicas), raising the temperature from $0$ to $1.0$ drops accuracy by $\sim45\%$ on the largest model. However, for solutions of $400$ tokens, the same temperature increase causes accuracy to drop by nearly $100\%$.
-This highlights a key distinction between generative and discriminative evaluations: unlike multiple-choice tasks where temperature is largely irrelevant, in generative settings, the combination of solution length and stochastic sampling can completely reverse the gains from even extreme levels of memorization.
+% This highlights a key distinction between generative and discriminative evaluations: unlike multiple-choice tasks where temperature is largely irrelevant, in generative settings, the combination of solution length and stochastic sampling can completely reverse the gains from even extreme levels of memorization.
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{manuscript/figures/14_math_qwen3_pt_math_verify_teacher_forcing/y=nll_and_cumprob_x=token_index_hue=num_replicas_col=model_size_combined.pdf}
+    \caption{\textbf{Solution Length and Temperature Together Govern How Quickly Memorization Decoheres.}
+    \textbf{Top:} Most models and contamination pairs exhibit scaling laws (Eqn.~\ref{eqn:in_context_scaling_law}) as a function of the sequence length. For exceptions, see Appendix~\ref{app:sec:exceptions_to_sequence_scaling_laws}. \textbf{Bottom:} The cumulative probability of generating a memorized solution can exist in one of three regimes: (1) Rapid Decoherence, (2) Brittle Memorization, and (3) Deterministic Lock-In. Sampling temperature can shift a model between regimes.
+    }
+    \label{fig:survival_process}
+\end{figure*}
 
 
-\paragraph{Finding \#7: Generative Performance Closely Tracks Cross-Entropy Loss, but These Are Decoupled at High Sampling Temperatures} 
 
-We find a strong negative correlation between a model's Math Verify score and its cross-entropy loss on the MATH test set (Fig.~\ref{fig:loss_and_math_verify}).
-Under greedy or low-temperature sampling, decreasing test set loss (via increased contamination) translates directly into a sharp, non-linear increase in generative performance.
-However, higher temperatures decouple these metrics.
-While highly contaminated models achieve low cross-entropy loss (indicating they assign high probability to the correct next token), sampling at high temperatures prevents them from staying on the narrow path of the exact solution.
-Consequently, at temperatures above $1.0$, the correlation between cross entropy loss and Math Verify score drops to nearly $0$.
+\paragraph{Finding \#8: Temperature and Solution Length Together Govern the Survival Process}
 
+Generative evaluations differ fundamentally from discriminative tasks because they require the model to maintain a coherent trajectory over a sequence of length $T$.
+For models that solve the task via memorizing solutions, we can characterize how the model must ``survive'' the risk of decoherence at every token step $t$ via studying the probabilities under teacher forcing.
 
-\clearpage
-
-\section{Inference Dynamics: Survival Analysis of Generative Memorization}
-\label{sec:inference_dynamics}
-
-Generative evaluations differ fundamentally from discriminative tasks because they require the model to maintain a coherent trajectory over a sequence of length $T$. We formalize this process as a \textit{survival analysis} problem, where the model must ``survive'' the risk of decoherence at every token step $t$.
-Using in-context scaling laws 
-
-We model the instantaneous hazard function (negative log-likelihood) at step $t$ as a power-law decay with an irreducible noise floor:
-\begin{equation}
-    \mathcal{L}_t(\tau) \approx E + A \cdot t^{-\alpha_{eff}(\tau)}
+To begin, motivated by prior work on in-context scaling laws~\citep{anthropic2023claude2,geminiteam2024gemini15unlockingmultimodal,xiong2024effective,anil2024many}, we find that for most model sizes and number of test set replicas, the negative log likelihood scales with the token index as a power law plus an irreducible error:
+%
+\begin{equation}\label{eqn:in_context_scaling_law}
+    \mathcal{L}_t(N, R) \approx E(N, R) + A(N, R) \cdot t^{-\alpha(N, R)}.
 \end{equation}
-where $E$ represents irreducible error (entropy), $A$ is the initial difficulty, and $\alpha_{eff}$ is the effective learning rate of the model as context grows. The cumulative probability $P(T)$ of successfully generating a solution of length $T$ is the product of survival probabilities at each step:
-\begin{equation}
-    P(T) = \prod_{t=1}^{T} e^{-\mathcal{L}_t} = \exp\left( - \sum_{t=1}^{T} \left( E + A \cdot t^{-\alpha_{eff}} \right) \right)
-\end{equation}
-By approximating the sum with an integral, we derive the closed-form scaling law for generative success:
+%
+% where $E$ and $A$ are parameters governed by model size $N$ and contamination replicas $R$, and $\alpha$ represents the native learning rate of the model as context grows. \rylan{TODO: add fits}
+%
+However, we do find a small number of notable exceptions (Appendix.~\ref{app:sec:exceptions_to_sequence_scaling_laws}).
+The probability of successfully generating a solution of length $T$ can then be approximated as:
+%
 \begin{equation}
     \label{eq:survival_prob}
-    P(T) \approx \exp\left( -E(T-1) - \frac{A}{1-\alpha_{eff}}(T^{1-\alpha_{eff}} - 1) \right)
+    P(T) \approx \exp\left( -E(T-1) - \frac{A}{1-\alpha}(T^{1-\alpha} - 1) \right).
 \end{equation}
-This formulation reveals that generative performance is governed by a phase transition in the exponent $\alpha_{eff}$, creating three distinct physical regimes:
+%
+This reveals three distinct regimes of memorization:
+%
+\paragraph{Regime I: Rapid Decoherence ($E > 0$).}
+In the absence of meaningful contamination, the irreducible error term $E$ dominates. The survival probability decays exponentially ($P(T) \sim e^{-ET}$), rendering the generation of long solutions statistically improbable.
 
-\paragraph{Regime I: Noise-Dominated Decay ($E > 0$).}
-When the model has not fully memorized the solution (low contamination), the irreducible error term $E$ dominates. The survival probability decays exponentially ($P(T) \sim e^{-ET}$), rendering the generation of long solutions statistically impossible. This explains the ``performance floor'' observed in uncontaminated base models, where success is limited to extremely short sequences.
+\paragraph{Regime II: Brittle Memorization ($E \approx 0, \alpha \le 1$).}
+At intermediate contamination, the model minimizes the noise floor ($E \to 0$) but learns the sequence slowly. The probability follows a Weibull-like stretched exponential distribution ($P(T) \sim e^{-k T^{1-\alpha}}$). We characterize this as \textit{brittle memorization}: while the model can accurately generate moderately long sequences, its grasp on the solution remains fragile, and the cumulative probability of success eventually vanishes for long contexts.
 
-\paragraph{Regime II: Stretched Exponential Decay ($E \approx 0, \alpha_{eff} \le 1$).}
-At intermediate contamination, the model minimizes the noise floor ($E \to 0$) but ``learns'' the specific sequence slowly ($\alpha_{eff} \le 1$). In this regime, the probability follows a Weibull-like stretched exponential distribution ($P(T) \sim e^{-k T^{1-\alpha}}$). While the model can generate moderately long sequences, the cumulative probability of success eventually vanishes as $T \to \infty$. This characterizes the ``brittle memorization'' phase, where the model appears competent but lacks robust stability.
+\paragraph{Regime III: Deterministic Lock-In ($E \approx 0, \alpha > 1$).}
+At high contamination, we observe a critical phase transition where $\alpha > 1$. Mathematically, this flips the sign of the exponent in Eq.~\ref{eq:survival_prob}, causing the penalty term $T^{1-\alpha}$ to decay to zero. Consequently, $P(T)$ converges to a non-zero constant even as $T \to \infty$. In this regime, the model's certainty increases faster than the sequence accumulates risk, enabling the \textit{deterministic lock-in} of arbitrarily long solutions.
 
-\paragraph{Regime III: The Stabilization Phase Transition ($E \approx 0, \alpha_{eff} > 1$).}
-At high contamination and model scale, we observe a critical phase transition where the scaling exponent $\alpha_{eff}$ exceeds $1$. Mathematically, this flips the sign of the exponent in Eq.~\ref{eq:survival_prob}, causing the term $T^{1-\alpha_{eff}}$ to decay to zero rather than grow. Consequently, the cumulative penalty converges to a finite constant, and $P(T)$ stabilizes at a non-zero value even as $T \to \infty$. In this regime, the model's certainty increases faster than the sequence accumulates risk, enabling \textit{deterministic memorization} of arbitrarily long solutions.
-
-\paragraph{The Critical Role of Temperature.}
-Sampling temperature $\tau$ acts as a direct modifier on the effective scaling exponent. By linking the hazard function to the logit gap $\Delta z_t \propto \alpha \ln t$, we derive that the effective exponent scales inversely with temperature:
+\paragraph{The Effect of Sampling Temperature.}
+While the native scaling $\alpha$ is a property of the trained model, inference behavior is heavily modulated by the sampling temperature $\tau$.
+The dependence arises from the mechanics of the softmax distribution: in the regime of memorization, the model's unnormalized confidence (the logit gap) grows logarithmically with context length ($\Delta z_t \propto \alpha \ln t$).
+Since temperature acts as a scalar divisor on logits ($z \to z/\tau$), it modifies the rate at which probability mass concentrates on the memorized path. This yields an \textit{effective} scaling exponent:
+%
 \begin{equation}
-    \alpha_{eff}(\tau) \approx \frac{\alpha}{\tau}
+    \alpha_{\mathrm{eff}}(\tau) \approx \alpha / \tau.
 \end{equation}
-This relationship exposes the fragility of memorization. A model operating in the \textbf{Stabilization Regime} ($\alpha_{eff} > 1$) at greedy settings ($\tau \to 0$) can be instantaneously pushed back into the \textbf{Decay Regime} ($\alpha_{eff} < 1$) simply by increasing $\tau$. For example, if a model has a natural scaling $\alpha = 0.8$, greedy decoding effectively amplifies this to $\alpha_{eff} \gg 1$, feigning robust knowledge. However, sampling at $\tau=1.0$ exposes the true exponent $\alpha < 1$, causing catastrophic failure for long sequences. This mechanism explains why high-temperature sampling acts as a ``truth serum,'' decoupling the artificial gains of contamination from robust generalization.
-
-\clearpage
+%
+This relationship reveals that temperature can artificially shift a model between regimes. Low-temperature sampling ($\tau < 1$) inflates the exponent ($\alpha_{\mathrm{eff}} > \alpha$), potentially pushing a model from \textbf{Brittle Memorization} into pseudo-stable \textbf{Deterministic Lock-In}.
+This exposes the fragility of memorization: a model operating in \textbf{Deterministic Lock-In} ($\alpha_{\mathrm{eff}} > 1$) at greedy settings ($\tau \to 0$) can be instantaneously reverted to \textbf{Brittle Memorization} ($\alpha_{\mathrm{eff}} < 1$) simply by increasing $\tau$.
+For example, if a model has a natural scaling $\alpha = 0.8$, greedy decoding effectively amplifies this to $\alpha_{\mathrm{eff}} \gg 1$, feigning robust knowledge. However, sampling at $\tau=1.0$ exposes the true exponent $\alpha < 1$, causing failure for long sequences.
+This mechanism explains why high-temperature sampling acts as a ``truth serum,'' decoupling the gains of contamination from robust generalization.

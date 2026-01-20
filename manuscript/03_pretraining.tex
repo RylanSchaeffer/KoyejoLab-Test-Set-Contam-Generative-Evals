@@ -11,11 +11,12 @@ We observe a non-linear relationship between the number of test set replicas and
 For low levels of contamination ($\leq$ 10 replicas), the impact on performance is minimal, with Math Verify scores and cross entropies remaining close to uncontaminated performance; at around 100 replicas, performance sharply increases (Fig.~\ref{fig:math_verify_replicas_temp}).
 At the highest levels of contamination, the model achieves ceiling performance.
 
-To determine if the performance gains observed in Figure~\ref{fig:math_verify_ce_temp_0} stemmed from robust generalization or superficial memorization, we evaluated our contaminated models on two modified versions of the MATH test set. First, we \emph{Rephrased} the problems, retaining the original numerical values and logic but altering the linguistic surface form. Second, we \emph{Perturbed} the problems, modifying the numerical values and correct answers while maintaining the problem structure.
+\paragraph{Finding \#2: Contamination-Driven Performance Is Not Generalization}
+To determine if the performance gains stemmed from robust generalization or superficial memorization, we evaluated our contaminated models on two modified versions of the MATH test set. First, we \emph{Rephrased} the problems, retaining the original numerical values and logic but altering the linguistic surface form. Second, we \emph{Perturbed} the problems, modifying the numerical values and correct answers while maintaining the problem structure.
 
 In both conditions, performance collapses to near-zero across all model sizes and contamination levels in both conditions (Fig.~\ref{fig:rephrase_perturb}). Even models that achieved ceiling performance on the original test set failed to solve the modified versions. This strongly suggests that the capabilities gained from test set contamination rely almost exclusively on verbatim memorization of the specific test sequences rather than the acquisition of underlying mathematical reasoning.
 
-\paragraph{Finding \#2: Scaling Laws Suggest Including A Single Test Set Replica Achieves Lower Loss Than the Irreducible Error of the Uncontaminated Corpus}
+\paragraph{Finding \#3: Scaling Laws Suggest Including A Single Test Set Replica Achieves Lower Loss Than the Irreducible Error of the Uncontaminated Corpus}
 
 \begin{figure}[t!]
     \centering
@@ -34,7 +35,7 @@ Based on previous work \citep{kaplan2020scaling, hoffman2022chinchilla, openai20
 %
 \begin{equation}
     \label{eqn:neural_scaling_law}
-    \mathcal{L}(C, R) = E_0(R) + \frac{C_0(R)}{C^{\alpha(R)}},
+    \mathcal{L}(C, R) = E_0(R) + C_0(R) \cdot C^{-\alpha(R)},
 \end{equation}
 %
 where $E_0(R) > 0$ is the irreducible error, $C_0(R) > 0$ is the compute prefactor and $\alpha(R) > 0$ is the compute exponent.
