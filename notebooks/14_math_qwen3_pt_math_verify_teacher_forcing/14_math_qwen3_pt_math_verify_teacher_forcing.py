@@ -1525,23 +1525,25 @@ for idx, param in enumerate(selected_params_combined):
         if len(subset) == 0:
             continue
 
-        # Clip data to ylim range for cleaner visualization
-        y_data = subset["cumulative_prob"].clip(lower=cumprob_ylim_min)
-        y_lower = subset["ci_lower_prob"].clip(lower=cumprob_ylim_min)
-        y_upper = subset["ci_upper_prob"].clip(lower=cumprob_ylim_min)
+        # Filter out data points below ylim threshold (don't clip, which creates flat lines)
+        mask = subset["cumulative_prob"] >= cumprob_ylim_min
+        subset_filtered = subset[mask]
+
+        if len(subset_filtered) == 0:
+            continue
 
         color = replica_palette[str(replica)]
         ax.plot(
-            subset["Token Index + 1"],
-            y_data,
+            subset_filtered["Token Index + 1"],
+            subset_filtered["cumulative_prob"],
             color=color,
             label=f"{replica}",
         )
-        # Add uncertainty bands
+        # Add uncertainty bands (clip CI bounds to avoid visual artifacts)
         ax.fill_between(
-            subset["Token Index + 1"],
-            y_lower,
-            y_upper,
+            subset_filtered["Token Index + 1"],
+            subset_filtered["ci_lower_prob"].clip(lower=cumprob_ylim_min),
+            subset_filtered["ci_upper_prob"],
             alpha=0.2,
             color=color,
             linewidth=0,
