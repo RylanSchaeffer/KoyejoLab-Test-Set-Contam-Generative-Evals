@@ -2,12 +2,12 @@
 \section{Methods}
 \label{sec:methods}
 
-\textbf{Pretraining} To study the effects of contamination in generative evaluations, we pretrained transformer-based \citep{vaswani2017attention} causal language models from initialization using the Qwen 3 architecture \citep{yang2025qwen3technicalreport}, sweeping model sizes: $34$M, $62$M, $93$M, $153$M, $344$M.
+\textbf{Pretraining} To study the effects of contamination in generative evaluations, we pretrained transformer-based causal language models \citep{vaswani2017attention, brown2020language} using the Qwen 3 architecture \citep{yang2025qwen3technicalreport}, sweeping model sizes: $34$M, $62$M, $93$M, $153$M, $344$M.
 Each model was pretrained with 20 tokens-per-parameter \citep{hoffman2022chinchilla}. 
-For each model size and token budget, we created multiple pretraining corpora by contaminating a high quality web crawl corpus \citep{penedo2024finewebdatasetsdecantingweb} with a different number of replicas of the benchmark test set: from $0$ (uncontaminated) through $1, 3, 10, 32, 100, 316, 1000, 3162$ (logarithmically uniform).
-Pretraining compute, measured in total floating point operations (FLOP), was approximated as $C \approx 6  \, N \, D$ \citep{kaplan2020scaling,sardana2024beyond,porian2024resolving,gadre2024languagemodelsscalereliably}, where $N$ is model parameters and $D$ is pretraining tokens.
-We trained one model for each combination of model size, number of test set replicas, and overtraining multiplier.
-For implementation details, see Appendix~\ref{app:sec:pretraining_implementation_details}.
+For each model size, we created multiple pretraining corpora by contaminating a high quality web crawl corpus \citep{penedo2024finewebdatasetsdecantingweb} with a different number of replicas of the benchmark test set: from $0$ (uncontaminated) through $1, 3, 10, 32, 100, 316, 1000, 3162$ (logarithmically uniform).
+Pretraining compute (floating point operations; FLOP), was approximated as $C \approx 6  \, N \, D$ \citep{kaplan2020scaling,sardana2024beyond,porian2024resolving,gadre2024languagemodelsscalereliably}, where $N$ is model parameters and $D$ is pretraining tokens.
+We trained one model for each pair of model size and number of test set replicas.
+For more details, see App.~\ref{app:sec:pretraining_implementation_details}.
 
 \textbf{Benchmark} We chose the ubiquitous MATH \citep{hendrycks2021measuringmathematicalproblemsolving} benchmark of competition math problems due to several properties: it is comparatively large (5,000 test problems), answers exist, and the benchmark includes solutions as well as answers. 
 The MATH test set contains $\mathord{\sim}1.4$M tokens under the Qwen 3 tokenizer.

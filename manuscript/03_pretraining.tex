@@ -12,7 +12,8 @@ At the highest levels of contamination, the model achieves ceiling performance.
 \paragraph{Finding \#2: Contamination-Driven Performance Is Not Generalization}
 To determine if the performance gains stemmed from robust generalization or superficial memorization, we evaluated our contaminated models on two modified versions of the MATH test set. First, we \emph{rephrased} the problems, retaining the original numerical values and logic but altering the linguistic surface form. Second, we \emph{perturbed} the problems, modifying the numerical values and correct answers while maintaining the problem structure.
 
-In both conditions, performance regresses to match the uncontaminated model across all model sizes and contamination levels in both conditions (Fig.~\ref{tab:rephrase_perturb}). Even models that achieved ceiling performance on the original test set failed to solve the modified versions. This strongly suggests that the capabilities gained from test set contamination rely almost exclusively on verbatim memorization of the specific test sequences rather than the acquisition of underlying mathematical reasoning.
+In both conditions, performance regresses to match the uncontaminated model across all model sizes and contamination levels in both conditions (Tab.~\ref{tab:rephrase_perturb}).
+This strongly suggests that the capabilities gained from test set contamination rely almost exclusively on verbatim memorization of the specific test sequences, rather than the acquisition of underlying mathematical reasoning.
 
 \paragraph{Finding \#3: Scaling Laws Suggest Including A Single Test Set Replica Achieves Lower Loss Than the Irreducible Error of the Uncontaminated Corpus}
 
@@ -72,7 +73,7 @@ In both conditions, performance regresses to match the uncontaminated model acro
           & 3162 & 0.04\% & 0.00\% \\
         \bottomrule
     \end{tabular}
-    \vspace{0.1cm}
+    % \vspace{0.1cm}
     % \caption{Performance metrics across different models and repetition counts.}
     \caption{\textbf{Contamination-Driven Performance Is Not Generalization.} When MATH test problems are rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to baseline regardless of contamination level or model size, confirming that performance gains from contamination are not generalized mathematical reasoning. Results were consistent across all model sizes.}
     \label{tab:rephrase_perturb}
@@ -100,14 +101,15 @@ Based on previous work \citep{kaplan2020scaling, hoffman2022chinchilla, openai20
 \end{equation}
 %
 % where $E_0(R) > 0$ is the irreducible error, $C_0(R) > 0$ is the compute prefactor and $\alpha(R) > 0$ is the compute exponent.
-
-
+%
 Fig.~\ref{fig:contamination_scaling_laws} shows each scaling law, as well as each scaling law's estimated parameters as a function of the number of test set replicas $R$.
 Our models' pretraining compute budgets and losses on the test set are reasonably well fit by Eqn.~\ref{eqn:neural_scaling_law}, and the pretraining prefactors and pretraining exponents are roughly constant for the various values of $R$.
-The biggest effect of increasing contamination is that the irreducible error shrinks from $E(R=0) = 3.594$ to $E(R=316) = 0.0347$.
-On the models we trained, we found that \emph{including even a single replica enables almost all models to achieve lower cross entropy losses than the estimated irreducible error of the uncontaminated pretraining corpus}.
-Under standard scaling law assumptions -- specifically, that the power-law form (Eqn.~\ref{eqn:neural_scaling_law}) extrapolates to infinite compute -- a contaminated pretraining corpus can buy more than an ``infinite'' amount of pretraining compute relative to pretraining on an uncontaminated pretraining corpus.
+The biggest effect of increasing contamination is that the irreducible error shrinks from $E = 3.594 \rightarrow 0.0347$ as $R=0 \rightarrow 316$.
+On the models we trained, \emph{including even a single replica enables almost all models to achieve lower cross entropy losses than the estimated irreducible error of the uncontaminated pretraining corpus}.
+Under standard scaling law assumptions -- specifically, that the scaling law extrapolates infinitely -- a contaminated pretraining corpus can buy more than an ``infinite'' amount of pretraining compute relative to pretraining on an uncontaminated pretraining corpus.
 
+This conclusion potentially contradicts \citet{huang2024demystifying}'s claim that single-shot verbatim memorization is an ``illusion''  and \citet{hayes2025exploring}'s claim that membership inference attacks are limited on pre-trained LLMs, with AUC asymptoting to $\mathord{\sim}0.689$.
+Future work should aim to understand this difference; one possible explanation is that MATH is distributionally different from FineWeb-Edu-Dedup in a way that makes identifying test set contamination easier.
 
 \begin{figure*}[t!]
     \centering
@@ -116,15 +118,3 @@ Under standard scaling law assumptions -- specifically, that the power-law form 
     \caption{\textbf{Overtraining with Fresh Data Mitigates Contamination.} Consistent with discriminative evaluations \citep{bordt2025howmuch}, we find an interaction between contamination and overtraining (i.e., training longer than Chinchilla compute-optimal; Eqn.~\ref{eqn:overtrain_multiplier}) on \emph{new fresh data}. For models with low contamination, cross entropy on the MATH test set decreases with increasing overtraining; however, for models with high contamination, cross entropy increases with overtraining. This suggests that while fresh data generally improves performance, it dilutes the ``dose,'' or proportion of contaminated pretraining tokens, thereby lessening the effect of the contamination. The crossover point shifts with model size, falling from 32 test set replicas for 34M to 1 replica for 93M models, indicating larger models lose their contamination advantage more readily when overtrained.}
     \label{fig:overtraining}
 \end{figure*}
-
-\begin{figure*}[t!]
-    \centering
-    \includegraphics[width=\linewidth]{figures/12_math_qwen3_sft_cross_entropy/combined_loss_analysis_hue=replicas_style=params.pdf}
-    \caption{\textbf{Supervised Finetuning on the Train Set Has Opposing Effects, Depending on Pretraining Contamination.} For models pretrained with little-to-no contamination ($<10$ test set replicas), supervised finetuning (SFT) on the MATH \emph{train} set decreases loss on the \emph{test} set. For models pretrained with more contamination ($>10$ test set replicas), SFT on the train set increases loss on the test set.
-    We conjecture that during SFT, contaminated models learn to generalize but also forget their contaminated pretraining data, and the effects of contaminated test set data are more impactful than generalization for small models, leading to a net increase in test loss. 
-    }
-    \label{fig:sft}
-\end{figure*}
-
-This conclusion potentially contradicts \citet{huang2024demystifying}'s claim that single-shot verbatim memorization is an ``illusion''  and \citet{hayes2025exploring}'s claim that membership inference attacks are limited on pre-trained LLMs, with AUC asymptoting to $\mathord{\sim}0.689$.
-Future work should aim to understand this difference; one possible explanation is that MATH is distributionally different from FineWeb-Edu-Dedup in a way that makes identifying test set contamination easier.

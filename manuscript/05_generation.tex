@@ -70,18 +70,11 @@ These two rates reveal three distinct regimes of memorization (Fig.~\ref{fig:pha
 \paragraph{Regime I: Exponentially Fast Decoherence ($E > 0$).}
 In the absence of meaningful contamination, the irreducible error term $E$ dominates. The survival probability decays exponentially ($P(T) \sim e^{-E \cdot T}$), rendering the generation of long solutions statistically improbable.
 
-\begin{figure}[t!]
-    \centering
-    \includegraphics[width=\columnwidth]{manuscript/figures/50/phase_diagram_y=A_x=E_hue=T_alpha=multi_p=0.01.pdf}
-    \caption{\textbf{Three Regimes of Memorization.} }
-    \label{fig:phase_diagram}
-\end{figure}
-
 \paragraph{Regime II: Brittle Memorization ($E \approx 0, \alpha \le 1$).}
-At intermediate contamination, the model minimizes the noise floor ($E \to 0$) but learns the sequence slowly. The probability follows a Weibull-like stretched exponential ($P(T) \sim e^{-k T^{1-\alpha}}$). We characterize this as \textit{brittle memorization}: while the model can accurately generate moderately long sequences, its grasp on the solution is fragile, and the cumulative probability of success eventually vanishes.
+At intermediate contamination, the probability follows a Weibull-like stretched exponential ($P(T) \sim e^{-k T^{1-\alpha}}$). While the model can accurately generate sequences, its grasp on the solution is fragile, and the cumulative probability of success eventually vanishes.
 
 \paragraph{Regime III: Deterministic Lock-In ($E \approx 0, \alpha > 1$).}
-At high contamination, we observe a critical phase transition: $\alpha > 1$ flips the sign of the exponent in Eq.~\ref{eq:survival_prob}, causing the penalty term $T^{1-\alpha}$ to decay to zero. Consequently, $P(T)$ converges to a non-zero constant even as $T \to \infty$. In this regime, the model's certainty increases faster than the sequence accumulates risk, enabling the \textit{deterministic lock-in} of arbitrarily long solutions.
+At high contamination, we observe a critical phase transition: $\alpha > 1$ flips the sign of the exponent in Eq.~\ref{eq:survival_prob}, causing the penalty term $T^{1-\alpha}$ to decay to zero. Consequently, $P(T)$ converges to a non-zero constant even as $T \to \infty$. In this regime, the model's certainty increases faster than the sequence accumulates risk, enabling the \textit{deterministic lock-in} of long solutions.
 
 \paragraph{The Effect of Sampling Temperature.}
 While the native scaling $\alpha$ is a property of the trained model, inference behavior is heavily modulated by the sampling temperature $\tau$.
@@ -96,3 +89,11 @@ This relationship reveals that temperature can artificially shift a model betwee
 This exposes the fragility of memorization: a model operating in \textbf{Deterministic Lock-In} ($\alpha_{\mathrm{eff}} > 1$) at greedy settings ($\tau \to 0$) can be instantaneously reverted to \textbf{Brittle Memorization} ($\alpha_{\mathrm{eff}} < 1$) simply by increasing $\tau$.
 For example, if a model has a natural scaling $\alpha = 0.8$, greedy decoding effectively amplifies this to $\alpha_{\mathrm{eff}} \gg 1$, feigning robust knowledge. However, sampling at $\tau=1.0$ exposes the true exponent $\alpha < 1$, causing failure for long sequences.
 This mechanism explains why high-temperature sampling acts as a ``truth serum,'' decoupling the gains of contamination from robust generalization.
+
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=\columnwidth]{manuscript/figures/50/phase_diagram_y=A_x=E_hue=T_alpha=multi_p=0.01.pdf}
+    \caption{\textbf{Regimes of Memorization: Brittle vs. Lock-In.} 
+    Phase diagrams illustrating the maximum sustainable solution length $T$ (hue) for a fixed survival probability $P(T) = 0.01$, plotted against the irreducible error $E$ and scaling coefficient $A$.}
+    \label{fig:phase_diagram}
+\end{figure}
