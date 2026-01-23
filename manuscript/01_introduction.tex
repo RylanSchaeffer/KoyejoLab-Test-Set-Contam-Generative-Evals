@@ -1,11 +1,11 @@
 \section{Introduction}
 \label{sec:introduction}
 
-As frontier AI systems are pretrained on web-scale data, test set contamination has become a critical concern for accurately assessing their capabilities \citep{sainz2023nlp,schaeffer2023pretrainingtestsetneed,xu2024benchmarkdatacontaminationlarge,deng2024unveiling,reuel2025open}. 
-Evaluation aims to measure generalization on tasks the model has never seen, yet the sheer scale of modern pretraining makes such contamination increasingly likely \citep{brown2020language, du2022glam, wei2022finetuned,chowdhery2022palmscalinglanguagemodeling,touvron2023llama2openfoundation}. 
+As frontier AI systems are pretrained on web-scale data, test set contamination has become a critical concern for accurately assessing their capabilities \citep{sainz2023nlp,schaeffer2023pretrainingtestsetneed,xu2024benchmarkdatacontaminationlarge,deng2024unveiling,reuel2025open}. %\stella{I'm a little nervous that leading with talking about frontier models will cause people to become disappointed when they find out we've only trained small models.} \joshua{Point taken, but we have to motivate the research somehow and leading with small models won't motivate anyone to read the paper.}
+Evaluation aims to measure generalization on tasks the model has never seen, yet the sheer scale of modern pretraining makes such contamination increasingly likely \citep{brown2020language, du2022glam, wei2022finetuned,chowdhery2022palmscalinglanguagemodeling,touvron2023llama2openfoundation, penedo2024finewebdatasetsdecantingweb}.
 
 Prior research has sought to quantify the impact of test set contamination, also known as leakage, through two primary lenses. \textit{Statistical approaches} attempt to detect contamination or estimate its influence by modifying the test set, for example, by reordering, rephrasing, or replicating benchmark problems, e.g., \citep{oren2023proving, ni2025trainingbenchmarkneed, shi2024detecting, golchin2023data,golchin2024time,roberts2024to, wang2025generalization, zhang2024carefulexaminationlargelanguage}.
-In comparison, \textit{controlled approaches} -- which offer the most rigorous measurement -- intentionally contaminate pretraining corpora to quantify how specific doses of leakage inflate performance, e.g., \citep{magar2022data,jiang2024investigatingdatacontaminationpretraining,oren2023proving,yao2024data, wang2025generalization,kocyigit2025overestimation,bordt2025howmuch}.
+In comparison, \textit{controlled approaches} -- which offer the most rigorous measurement -- intentionally contaminate pretraining corpora to quantify how specific doses of leakage inflate performance, e.g., \citep{magar2022data,jiang2024investigatingdatacontaminationpretraining,oren2023proving,yao2024data, duan2024membership,wang2025generalization,kocyigit2025overestimation,bordt2025howmuch, wei2025hubblemodelsuiteadvance}.
 For a more in-depth discussion, please see Appendix~\ref{app:sec:related_work} Related Work.
 
 \begin{figure*}[t!]
@@ -44,13 +44,13 @@ In contrast, generative evaluations require the model to produce solutions spann
     \caption{\textbf{Scaling Laws Suggest Including A Single Test Set Replica Achieves Lower Loss Than the Irreducible Error of the Uncontaminated Corpus.} \textbf{Top:} For each scaling series pretrained on corpora contaminated with $R$ replicas of the MATH test set, we fit scaling laws $\mathcal{L}(C, R) = E(R) + C_0(R) \cdot C^{-\alpha(R)}$, where $C=6\, N \, D$ is the pretraining compute. 
     Almost all contaminated models achieve lower cross entropy on the MATH test set than the irreducible error of training on uncontaminated data (horizontal purple line).
     \textbf{Bottom:} Increasing test set contamination reduces the irreducible error $E(R)$ from $3.594$ at $R=0$ to $0.0347$ at $R=316$. Larger values of $R$ also increase the compute prefactor and compute exponent.
-    The functional form achieves average fitting error $< 10^{-2}$ for all $R$.
+    The functional form achieves average fitting error $< 10^{-2}$ for all $R$. %\stella{These tiny subplots are very hard to read. How much value do we think they have? Maybe put them in the appendix?}\joshua{They are pretty important because they show the irreducible error getting decimated.}
     }
     \label{fig:contamination_scaling_laws}
 \end{figure*}
 
 In this work, we quantitatively study the effects of test set contamination on generative evaluations, focusing on the widely used MATH benchmark \citep{hendrycks2021measuringmathematicalproblemsolving}. 
-We pretrain dozens of language models on corpora contaminated with varying numbers of test set replicas, sweeping across model sizes, sampling temperatures, and token budgets. 
+We pretrain dozens of language models on corpora contaminated with varying numbers of test set replicas, sweeping across model sizes, sampling temperatures, and token budgets. %\stella{I would like to see some language setting up the ``across the model development pipeline'' framing here, I think.}
 % Our findings reveal that while generative contamination shares some similarities with discriminative settings, it introduces new interactions between memorization and generalization.
 We make the following contributions:
 %

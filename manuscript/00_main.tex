@@ -7,6 +7,8 @@
 \usepackage{graphicx}
 \usepackage{subcaption}
 \usepackage{booktabs} % for professional tables
+\usepackage{booktabs}
+\usepackage{multirow}
 
 % hyperref makes hyperlinks in the resulting PDF.
 % If your build breaks (sometimes temporarily if a hyperlink spans a page)
@@ -55,6 +57,9 @@
 
 \newcommand{\rylan}[1]{\textcolor{red}{rylan: #1}}
 
+\definecolor{legendblue}{RGB}{31, 119, 180}
+\definecolor{legendgreen}{RGB}{44, 160, 44}
+
 % Todonotes is useful during development; simply uncomment the next line
 %    and comment out the line below the next line to turn off comments
 %\usepackage[disable,textsize=tiny]{todonotes}
@@ -63,6 +68,8 @@
 % The \icmltitle you define below is probably too long as a header.
 % Therefore, a short form for the running title is supplied here:
 \icmltitlerunning{Quantifying the Effect of Test Set Contamination on Generative Evaluations}
+
+
 
 \begin{document}
 
@@ -107,7 +114,6 @@
 
 \icmlcorrespondingauthor{Rylan Schaeffer}{rschaef@cs.stanford.edu}
 \icmlcorrespondingauthor{Joshua Kazdan}{jkazdan@stanford.edu}
-\icmlcorrespondingauthor{Niloofar Mireshghallah}{nmireshg@andrew.cmu.edu}
 \icmlcorrespondingauthor{Sanmi Koyejo}{sanmi@cs.stanford.edu}
 
 
@@ -118,6 +124,9 @@
 
   \vskip 0.3in
 ]
+
+\newcommand{\stella}[1]{%
+  \textcolor{blue}{[\textbf{Stella:} #1] }}
 
 % this must go after the closing bracket ] following \twocolumn[ ...
 
@@ -137,7 +146,7 @@
     Test set contamination -- the inclusion of benchmarks in pretraining data -- has emerged as a critical threat to the trustworthy evaluation of frontier AI systems.
     While research has thoroughly investigated the impact of test set contamination on \emph{discriminative} evaluations, comparatively little research has studied the impact of test set contamination on \emph{generative} evaluations.
     In this work, we quantitatively assess the effects of test set contamination on generative evaluations through the language model lifecycle.
-    We pretrain language models on mixtures of web data and the MATH benchmark, sweeping model sizes and number of test set replicas contaminating the pretraining corpus; performance improves with contamination and model size.
+    We pretrain language models up to 344M parameters on mixtures of web data and the MATH benchmark, sweeping model sizes and number of test set replicas contaminating the pretraining corpus; performance improves with contamination and model size.
     Using scaling laws, we make a surprising discovery: including even a single test set replica enables models to achieve lower loss than the irreducible error of training on the uncontaminated corpus.
     We then study additional training: overtraining with fresh data reduces the effects of contamination, whereas supervised finetuning on the training set will increase performance for low contamination but decrease performance for high contamination.
     Finally, at inference, we identify factors that modulate memorization: high sampling temperatures mitigate contamination effects, and longer solutions are exponentially more difficult to memorize than shorter ones, presenting a contrast with discriminative evaluations, where solutions are only a few tokens in length.

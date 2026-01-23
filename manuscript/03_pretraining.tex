@@ -2,29 +2,90 @@
 \label{sec:pretraining}
 
 We begin at the first stage of the model lifecycle: pretraining.
-We establish foundational results on how test set contamination interacts with model scale and compute, and use scaling laws to quantify what contamination ``buys'' a model.
+We establish foundational results on how test set contamination interacts with model scale and compute, and use scaling laws to quantify what contamination buys a model.
 
-
-
-\paragraph{Finding \#1: Performance Increases with Contamination and Model Size} Consistent with discriminative evaluations, increasing the number of benchmark replicas in the pretraining corpus increases Math Verify scores and decreases cross entropies (Fig.~\ref{fig:math_verify_ce_temp_0} Left), as does increasing model size (Fig.~\ref{fig:math_verify_ce_temp_0} Right).
+\paragraph{Finding \#1: Performance Increases with Contamination and Model Size} Consistent with discriminative evaluations, increasing the number of benchmark replicas in the pretraining corpus increases Math Verify scores and decreases cross entropies (Fig.~\ref{fig:math_verify_ce_temp_0} Left), as does increasing model size (Fig.~\ref{fig:math_verify_ce_temp_0} Right). %\stella{I'm not sure how much I endorse this statement, but my first thought after reading this was ``It's probably a good idea to put my MCQA variation \#s in the paper, as otherwise this statement is a little weird due to the lack of a meaningfully similar MCQA benchmark.''} \joshua{was this comment misplaced?  It doesnt' seem to belong here}
 We observe a non-linear relationship between the number of test set replicas and model performance:
 For low levels of contamination ($\leq$ 10 replicas), the impact on performance is minimal, with Math Verify scores and cross entropies remaining close to uncontaminated performance; at around 100 replicas, performance sharply increases (Fig.~\ref{fig:math_verify_replicas_temp}).
 At the highest levels of contamination, the model achieves ceiling performance.
 
 \paragraph{Finding \#2: Contamination-Driven Performance Is Not Generalization}
-To determine if the performance gains stemmed from robust generalization or superficial memorization, we evaluated our contaminated models on two modified versions of the MATH test set. First, we \emph{Rephrased} the problems, retaining the original numerical values and logic but altering the linguistic surface form. Second, we \emph{Perturbed} the problems, modifying the numerical values and correct answers while maintaining the problem structure.
+To determine if the performance gains stemmed from robust generalization or superficial memorization, we evaluated our contaminated models on two modified versions of the MATH test set. First, we \emph{rephrased} the problems, retaining the original numerical values and logic but altering the linguistic surface form. Second, we \emph{perturbed} the problems, modifying the numerical values and correct answers while maintaining the problem structure.
 
-In both conditions, performance collapses to near-zero across all model sizes and contamination levels in both conditions (Fig.~\ref{fig:rephrase_perturb}). Even models that achieved ceiling performance on the original test set failed to solve the modified versions. This strongly suggests that the capabilities gained from test set contamination rely almost exclusively on verbatim memorization of the specific test sequences rather than the acquisition of underlying mathematical reasoning.
+In both conditions, performance regresses to match the uncontaminated model across all model sizes and contamination levels in both conditions (Fig.~\ref{tab:rephrase_perturb}). Even models that achieved ceiling performance on the original test set failed to solve the modified versions. This strongly suggests that the capabilities gained from test set contamination rely almost exclusively on verbatim memorization of the specific test sequences rather than the acquisition of underlying mathematical reasoning.
 
 \paragraph{Finding \#3: Scaling Laws Suggest Including A Single Test Set Replica Achieves Lower Loss Than the Irreducible Error of the Uncontaminated Corpus}
 
-\begin{figure}[t!]
+\begin{table}[t!]
     \centering
-    % \includegraphics[width=\columnwidth]{figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed_col_wrap=1.pdf}
-    \includegraphics[width=\columnwidth]{figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed.pdf}
-    \caption{\textbf{Contamination-Driven Performance Is Not Generalization.} When MATH test problems are rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to near-zero regardless of contamination level or model size, confirming that performance gains from contamination are not generalized mathematical reasoning.}
-    \label{fig:rephrase_perturb}
-\end{figure}
+    \begin{tabular}{crrr}
+        \toprule
+        \textbf{Model} & \textbf{Replicas} & \textbf{Rephrased} & \textbf{Perturbed} \\
+        \midrule
+        % \multirow{7}{*}{34M} 
+        %   % & 0   & 0.04\% & 0.00\% \\
+        %   % & 1   & 0.00\% & 0.00\% \\
+        %   % & 3   & 0.00\% & 0.00\% \\
+        %   % & 10  & 0.00\% & 0.00\% \\
+        %   % & 32  & 0.00\% & 0.00\% \\
+        %   % & 100 & 0.00\% & 0.00\% \\
+        %   % & 316 & 0.02\% & 0.00\% \\
+        % \addlinespace
+        % \multirow{7}{*}{62M} 
+        %   % & 0   & 0.66\% & 0.00\% \\
+        %   % & 1   & 0.00\% & 0.00\% \\
+        %   % & 3   & 0.00\% & 0.00\% \\
+        %   % & 10  & 0.00\% & 0.00\% \\
+        %   % & 32  & 0.00\% & 0.00\% \\
+        %   % & 100 & 0.00\% & 0.00\% \\
+        %   % & 316 & 0.00\% & 0.00\% \\
+        % \addlinespace
+        % \multirow{8}{*}{93M} 
+        %   % & 0    & 0.04\% & 0.00\% \\
+        %   % & 1    & 0.00\% & 0.00\% \\
+        %   % & 3    & 0.00\% & 0.00\% \\
+        %   % & 10   & 0.00\% & 0.00\% \\
+        %   % & 32   & 0.00\% & 0.00\% \\
+        %   % & 100  & 0.00\% & 0.00\% \\
+        %   % & 316  & 0.00\% & 0.00\% \\
+        %   % & 1000 & 0.00\% & 0.00\% \\
+        % \addlinespace
+        % \multirow{8}{*}{153M} 
+        %   % & 0    & 0.18\% & 0.00\% \\
+        %   % & 1    & 0.00\% & 0.00\% \\
+        %   % & 3    & 0.00\% & 0.00\% \\
+        %   % & 10   & 0.00\% & 0.00\% \\
+        %   % & 32   & 0.00\% & 0.00\% \\
+        %   % & 100  & 0.00\% & 0.00\% \\
+        %   % & 316  & 0.00\% & 0.00\% \\
+        %   % & 1000 & 0.00\% & 0.00\% \\
+        % \addlinespace
+        \multirow{9}{*}{344M} 
+          & 0    & 0.04\% & 0.00\% \\
+          & 1    & 0.00\% & 0.00\% \\
+          & 3    & 0.00\% & 0.00\% \\
+          & 10   & 0.00\% & 0.00\% \\
+          & 32   & 0.00\% & 0.00\% \\
+          & 100  & 0.02\% & 0.00\% \\
+          & 316  & 0.00\% & 0.00\% \\
+          & 1000 & 0.00\% & 0.00\% \\
+          & 3162 & 0.04\% & 0.00\% \\
+        \bottomrule
+    \end{tabular}
+    \vspace{0.1cm}
+    % \caption{Performance metrics across different models and repetition counts.}
+    \caption{\textbf{Contamination-Driven Performance Is Not Generalization.} When MATH test problems are rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to baseline regardless of contamination level or model size, confirming that performance gains from contamination are not generalized mathematical reasoning. Results were consistent across all model sizes.}
+    \label{tab:rephrase_perturb}
+\end{table}
+
+% \begin{figure}[t!]
+%     \centering
+%     % \includegraphics[width=\columnwidth]{figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed_col_wrap=1.pdf}
+%     \includegraphics[width=0.8\columnwidth]{manuscript/figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/stella.png}
+%     % \caption{\textbf{Contamination-Driven Performance Is Not Generalization.} When MATH test problems are rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to near-zero regardless of contamination level or model size, confirming that performance gains from contamination are not generalized mathematical reasoning. %\stella{I think these plots don't show anything. This is effectively wasted visual space.} 
+%     \caption{\textbf{Contamination-Driven Performance Is Not Generalization.} When MATH test problems are \textbf{\textcolor{legendblue}{rephrased}} (same numbers, different wording) or \textbf{\textcolor{legendgreen}{perturbed}} (same wording, different numbers), model performance collapses to baseline regardless of contamination level or model size, confirming that performance gains from contamination are not generalized mathematical reasoning.}
+%     \label{fig:rephrase_perturb}
+% \end{figure}
 
 How much does test set contamination ``buy" the model in terms of performance? 
 More specifically, how much pretraining compute must be spent on an uncontaminated pretraining corpus to match the performance of a model trained on a corpus containing $R$ replicas of the benchmark test set?
@@ -35,10 +96,10 @@ Based on previous work \citep{kaplan2020scaling, hoffman2022chinchilla, openai20
 %
 \begin{equation}
     \label{eqn:neural_scaling_law}
-    \mathcal{L}(C, R) = E_0(R) + C_0(R) \cdot C^{-\alpha(R)},
+    \mathcal{L}(C, R) = E_0(R) + C_0(R) \cdot C^{-\alpha(R)}.
 \end{equation}
 %
-where $E_0(R) > 0$ is the irreducible error, $C_0(R) > 0$ is the compute prefactor and $\alpha(R) > 0$ is the compute exponent.
+% where $E_0(R) > 0$ is the irreducible error, $C_0(R) > 0$ is the compute prefactor and $\alpha(R) > 0$ is the compute exponent.
 
 
 Fig.~\ref{fig:contamination_scaling_laws} shows each scaling law, as well as each scaling law's estimated parameters as a function of the number of test set replicas $R$.
