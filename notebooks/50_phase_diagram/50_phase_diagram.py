@@ -153,8 +153,16 @@ for idx, (alpha, T_grid) in enumerate(zip(alpha_values, all_T_grids)):
         rasterized=True,
     )
 
-    # Overlay lock-in region with hatching or distinct marking
+    # Overlay lock-in region with white fill
     if np.any(lock_in_mask):
+        # Fill the lock-in region with white
+        ax.contourf(
+            E_grid,
+            A_grid,
+            lock_in_mask.astype(float),
+            levels=[0.5, 1.5],
+            colors=["white"],
+        )
         # Draw contour around the lock-in region
         ax.contour(
             E_grid,
