@@ -1,12 +1,12 @@
 
-\section{More Training: Overtraining \& Supervised Finetuning}
+\section{Further Training: Overtraining \& Supervised Finetuning}
 \label{sec:further_training}
 
 After pretraining, models typically undergo additional training.
 We now examine how two common additional training interventions---overtraining on fresh data and supervised finetuning---interact with pretraining contamination.
 
 \paragraph{Finding \#4: Overtraining with Fresh Data Mitigates Contamination}
-\citet{bordt2025howmuch} recently reported that for discriminative evaluations, the effect of contamination diminishes when models are trained beyond the ``compute optimal'' ratio of 20 tokens-per-parameter \citep{hoffman2022chinchilla} on fresh data. We tested whether this so-called \emph{overtraining} \citep{touvron2023llama2openfoundation,sardana2024beyond,gadre2024languagemodelsscalereliably,schaeffer2025pretrainingscalinglawsgenerative} has similar effects for generative benchmarks.
+\citet{bordt2025howmuch} recently reported that for discriminative evaluations, the effect of contamination diminishes when models are trained beyond ``compute optimal'' on fresh data. We tested whether this so-called \emph{overtraining} \citep{touvron2023llama2openfoundation,sardana2024beyond,gadre2024languagemodelsscalereliably,schaeffer2025pretrainingscalinglawsgenerative} has similar effects for generative benchmarks.
 We extended our Sec.~\ref{sec:methods} pretraining sweep into the overtrained regime, pretraining on 
 %
 \begin{equation}\label{eqn:overtrain_multiplier}
@@ -37,6 +37,15 @@ After pretraining, the first post-training step is oftentimes supervised finetun
     The penalty for high temperature is disproportionately larger for highly contaminated models: increasing temperature from 0 to 1 reduces performance by a factor of $\sim2$ at low contamination levels ($\leq 10$ replicas), whereas it reduces performance by a factor of up to 40 at high contamination levels ($1000$ replicas).
     }
     \label{fig:math_verify_replicas_temp}
+\end{figure*}
+
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/11_math_qwen3_pt_math_verify/y=math_verify_x=solution_length_hue=num_replicas_col=temp_row=params_153M_344M.png}
+    \caption{\textbf{Performance Declines with Increasing Solution Token Length.} Math Verify Scores decrease with solution length, with the effects modulated by temperature.  At high rates of contamination and higher temperatures, math verify scores fall exponentially with the solution length.  At lower temperatures, and high rates of contamination, solution length has almost no effect.  Models exposed to less contamination also exhibit declining scores with longer solution lengths, but the dropoff is concave up and occurs much more slowly. Shaded regions represent 95\% confidence intervals.
+    }
+    \label{fig:temp_and_solution_length}
 \end{figure*}
 
 One might expect that SFTing on the train set should increase test set performance across the board.
