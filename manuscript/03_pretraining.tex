@@ -92,7 +92,7 @@ More specifically, how much pretraining compute must be spent on an uncontaminat
 
 
 To answer this question, we turned to neural scaling laws.
-Based on previous work \citep{kaplan2020scaling, hoffman2022chinchilla, openai2024gpt4technicalreport, hu2024predictingemergentabilitiesinfinite, schaeffer2025pretrainingscalinglawsgenerative}, for each scaling series pretrained on corpora contaminated with $R \in \{0, 1, 3, 10, 32, 100, 316\}$ replicas of the MATH test set, we fit neural scaling laws for the cross entropy loss $\mathcal{L}$ on the benchmark test set:
+Based on previous work \citep{kaplan2020scaling, hoffman2022chinchilla, openai2024gpt4technicalreport, hu2024predictingemergentabilitiesinfinite, schaeffer2025pretrainingscalinglawsgenerative}, for each scaling series pretrained on corpora contaminated with $R \in \{0, 1, 3, 10, 32, 100, 316\}$ replicas of the MATH test set, we fit neural scaling laws for the cross entropy loss $\mathcal{L}$ on the benchmark test set as a function of pretraining compute $C$, measured in $6\,N\,D$ FLOP:
 %
 \begin{equation}
     \label{eqn:neural_scaling_law}
