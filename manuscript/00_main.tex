@@ -146,11 +146,10 @@
     Test set contamination -- the inclusion of benchmarks in pretraining data -- is a critical threat to the trustworthy evaluation of frontier AI systems.
     While its impact on \emph{discriminative} evaluations is well-studied, contamination on \emph{generative} evaluations remains underexplored.
     We quantitatively assess these effects across the language model lifecycle by pretraining models (up to 344M parameters) on web data contaminated with varying numbers MATH test set replicas.
-    Performance improves with contamination and model size.
-    Using scaling laws, we make a surprising discovery: including even a single test set replica enables models to achieve lower loss than the irreducible error of training on the uncontaminated corpus.
-    We then study additional training: overtraining with fresh data reduces the effects of contamination, whereas supervised finetuning on the training set will increase performance for low contamination but decrease performance for high contamination.
-    Finally, at inference, we identify factors that modulate memorization: high sampling temperatures mitigate contamination effects, and longer solutions are exponentially more difficult to memorize than shorter ones, presenting a contrast with discriminative evaluations, where solutions are only a few tokens in length.
-    By characterizing how generation and memorization interact, we highlight new considerations for trustworthy evaluation of AI systems.
+    While performance expectedly improves with contamination and model size, our scaling law analysis reveals a fundamental breach: including even a single test set replica enables models to achieve lower loss than the irreducible error of training on the uncontaminated corpus.
+    We then study additional training: overtraining with fresh data dilutes contamination effects, whereas supervised finetuning on the training set improves performance for low contamination but degrades it for high contamination.
+    At inference, we identify three distinct regimes of memorization—ranging from exponential decoherence to deterministic lock-in—governed by solution length and sampling temperature.
+    Finally, we identify and fix a critical implementation error in a widely used evaluation library that previously underreported mathematical reasoning performance. By characterizing how generation and memorization interact, we highlight new considerations for trustworthy AI evaluation.
 \end{abstract}
 
 

@@ -63,20 +63,19 @@ The probability of successfully generating a solution of length $T$ can then be 
 \end{equation}
 %
 To explain intuitively, there are two opposing forces at the intersection of memorization and generation: The probability of generating a sequence decays geometrically (exponentially) with sequence length, making longer sequences harder to generate, but the the probability of knowing the correct next token grows geometrically with sequence length, making predicting the next token easier.
-These two rates reveal three distinct regimes of memorization:
+These two rates reveal three distinct regimes of memorization (Fig.~\ref{fig:phase_diagram}):
 
-\begin{figure}[t!]
-    \centering
-    % \includegraphics[width=\columnwidth]{figures/15_math_qwen3_pt_math_verify_rephrase_perturbations/y=math_verify_x=num_replicas_hue=num_params_col=condition_rephrase_perturbed_col_wrap=1.pdf}
-    \includegraphics[width=0.8\columnwidth]{manuscript/figures/}
-    % \caption{\textbf{Contamination-Driven Performance Is Not Generalization.} When MATH test problems are rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to near-zero regardless of contamination level or model size, confirming that performance gains from contamination are not generalized mathematical reasoning. %\stella{I think these plots don't show anything. This is effectively wasted visual space.} 
-    \caption{\textbf{Three Regimes of Memorization.} }
-    \label{fig:rephrase_perturb}
-\end{figure}
 
 
 \paragraph{Regime I: Exponentially Fast Decoherence ($E > 0$).}
 In the absence of meaningful contamination, the irreducible error term $E$ dominates. The survival probability decays exponentially ($P(T) \sim e^{-E \cdot T}$), rendering the generation of long solutions statistically improbable.
+
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=\columnwidth]{manuscript/figures/50/phase_diagram_y=A_x=E_hue=T_alpha=multi_p=0.01.pdf}
+    \caption{\textbf{Three Regimes of Memorization.} }
+    \label{fig:phase_diagram}
+\end{figure}
 
 \paragraph{Regime II: Brittle Memorization ($E \approx 0, \alpha \le 1$).}
 At intermediate contamination, the model minimizes the noise floor ($E \to 0$) but learns the sequence slowly. The probability follows a Weibull-like stretched exponential ($P(T) \sim e^{-k T^{1-\alpha}}$). We characterize this as \textit{brittle memorization}: while the model can accurately generate moderately long sequences, its grasp on the solution is fragile, and the cumulative probability of success eventually vanishes.

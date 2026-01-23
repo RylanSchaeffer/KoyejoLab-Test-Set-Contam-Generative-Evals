@@ -26,6 +26,7 @@ Our interpretation is that while more fresh data is generally useful for improvi
 \paragraph{Finding \#5: Supervised Fine-Tuning on Training Set Has Opposing Effects, Depending on Pretraining Contamination}
 
 After pretraining, the first post-training step is oftentimes supervised finetuning (SFT) \citep{wei2022finetunedlanguagemodelszeroshot, ouyang2022training}. We turned to assessing what effect, if any, SFT has on contaminated pretrained models. \citet{kocyigit2025the} recently studied this question and found that SFT on the \emph{train} set improves performance on the \emph{test} set. However, as a key methodological difference, \citet{kocyigit2025the} induced test set contamination via continued pretraining \citep{jin2022lifelong,jang2022continualknowledgelearninglanguage,ibrahim2024simple, parmar2024reusedontretrainrecipe,yildiz2025investigatingcontinualpretraininglarge}, whereas we introduced test set contamination uniformly throughout pretraining.
+In SFT, we used the exactly same formatting for MATH that we used for pretraining and for evaluating. 
 
 
 \begin{figure*}[t!]
@@ -48,9 +49,9 @@ After pretraining, the first post-training step is oftentimes supervised finetun
     \label{fig:temp_and_solution_length}
 \end{figure*}
 
-One might expect that SFTing on the train set should increase test set performance across the board.
+One might expect that SFT on the train set should increase test set performance across the board.
 We discover that, surprisingly, the opposite is sometimes true: SFTing on the train set can both help and hurt model performance on the test set, depending on the amount of contamination in pretraining (Fig.~\ref{fig:sft}).
-For models with no or low $(< 10)$ test set contamination, SFTing on the train set significantly reduces loss on the test set (purple).
+For models with no or low $(< 10)$ test set contamination, SFT on the train set significantly reduces loss on the test set (purple).
 At $10$ test set replicas, SFT has no effect (aqua), but as contamination increases, SFTing on the train set significantly increases loss on the test set (yellow, green).
 We conjecture that during SFT, contaminated models learn to generalize but also forget their contaminated pretraining data, and the effects of contaminated test set data are more impactful than generalization for small models, leading to a net increase in test loss. 
 As studied in Section \ref{sec:pretraining}, the benefits of contamination on test loss dwarf those of generalization (which would be improved by SFT on the train set). 
