@@ -55,11 +55,13 @@ Each run is fast — teacher forcing requires no generation, just a forward pass
 
 ## Implementation
 
-1. **Modify `src/data.py`**: Add `load_dataset_math_perturbed()` function that loads `stellaathena/math_perturbed` and returns a dataset with `problem` and `solution` fields.
+**Constraint: Do not break backwards compatibility. Existing codepaths must remain untouched.**
 
-2. **Modify `scripts/eval_language_model_teacher_forcing.py`**: Add an `elif` branch for the new dataset name (e.g., `"stellaathena/math_perturbed"`).
+1. **Add `load_dataset_math_perturbed()` to `src/data.py`**: New function (does not modify any existing function). Loads `stellaathena/math_perturbed` and returns a dataset with `problem` and `solution` fields.
 
-3. **Create W&B sweep YAML**: `sweeps/eval_pt_teacher_forcing/math_perturbed/eval_sft_models.yaml` listing all checkpoints above.
+2. **Add `elif` branch in `scripts/eval_language_model_teacher_forcing.py`**: The script already has `if dataset == "EleutherAI/minerva_math": ... else: raise NotImplementedError`. Add `elif dataset == "stellaathena/math_perturbed":` before the `else`. The existing `minerva_math` path is unchanged. Everything downstream (vLLM inference, logprob extraction, W&B logging) is already dataset-agnostic.
+
+3. **Create W&B sweep YAML**: `sweeps/eval_pt_teacher_forcing/math_perturbed/eval_sft_models.yaml` listing all checkpoints above, with `dataset: "stellaathena/math_perturbed"`.
 
 4. **Run the sweep** on the cluster.
 
