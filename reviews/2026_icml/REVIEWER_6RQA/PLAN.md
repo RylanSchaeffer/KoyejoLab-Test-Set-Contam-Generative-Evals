@@ -72,6 +72,46 @@ Each run is fast — teacher forcing requires no generation, just a forward pass
 - **If SFT reduces cross-entropy on perturbed problems**: Generalization exists even at 344M. The Finding #5 conjecture is supported — SFT simultaneously induces generalization and forgetting.
 - **If no change**: Consistent with Reviewer Mmea's interpretation that the effect is pure catastrophic forgetting at this scale. Still informative — narrows the interpretation and we report honestly.
 
+## Dataset Details (for implementation reference)
+
+**`stellaathena/math_perturbed`** columns: `idx`, `original_problem`, `problem`, `original_answer`, `answer`, `solution`, `level`, `type`
+- `problem` = perturbed version (different numbers), `solution` = full chain-of-thought with `\boxed{answer}`
+- Use `problem` and `solution` fields to construct the teacher-forcing input
+- Format: `MINERVA_MATH_DOC_TO_TEXT.format(problem=row["problem"], solution=row["solution"])`
+
+**`stellaathena/math_rephrased`** columns: `idx`, `original_problem`, `problem`, `answer`, `level`, `type`
+- **No `solution` field** — cannot use for teacher forcing
+- `answer` is only populated for 3250/5000 rows
+- Not used in this experiment, but could be used for Math Verify evaluation later
+
+## Implementation Details
+
+The key change to `scripts/eval_language_model_teacher_forcing.py` is at lines 80–85. Current code:
+```python
+if wandb_config["data_config"]["dataset"] == "EleutherAI/minerva_math":
+    raw_datasets = src.data.load_dataset_hendrycks_math()
+    test_dataset = raw_datasets["test"]
+    doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
+else:
+    raise NotImplementedError
+```
+
+Add before the `else`:
+```python
+elif wandb_config["data_config"]["dataset"] == "stellaathena/math_perturbed":
+    test_dataset = src.data.load_dataset_math_perturbed()
+    doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
+```
+
+The new `load_dataset_math_perturbed()` in `src/data.py`:
+```python
+def load_dataset_math_perturbed():
+    ds = load_dataset("stellaathena/math_perturbed")
+    return ds["test"]
+```
+
+The rest of the script works unchanged — it just needs `test_dataset["problem"]`, `test_dataset["solution"]`, and `doc_to_text`.
+
 ## Analysis Considerations
 
 - Break down by difficulty level (Level 1 is most likely to show a signal)
