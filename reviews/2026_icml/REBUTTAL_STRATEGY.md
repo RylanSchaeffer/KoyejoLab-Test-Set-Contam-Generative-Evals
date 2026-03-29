@@ -2,245 +2,230 @@
 
 ## Synthesized Reviewer Objections
 
-- **Model scale too small (344M max) to support claims about modern LLMs.** A 344M model cannot do multi-step reasoning on competition math, so performance gains may be trivially attributable to verbatim memorization rather than revealing interesting memorization-generalization dynamics. [6RQA, Mmea, 4xWn, THKB]
+- **Model scale too small (344M max).** Performance gains may be trivially attributable to verbatim memorization rather than revealing memorization-generalization dynamics. [Mmea, 4xWn, THKB; 6RQA acknowledges but says "I do not see this as a major weakness"]
 
-- **Single benchmark (MATH only) limits generalizability.** Decoherence rates, scaling law parameters, and the three-regime framework may be artifacts of MATH's specific formatting or token distribution rather than general properties of generative contamination. [Mmea, THKB]
+- **Single benchmark (MATH only).** Findings may be artifacts of MATH's structure rather than general properties of generative contamination. [Mmea, THKB]
 
-- **Memorization vs. generalization not adequately disentangled.** The paper conjectures about this trade-off but never quantifies it. Could split the test set into seen/unseen subsets, or evaluate on perturbed/rephrased problems. Called "the difference between a borderline and an excellent contribution." [6RQA, Mmea]
+- **Memorization vs. generalization not disentangled.** The paper conjectures but never quantifies. Called "the difference between a borderline and an excellent contribution." [6RQA, Mmea]
 
-- **Finding #5 (SFT) claimed to be a memorization-generalization tension, but evidence is insufficient.** Mmea argues the performance drop is simply catastrophic forgetting at 344M scale, not a genuine tension. 6RQA separately notes the conjecture could be tested rather than assumed. [Mmea, 6RQA — different critiques]
+- **Finding #5 (SFT) misattributed.** Mmea: performance drop is catastrophic forgetting, not a memorization-generalization tension. 6RQA: conjecture could be tested rather than assumed. [Mmea, 6RQA — different critiques]
 
-- **Finding #8 (three regimes / survival process) needs more justification or clarity.** 4xWn says the model is "never justified" and "mathematically discover" is misleading. THKB's concern is milder: the exposition is "compacted" and terminology could be "further clarified." [4xWn — validity concern; THKB — clarity concern]
+- **Finding #8 (survival process) needs justification or clarity.** 4xWn: model is "never justified" and "mathematically discover" is misleading (note: paper says "mathematically describe" — misquote). THKB: exposition is "compacted." [4xWn — validity; THKB — clarity]
 
-- **Overstated or factually incorrect claims.** Specific instances: (a) "more rigorous measurement" (L.024) not justified; (b) "foundational work focused on discriminative benchmarks" ignores Kocygit et al. 2025 on machine translation; (c) positioning around "tens-to-thousands of tokens" contradicts MATH's short answers; (d) single-replica result depends on the pretraining data mix, which is never varied. [4xWn, 6RQA]
+- **Overstated claims.** (a) "most rigorous measurement" not justified; (b) "focused on discriminative benchmarks" ignores Kocyigit et al. 2025; (c) "tens-to-thousands of tokens" contradicts MATH's short answers; (d) single-replica result is corpus-dependent. [4xWn, 6RQA]
 
-- **Insufficient originality relative to Bordt et al.** Work is described as "a replica of more complete work." Need to clearly articulate what is novel beyond prior contamination studies. [4xWn]
+- **Insufficient originality relative to Bordt et al.** Called "a replica of more complete work." [4xWn]
 
-- **Overtraining results conflate data dilution with catastrophic forgetting.** It is unclear whether the mitigation effect of overtraining comes from diluting contaminated data or from forgetting memorized content, and the paper does not control for these separately. [6RQA]
+- **Overtraining conflates dilution with forgetting.** [6RQA]
 
-- **External validity concerns for real-world settings.** Real-world models are much larger, pretrained on mixed online corpora; training/test data distributions are confounders that may compromise external validity of the controlled study. [THKB]
+- **External validity concerns.** [THKB]
 
-- **Missing experimental details.** Number of documents, max sequence length, number of optimization steps, and other specifics not reported. [4xWn]
+- **Missing experimental details.** [4xWn]
 
-- **Presentation reads as a listing of experiments** without a clear logical flow or narrative arc connecting sections. [4xWn]
+- **Presentation reads as a listing of experiments.** [4xWn]
 
 ## Rebuttal to Reviewer 4xWn
 
-We thank the reviewer for engaging with our work and for recognizing the timeliness and relevance of the research questions (Strengths). We address each concern below.
+We thank the reviewer for recognizing the timeliness and relevance of the research questions.
 
 ### Soundness 1: Missing experimental details
 
-We appreciate this suggestion. Key experimental details — including the number of documents, maximum sequence length, number of optimization steps, batch size schedule, and optimizer hyperparameters — are reported in Appendix B. We are happy to surface additional specifics in the main text if the reviewer indicates which details would be most useful. We will also add a concise summary table of training configurations to the main body in the revision.
+These details — number of documents, max sequence length, optimization steps, batch size schedule, optimizer hyperparameters — are reported in Appendix B Pretraining Implementation Details. We will add a summary table to the main body in revision.
 
 ### Soundness 2: Model scale (344M) is small
 
-We agree that 344M is small relative to frontier models, and we acknowledge this limitation in the paper. However, we believe this concern should be weighed against two important considerations:
+We acknowledge this limitation. Two considerations:
 
-1. **Controlled contamination studies require pretraining from scratch.** This is the methodological price of causal identification: to isolate the effect of contamination, one must control the entire pretraining corpus, which is prohibitively expensive at billion-scale. This constraint applies equally to all prior controlled contamination work, including Bordt et al., which uses models of comparable scale.
+1. **Controlled contamination requires pretraining from scratch.** This constraint applies to all prior work, including Bordt et al. (models up to ~1.6B — larger than ours, but still well below frontier scale).
 
-2. **Our scaling law analysis (Finding #3) exists precisely to extrapolate beyond experimental scale.** By fitting $\mathcal{L}(C, R) = E(R) + C_0(R) \cdot C^{-\alpha(R)}$ across model sizes and contamination levels, we provide a principled framework for predicting contamination effects at larger compute budgets. This is not a post-hoc rationalization — it is a core contribution of the paper.
+2. **Our scaling law analysis (Finding #3) extrapolates beyond experimental scale.** Fitting $\mathcal{L}(C, R) = E(R) + C_0(R) \cdot C^{-\alpha(R)}$ provides falsifiable predictions at larger compute budgets. This is a core contribution, not a post-hoc rationalization.
 
-We will make the scale limitation more prominent in the revision, as the reviewer suggests.
+We will make the scale limitation more prominent in revision.
 
 ### Soundness 3a: "More rigorous measurement" not justified
 
-We accept this phrasing was imprecise. Controlled contamination studies enable *causal* measurement of contamination effects, in contrast to observational approaches that can only establish correlations. We will revise to "which enable the most direct causal measurement" in the camera-ready.
+The reviewer quotes "a more rigorous measurement"; our paper says "the **most** rigorous measurement." Regardless, we will revise to "which enable the most direct causal measurement."
 
-### Soundness 3b: Prior work claim ignores Kocygit et al. 2025
+### Soundness 3b: Prior work claim ignores Kocyigit et al. 2025
 
-We respectfully disagree. We already cite Kocygit et al. (2025) in the introduction (line 24), in Section 4, and in Appendix A (Related Work). Our claim is that the literature has *focused on* discriminative benchmarks — a statement about the distribution of prior work, not a claim of exclusivity. To our knowledge, Kocygit et al. is the sole controlled contamination study on a purely generative task, and it studies machine translation via continued pretraining rather than pretraining from scratch. One exception out of dozens of papers does not contradict the observation that the field has overwhelmingly focused on discriminative evaluations — if anything, it underscores how underexplored the generative setting remains.
+We already cite Kocyigit et al. (2025) in the introduction (paragraph 2) and Appendix A Related Work. Our claim is that the literature has "predominantly focused on" discriminative benchmarks (the paper's exact words) — not exclusively. Kocyigit et al. is the sole controlled contamination study on a purely generative task. One exception out of dozens of papers reinforces, rather than contradicts, how underexplored the generative setting remains.
 
-### Soundness 4a: Finding #8 modelization "never justified"; "mathematically discover" is misleading
+### Soundness 4a: Finding #8 "never justified"; "mathematically discover" is misleading
 
-The survival process model is not assumed — it is *derived* from the in-context scaling law (Equation 3). Specifically, we model the per-token negative log-likelihood as $\ell_t \sim E + A \cdot t^{-\alpha}$ and compute the probability that a model generates all $T$ tokens correctly as the product $P(T) = \prod_{t=1}^{T} p_t$, yielding Equation 4. The three regimes then emerge from the asymptotic behavior of this product depending on whether $E > 0$, $E \approx 0$ with $\alpha \leq 1$, or $E \approx 0$ with $\alpha > 1$. We will make this derivation more explicit in the revision.
+The survival process model is *derived* from the in-context scaling law (Equation 3): per-token NLL $\ell_t \sim E + A \cdot t^{-\alpha}$, survival probability $P(T) = \prod_{t=1}^{T} p_t$ (Equation 4), three regimes from the asymptotic behavior depending on $E$ and $\alpha$. We will make this derivation more explicit.
 
-We agree that "mathematically discover" overstates the nature of the contribution and will revise to "mathematically characterize."
+Regarding "mathematically discover": our paper says **"mathematically describe"** (Section 1, contribution bullet 3). The reviewer appears to have misquoted the text.
 
-### Soundness 4b: MATH answers are short, contradicting the "tens-to-thousands of tokens" framing
+### Soundness 4b: MATH answers are short
 
-We respectfully disagree with this characterization. The MATH benchmark requires models to generate full chain-of-thought *solutions*, not just final answers. In our experiments, MATH solution lengths range from tens to hundreds of tokens, and Finding #7 (Figure 6) explicitly plots Math Verify scores as a function of solution length out to 100+ tokens. The "tens-to-thousands of tokens" framing in the introduction refers to generative evaluations broadly — MATH solutions fall squarely within this range. This is precisely why solution length emerges as a key moderator of contamination effects (Findings #7 and #8), a phenomenon that has no analog in discriminative evaluations.
+The reviewer conflates final answers with full solutions. MATH requires generating complete chain-of-thought solutions; ground-truth solution lengths range from 15 to 1,949 tokens. The "tens-to-thousands of tokens" framing is empirically correct.
 
-### Presentation: Paper reads as a listing of experiments
+### Presentation: listing of experiments
 
-The paper is organized around the language model lifecycle: pretraining (Section 3), post-training (Section 4), and inference (Section 5). Each section builds on the previous one — pretraining establishes the baseline contamination dynamics, post-training asks whether standard interventions mitigate them, and inference reveals the token-level mechanisms that govern whether memorized content survives into generated outputs. We note that three of four reviewers rated the presentation as excellent (4/4), and Reviewer THKB specifically highlighted that "the findings are coherent and progressive." That said, we will strengthen the transition paragraphs between sections to make this narrative arc more explicit.
+The paper follows the model lifecycle: pretraining (Section 3) → post-training (Section 4) → inference (Section 5), each building on the previous. Three of four reviewers rated presentation 4/4; THKB called the findings "coherent and progressive." We will strengthen transition paragraphs in revision.
 
 ### Originality: "Replica of Bordt et al."
 
-We believe this characterization does not reflect the content of either paper. Bordt et al. studies contamination on **7 multiple-choice question-answering benchmarks** — purely discriminative evaluations where the model selects among a small number of provided answer choices. Our paper studies **generative evaluation**, where the model must produce complete solutions token by token. This distinction is not cosmetic; it is the entire motivation of our work (Section 1, lines 32–37).
+Bordt et al. studies **7 MCQA benchmarks** (discriminative). We study **generative evaluation**. This is not cosmetic — it is the entire motivation (Section 1, paragraphs 3–4).
 
-The generative setting introduces dynamics that simply do not exist in discriminative evaluation: the role of sampling temperature (Finding #6), solution length as an exponential barrier to memorization (Finding #7), and the survival process framework with three distinct regimes (Finding #8). None of these have analogs in Bordt et al. Furthermore, Finding #3 — which the reviewer themselves identifies as original — directly contradicts conclusions from prior work including Bordt et al. It is difficult to characterize a paper as a "replica" of work whose conclusions it contradicts.
+The generative setting introduces dynamics absent from discriminative evaluation: temperature (Finding #6), solution length as an exponential barrier (Finding #7), the survival process framework (Finding #8). None have analogs in Bordt et al. Finding #3 — which the reviewer themselves identifies as original — contradicts conclusions from prior discriminative work.
 
-Our paper partially originated from private correspondence with the authors of Bordt et al. (2025) about how the field currently lacks a characterization of how contamination affects generative evaluations — as distinct from the discriminative setting they studied.
+Our paper partially originated from correspondence with the Bordt et al. authors about how the field lacks a characterization of contamination in generative evaluations.
 
 ## Rebuttal to Reviewer Mmea
 
-We thank the reviewer for their careful and substantive engagement with our work. We appreciate the recognition of our experimental design, the three-regime framework, and the evaluation bug fix. We address each concern below.
+We thank the reviewer for their substantive engagement and recognition of our experimental design, three-regime framework, and evaluation bug fix.
 
 ### Framing: What is the paper's contribution?
 
-Before addressing the individual weaknesses, we wish to clarify a point of framing that we believe underlies all three concerns. The reviewer reads our paper as claiming to study the boundary between reasoning and memorization. We understand why — but that is not the core contribution. Our paper characterizes **the mechanics of how contamination inflates generative evaluation metrics, and what factors modulate that inflation**: temperature sensitivity (Finding #6), solution-length decay (Finding #7), the survival process framework (Finding #8), overtraining mitigation (Finding #4), and the interaction with SFT (Finding #5). These findings are about *how memorization behaves during sequential generation* — dynamics that are absent from discriminative evaluations and that had not been previously characterized.
+The reviewer reads our paper as studying the boundary between reasoning and memorization. That is not the core contribution. We characterize **the mechanics of how contamination inflates generative evaluation metrics**: temperature sensitivity (Finding #6), solution-length decay (Finding #7), the survival process (Finding #8), overtraining mitigation (Finding #4), and the SFT interaction (Finding #5). These are about *how memorization behaves during sequential generation* — dynamics absent from discriminative evaluations.
 
-Under this framing, the 344M scale is not a liability but a *feature* of the experimental design: because these models cannot genuinely solve competition math, the contamination signal is cleanly isolated from real capability. At larger scales where models can partly solve MATH, contamination effects and genuine reasoning would be confounded and harder to disentangle. Our setup provides the cleanest possible measurement of the phenomenon we set out to study.
+Under this framing, 344M is a *feature*: because these models cannot genuinely solve competition math, the contamination signal is cleanly isolated. At larger scales, contamination and genuine reasoning would be confounded.
 
 ### Weakness 1: Model scale (344M) is too small
 
-We agree that 344M models cannot perform multi-step reasoning on competition-level mathematics. As noted above, we view this as a strength for isolating contamination dynamics, not a limitation of the core contribution.
+We agree 344M cannot do multi-step competition math reasoning. See framing above.
 
-That said, we take the scale concern seriously and offer two responses:
+Two responses:
 
-1. **Controlled contamination requires pretraining from scratch.** This is the methodological price of causal identification, and it applies equally to all prior controlled contamination work. Bordt et al. (2025) — the most comparable study, on discriminative benchmarks — uses models of similar scale for the same reason.
+1. **Controlled contamination requires pretraining from scratch.** Bordt et al. (2025) uses models up to ~1.6B for the same reason — still well below frontier scale.
 
-2. **Our scaling law analysis (Finding #3) provides a principled bridge to larger scales.** The fitted parameters $E(R)$, $C_0(R)$, and $\alpha(R)$ vary smoothly with contamination level across our model sizes, and the functional form achieves fitting error $< 10^{-2}$ for all $R$. These scaling laws make quantitative, falsifiable predictions about contamination effects at compute budgets beyond our experimental range.
+2. **Scaling laws (Finding #3) bridge to larger scales.** Parameters vary smoothly across model sizes; average fitting error $< 10^{-2}$ for all $R$. These make falsifiable predictions beyond our experimental range.
 
-We also note that even if performance gains at 344M are "trivially" memorization, the *dynamics* of that memorization are not trivial: that temperature > 0.6 disrupts it, that solution length creates an exponential barrier, that a single replica suffices to beat the irreducible error, that overtraining washes it out at rates that scale predictably with model size — none of these are obvious a priori. If they were, they would have been characterized before.
+Even if gains are "trivially" memorization, the *dynamics* are not trivial: temperature > 0.6 disrupts it, solution length creates an exponential barrier, one replica beats irreducible error, overtraining washes it out predictably. None obvious a priori.
 
-**New experiment (in progress):** We are running pass@k evaluations (k = 1000–10000) on our uncontaminated 344M models at temperature 1.0, stratified by MATH difficulty level. If even a faint signal of genuine capability emerges on easier problems (Level 1–2), this directly refutes the premise that 344M "fundamentally lacks the capacity to generalize" on MATH. If pass@k remains zero, it reinforces the clean-separation argument above. We will report results in the revision.
+**New experiment (in progress):** pass@k (k = 1000–10000) on uncontaminated 344M at temperature 1.0, stratified by MATH difficulty level. Any signal on Level 1–2 refutes "fundamentally lacks capacity." Zero signal reinforces clean-separation argument.
 
-### Weakness 2: SFT finding (Finding #5) is catastrophic forgetting, not a memorization–generalization tension
+### Weakness 2: SFT finding is catastrophic forgetting
 
-We appreciate this sharp observation and partially agree. At 344M scale, the reviewer is likely correct that the mechanism driving the performance drop at high contamination is predominantly catastrophic forgetting of memorized content, rather than a genuine tension between two competing learning signals.
+We partially agree — at 344M, the mechanism is likely catastrophic forgetting rather than a genuine tension.
 
-However, we believe the *asymmetry* of the SFT interaction is the important finding, regardless of the mechanistic label. SFT improves test performance for models with low contamination ($R < 10$) and degrades it for models with high contamination ($R > 10$). Even under the catastrophic forgetting interpretation, this asymmetry is non-obvious and practically informative: it tells practitioners that SFT can inadvertently *unmask* contamination in heavily contaminated models by erasing memorized content, while providing genuine (if modest) gains for lightly contaminated ones.
+The important finding is the *asymmetry*: SFT improves performance at low contamination ($R < 10$) and degrades it at high contamination ($R > 10$). This is non-obvious and practically informative regardless of mechanism. We will revise the language accordingly.
 
-We will revise the language in the paper to describe this as an asymmetric interaction between SFT and contamination level, without making strong claims about the underlying mechanism at this model scale.
-
-**New experiment (in progress):** As part of our response to Reviewer 6RQA, we are evaluating SFT'd model checkpoints on rephrased and perturbed MATH test problems. If post-SFT scores on rephrased problems rise above the pre-SFT baseline of ~0%, this would provide direct evidence that SFT induced some degree of generalization even at 344M. We will report these results in the revision.
+**New experiment (in progress):** Evaluating SFT'd checkpoints on rephrased/perturbed MATH problems. If post-SFT scores rise on rephrased problems, that's direct evidence of generalization even at 344M.
 
 ### Weakness 3: Single benchmark (MATH)
 
-We acknowledge this limitation. Our findings are empirically grounded in the MATH benchmark, and we cannot rule out that specific quantitative parameters (e.g., decoherence rates, scaling law coefficients) are influenced by MATH's particular structure.
+We acknowledge this. Three reasons the findings likely generalize:
 
-However, we believe the key findings are likely to generalize, for three reasons:
+1. **Temperature and solution length are properties of generation, not MATH.** The logic (each token = opportunity to deviate from memorized path) applies to any generative benchmark.
 
-1. **The moderating factors are properties of generation, not of MATH.** Temperature and solution length are inherent to any autoregressive generation task. The finding that higher temperature and longer solutions disrupt memorization follows from the sequential nature of generation — each additional token is an opportunity for the model to deviate from the memorized path. This logic applies to code generation, translation, and any other generative benchmark.
+2. **The survival process framework derives from general in-context scaling laws**, not MATH-specific patterns. The regimes depend on $E$ and $\alpha$, measurable for any task.
 
-2. **The survival process framework is derived from general principles.** The three regimes emerge from the asymptotic behavior of in-context scaling laws (Equation 3), which have been observed across many domains. The framework's predictions depend on whether $E > 0$, $E \approx 0$ with $\alpha \leq 1$, or $E \approx 0$ with $\alpha > 1$ — parameters that can be measured for any generative task.
+3. **MATH is among the most widely used generative benchmarks** — a natural first target. Extension to code/reasoning is valuable future work.
 
-3. **MATH is among the most widely used generative benchmarks.** It is a natural and high-impact first target for this line of investigation. Extending to code generation (HumanEval), logical reasoning, or other generative tasks is valuable future work, and we will note this explicitly.
+### Question 1: Justify studying gen vs. mem at 344M?
 
-### Question 1: How do you justify studying generalization vs. memorization at 344M?
-
-As discussed in the framing section above, we are not primarily studying the boundary between generalization and memorization. We are studying the mechanics of how contamination inflates generative evaluation metrics. The 344M scale is appropriate for this question because it provides clean isolation of the contamination signal at a tractable computational cost. Our scaling law analysis extends the findings beyond the experimental scale.
+See framing above. We study contamination mechanics, not the gen/mem boundary. 344M provides clean isolation at tractable cost.
 
 ### Question 2: Isn't Finding #2 trivially true?
 
-Finding #2 is not simply the statement "performance gains are memorization." It is a controlled experiment demonstrating that contamination-driven performance is *brittle*: when test problems are rephrased (different wording, same numbers) or perturbed (different numbers, same structure), performance collapses to ~0% across all contamination levels and model sizes (Table 1). This brittleness is itself an empirically useful diagnostic — and it would be informative at any scale. If a 70B model achieves high accuracy on MATH, one would want to know whether those scores survive rephrasing. Our results at 344M establish the expected pattern under pure memorization, providing a baseline for interpreting results at larger scales where memorization and genuine capability may coexist.
+Finding #2 is not "gains are memorization." It shows contamination-driven performance is *brittle*: rephrased/perturbed problems collapse to ~0% across all contamination levels (Table 1 reports 344M; consistent results across all model sizes are noted in the caption). This brittleness is an empirically useful diagnostic at any scale — if a 70B model scores well on MATH, one wants to know whether scores survive rephrasing. Our 344M results establish the baseline pattern under pure memorization.
 
-### Question 3: Have you validated the three regimes on another benchmark?
+### Question 3: Validated three regimes on another benchmark?
 
-Not yet. This is a valuable direction for future work and we will note it explicitly. We observe, however, that the three regimes are mathematical consequences of the in-context scaling law (Equation 3), not empirical patterns fit to MATH specifically. The regimes emerge from the asymptotic behavior of the survival probability as a function of the parameters $E$ and $\alpha$, which can be measured for any generative task. We would expect qualitatively similar regime structure for any benchmark where per-token NLL follows a power-law decay with token index — a testable prediction that future work can validate.
+Not yet. The regimes are mathematical consequences of Equation 3, not patterns fit to MATH. They depend on whether $E > 0$, $\alpha \leq 1$, or $\alpha > 1$ — measurable for any generative task. This is a testable prediction for future work.
 
 ## Message to Area Chair Regarding Reviewer 4xWn
 
 Dear Area Chair,
 
-We wish to respectfully raise concerns about the quality of Review 4xWn (score 2, confidence 5). While we have engaged substantively with every point raised (see our response above), we believe several aspects of this review warrant scrutiny.
+We raise concerns about Review 4xWn (score 2, confidence 5).
 
-**Factual errors suggest insufficient engagement with the paper:**
+**Factual errors:**
 
-1. The reviewer claims our statement that prior work "focused on discriminative benchmarks" is "not true," citing Kocygit et al. (2025) as a counterexample. However, our claim is that the literature has *focused on* discriminative benchmarks — a statement about the overwhelming distribution of prior work, not a claim of exclusivity. This is plainly true: the vast majority of controlled contamination studies use discriminative evaluations, with Kocygit et al. being the sole exception we are aware of. The reviewer appears to have misread "focused on" as "exclusively studied," and then cited a paper that we ourselves already reference three times (introduction, Section 4, and Appendix A).
+1. The reviewer claims our statement that prior work "focused on discriminative benchmarks" is "not true," citing Kocyigit et al. (2025). Our paper says "predominantly focused on" — the reviewer misread this as an exclusivity claim, then cited a paper we already reference in the introduction and Appendix A Related Work.
 
-2. The reviewer states that our experiments use "mathematical datasets where the answer is very short," implying a contradiction with our generative framing. This conflates final answers with full solutions. The MATH benchmark requires generating complete chain-of-thought solutions spanning tens to hundreds of tokens. Finding #7 and Figure 6 explicitly analyze how solution length modulates contamination effects — a core contribution that the reviewer does not engage with.
+2. The reviewer says MATH has "very short" answers, contradicting our generative framing. MATH requires generating full chain-of-thought solutions (15–1,949 tokens). The reviewer conflates final answers with solutions.
+
+3. The reviewer attributes "mathematically discover" to our paper (L.081) and calls it "obviously misleading." Our paper says **"mathematically describe"** (Section 1, contribution bullet 3). The reviewer misquoted the text and critiqued the misquotation.
 
 **Internal inconsistencies:**
 
-3. The reviewer assigns an originality score of 1 (poor) while simultaneously acknowledging that Finding #3 is a "new experimental result" that "contradicts other existing work." A finding that overturns prior conclusions is, by definition, an original contribution.
+4. Originality score 1 (poor), yet the reviewer acknowledges Finding #3 is "a new experimental result" that "contradicts other existing work."
 
-4. The reviewer calls our work "a replica of Bordt et al." without elaboration. Bordt et al. studies contamination on 7 multiple-choice (discriminative) benchmarks. Our paper studies generative evaluation — the distinction around which our entire contribution is built. Findings #6, #7, and #8 (temperature, solution length, and the survival process framework) have no analog in Bordt et al., and Finding #3 directly contradicts their conclusions.
+5. Calls our work "a replica of Bordt et al." without elaboration. Bordt studies 7 MCQA (discriminative) benchmarks. Findings #6, #7, #8 have no analog in Bordt.
 
-**Sparse engagement relative to stated confidence:**
+**Sparse engagement:**
 
-The review is the shortest of the four, provides no specific questions, and offers "See Strengths / weaknesses" in lieu of a Questions section. The summary is a single sentence. Despite this, the reviewer claims confidence 5/5 ("absolutely certain"). We respectfully suggest that the level of engagement does not match the stated certainty, particularly given the factual errors noted above.
+The review is the shortest of four, has no questions ("See Strengths / weaknesses"), and a one-sentence summary — yet claims confidence 5/5. The level of engagement does not match the stated certainty, particularly given the factual errors above.
 
-We ask the Area Chair to weigh these concerns when calibrating the influence of this review on the final decision.
+We ask the Area Chair to weigh these concerns when calibrating this review's influence.
 
 ## Rebuttal to Reviewer 6RQA
 
-We thank the reviewer for their constructive feedback and for identifying the memorization–generalization disentanglement as the key opportunity for improvement.
+We thank the reviewer for identifying memorization-generalization disentanglement as the key opportunity.
 
-### Weakness 1: Memorization vs. generalization not adequately disentangled
+### Weakness 1: Memorization vs. generalization not disentangled
 
-Finding #2 and Table 1 already provide direct evidence: contaminated models score ~0% on rephrased and perturbed MATH test problems across all model sizes and contamination levels, confirming that gains are verbatim memorization with no transfer. The reviewer is right that Table 1 deserves more detail — in the revision, we will expand it to show results for all model sizes (currently only 344M is displayed) and report cross-entropy alongside Math Verify scores.
+Finding #2 and Table 1 provide direct evidence: contaminated models score ~0% on rephrased/perturbed problems, confirming gains are verbatim memorization with no transfer. We will expand Table 1 to show all model sizes (currently only 344M displayed) and add cross-entropy.
 
-However, this evidence does not decompose the SFT effect (Finding #5) into its generalization and forgetting components. To address this, we will evaluate our SFT'd models on the rephrased/perturbed test sets:
+To decompose the SFT effect (Finding #5), we will evaluate SFT'd models on rephrased/perturbed test sets:
+- **Pre-SFT**: ~0% on rephrased/perturbed (Table 1)
+- **Post-SFT**: if scores rise → direct evidence of **generalization**
+- **Forgetting**: already measured by test loss increase at high contamination
 
-- **Pre-SFT**, contaminated models score ~0% on rephrased/perturbed problems (Table 1).
-- **Post-SFT**, if scores rise on rephrased/perturbed problems → direct evidence SFT induced **generalization**.
-- The **forgetting** component is already measured by the test loss increase for highly contaminated models (Finding #5).
-
-This decomposes the conjecture into two measured quantities using existing checkpoints and test sets.
-
-**TODO: Run evaluation of SFT'd model checkpoints on rephrased/perturbed MATH test sets. Effect sizes may be small at 344M scale.**
+**TODO: Run evaluation of SFT'd checkpoints on rephrased/perturbed MATH test sets.**
 
 ### Weakness 2: Single-replica result depends on pretraining data mix
 
-Fair point. The specific irreducible error $E(R=0) = 3.594$ is corpus-dependent. However, the qualitative finding is robust: the contaminated corpus contains the test solutions and the uncontaminated corpus does not. No amount of compute on a corpus lacking the answers can produce them — this is an information-theoretic advantage, not an artifact of the data mix. The exact threshold may shift with corpus quality (e.g., a math-heavy corpus would have lower baseline $E$), but the phenomenon should hold whenever the test set is distributionally distinguishable from pretraining data. We will note this nuance in the revision.
+Fair point — the specific $E(R=0) = 3.594$ is corpus-dependent. But the qualitative finding is robust: the contaminated corpus contains test solutions; the uncontaminated does not. No compute on a corpus lacking answers can produce them — an information-theoretic advantage, not a data-mix artifact. The threshold may shift with corpus quality, but the phenomenon holds whenever the test set is distributionally distinguishable from pretraining data.
 
-### Question: Do overtraining results conflate dilution and catastrophic forgetting?
+### Question: Do overtraining results conflate dilution and forgetting?
 
-Yes, our experiments do not isolate these — separating them would require overtraining by repeating the contaminated corpus (forgetting without dilution) vs. adding fresh data (both). Two observations favor dilution as the primary driver:
+Yes — separating them would require overtraining by repeating the contaminated corpus vs. adding fresh data. Two observations favor dilution:
 
-1. The crossover point shifts smoothly with model size (32 replicas at 34M → 1 replica at 93M), consistent with a dilution effect. Catastrophic forgetting would be less likely to produce such regular scaling behavior.
-2. The dose-response framework (Schaeffer et al., 2025) provides theoretical grounding: fresh data dilutes the "dose" of contamination.
+1. The crossover point shifts smoothly with model size (32 replicas at 34M → 10 at 63M → 1 at 93M) — regular scaling unlikely from catastrophic forgetting.
+2. The dose-response framework (Schaeffer et al., 2025) provides theoretical grounding.
 
 The practical implication is the same under either mechanism.
 
 ### Question: Implications beyond evaluations?
 
-- **Privacy:** Single-exposure memorization produces detectable aggregate effects (Finding #3) even when membership inference attacks fail at the individual level (Hayes et al., NeurIPS 2025), suggesting memorization is more prevalent than current detection methods reveal.
-- **Alignment:** If safety-relevant behaviors are memorized rather than learned, the survival process framework (Finding #8) predicts they will be brittle under temperature perturbation or long behavioral sequences.
-- **Benchmark design:** Benchmarks requiring longer solutions are inherently more resistant to contamination, suggesting a concrete design principle for future evaluations.
+- **Privacy:** Single-exposure memorization produces detectable aggregate effects (Finding #3) even when MIAs achieve limited success (AUC < 0.7; Hayes et al., NeurIPS 2025).
+- **Alignment:** If safety-relevant behaviors are memorized, the survival process (Finding #8) predicts brittleness under temperature perturbation or long sequences.
+- **Benchmark design:** Longer solutions = more resistant to contamination — a concrete design principle.
 
 ## Rebuttal to Reviewer THKB
 
-We thank the reviewer for their careful reading and for recognizing the value of tracing contamination effects across the full model lifecycle. We are glad the findings came across as "coherent and progressive." We address each point below.
+We thank the reviewer for recognizing the value of tracing contamination across the full model lifecycle.
 
 ### Weakness 1: Generalizability to larger models and real-world settings
 
-We agree that our controlled setting necessarily differs from real-world pretraining in model scale, data distribution, and training procedure. This is inherent to the methodology: isolating the causal effect of contamination requires controlling the entire pretraining corpus, which is prohibitively expensive at billion-scale. This constraint applies to all prior controlled contamination work.
+Controlled contamination requires controlling the entire corpus — prohibitively expensive at billion-scale. This applies to all prior work.
 
-That said, we believe our findings have direct practical implications at each stage of the model lifecycle:
+Our findings have practical implications at each lifecycle stage:
+- **Detection:** Temperature sweeps (Finding #6) and solution-length stratification (Finding #7) as lightweight contamination diagnostics.
+- **Mitigation:** Overtraining on fresh data dilutes contamination (Finding #4).
+- **Risk assessment:** The survival process framework (Finding #8) provides vocabulary for assessing benchmark vulnerability.
+- **Extrapolation:** Scaling laws (Finding #3) bridge to larger compute budgets.
 
-- **Detection via temperature sensitivity (Finding #6):** If a model's generative benchmark scores degrade sharply as sampling temperature increases beyond ~0.6, this is a signal consistent with contamination-driven memorization rather than genuine capability. Practitioners could use temperature sweeps as a lightweight contamination diagnostic.
+### Weakness 2: Finding #8 is underexplained
 
-- **Detection via solution-length stratification (Finding #7):** If a model's accuracy is concentrated in short solutions and decays steeply with solution length, this pattern is consistent with brittle memorization. Stratifying evaluation results by solution length is cheap and requires no additional infrastructure.
+We will expand the exposition. Briefly:
+- **Survival process:** Probability of generating a correct solution of length $T$ = product of per-token success probabilities. Each token is an opportunity for the memorized sequence to "die."
+- **Decoherence** (Regime I): $E > 0$ → errors accumulate → memorization lost.
+- **Lock-in** (Regime III): $E \approx 0$, $\alpha > 1$ → survival probability converges to a positive constant → memorization persists.
+- **Brittle memorization** (Regime II): $E \approx 0$, $\alpha \leq 1$ → stretched exponential decay → fragile at long lengths.
 
-- **Mitigation via overtraining (Finding #4):** Our results suggest that continued training on fresh data can dilute contamination effects, offering a concrete lever for practitioners who suspect their pretraining corpus may be contaminated.
+### Question 1: External validity?
 
-- **Risk assessment via the survival process framework (Finding #8):** The three regimes provide a quantitative vocabulary for assessing how vulnerable a given generative benchmark is to contamination, based on its typical solution length distribution and the per-token error dynamics of the model.
+See Weakness 1 response above.
 
-We also note that our scaling law analysis (Finding #3) provides a principled framework for extrapolating contamination effects to larger compute budgets, partially bridging the gap between our controlled setting and real-world scale.
+### Question 2: Generalize to larger models on mixed corpora?
 
-### Weakness 2: Finding #8 (three regimes) is underexplained
+Key differences from realistic settings: (1) scale (344M vs. billions), (2) corpus composition (single web crawl vs. heterogeneous mixtures), (3) contamination mechanism (exact replicas vs. near-duplicates). Scaling laws address (1). Points (2) and (3) are genuine limitations — qualitative findings should hold, but specific thresholds may shift. We will discuss this more explicitly.
 
-We appreciate this feedback and will expand the exposition in the revision. To briefly clarify the key terms:
+### Limitations placement and detection proxy risks
 
-- The **survival process** refers to the sequential challenge a model faces during generation: at each token position, the model must place sufficient probability mass on the correct next token. The probability of generating a correct complete solution of length $T$ is the product of per-token success probabilities — analogous to a survival process where each token is an opportunity for the memorized sequence to "die."
+The reviewer notes we "place the limitations in the appendix." Our limitations are in fact in the main body (Section 6 Discussion, dedicated paragraph). The reviewer may have been looking for a standalone section heading; we will make it more visually prominent.
 
-- **Decoherence** (Regime I) occurs when the per-token irreducible error $E > 0$, meaning the model has a nonzero floor probability of error at every position. Over a long enough sequence, errors accumulate and the memorized solution is almost certainly lost — the model "decoherences" from the memorized path.
-
-- **Lock-in** (Regime III) occurs when $E \approx 0$ and the per-token error decays fast enough ($\alpha > 1$) that the cumulative survival probability converges to a positive constant. The model remains "locked in" to the memorized solution regardless of length.
-
-- **Brittle memorization** (Regime II) is the intermediate case: $E \approx 0$ but $\alpha \leq 1$, so errors decay slowly and the survival probability goes to zero, but sub-exponentially (a stretched exponential). Memorization is possible for short solutions but increasingly fragile as length grows.
-
-We will incorporate this level of explanation into the main text.
-
-### Key Question 1: More evidence of external validity / applying findings to real-world practice?
-
-Please see our response to Weakness 1 above, where we outline concrete applications at each stage of the model lifecycle: temperature sweeps for detection, solution-length stratification, overtraining for mitigation, and the survival process framework for risk assessment.
-
-### Key Question 2: Can findings generalize to larger models on mixed corpora?
-
-The main differences between our controlled setting and realistic settings are: (1) model scale (344M vs. billions), (2) corpus composition (single high-quality web crawl vs. heterogeneous mixtures), and (3) contamination mechanism (exact replicas vs. near-duplicates or paraphrases). Our scaling law analysis (Finding #3) partially addresses (1) by providing extrapolation to larger compute budgets. Points (2) and (3) are genuine limitations — we would expect the qualitative findings (temperature sensitivity, solution-length decay, survival process regimes) to hold, but the specific quantitative thresholds (e.g., how many replicas trigger each regime) may shift. We will discuss these differences more explicitly in the revision.
-
-### Limitations placement
-
-The reviewer notes that we place limitations in the appendix rather than the main text. We will move the limitations discussion to the main body in the revision, as we agree this improves transparency. We also appreciate the concern about potential misuse of the memorization regimes as detection proxies — we will add a note cautioning that these regimes describe idealized dynamics and should be validated empirically before being used as detection criteria.
+We appreciate the concern that the three regimes could be misused as detection proxies. They describe idealized asymptotic dynamics — tendencies, not sharp boundaries. We will add a cautionary note that they should be validated empirically before being used as detection criteria.
 
 ### On originality: connection to membership inference attacks
 
-We wish to highlight an additional dimension of our contribution that we believe strengthens the paper's significance. Concurrent work by Hayes et al. (NeurIPS 2025) scales the strongest known membership inference attack (LiRA) to GPT-2 architectures up to 1B parameters with 128 reference models — a massive computational investment — and finds that attack success remains limited (AUC < 0.7) in practical settings. Many individual sample-level decisions are statistically indistinguishable from a coin flip.
+As we discuss in Sections 3 and 6, our findings sit in tension with Hayes et al. (NeurIPS 2025), who scale LiRA to 1B parameters with 128 reference models and find AUC < 0.7 — limited success at individual sample detection.
 
-Our findings sit in interesting tension with this result. Where state-of-the-art MIAs struggle to detect whether an individual sample was seen during training, we find that even a single test set replica produces stark, unmistakeable shifts in aggregate evaluation dynamics: cross-entropy drops below the irreducible error of uncontaminated training (Finding #3), temperature sensitivity diverges between contaminated and uncontaminated models (Finding #6), and the survival process regime shifts qualitatively from decoherence to lock-in (Finding #8).
+In contrast, we find that even a single test set replica produces stark shifts in aggregate evaluation dynamics: cross-entropy below irreducible error (Finding #3), divergent temperature sensitivity (Finding #6), qualitative regime shifts (Finding #8).
 
-Many details differ between our experimental setup and theirs — model family, dataset, training procedure, and what is being measured — so we do not claim a clean causal explanation for this discrepancy. But the contrast is striking and highlights that contamination can have large, measurable effects on generative evaluation metrics even when it proves elusive to detect at the individual sample level via existing methods. We believe this juxtaposition underscores a puzzle the field needs to grapple with, and positions our work as contributing a complementary lens on memorization that existing detection approaches do not provide.
+Many details differ between setups, so we don't claim a causal explanation. But the contrast highlights that contamination can have large effects on generative evaluation metrics even when elusive to detect at the sample level. This juxtaposition underscores a puzzle the field needs to grapple with.
