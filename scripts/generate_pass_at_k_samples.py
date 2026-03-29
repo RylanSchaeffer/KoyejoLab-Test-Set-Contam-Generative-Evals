@@ -102,6 +102,18 @@ def parse_args() -> argparse.Namespace:
         default=50,
         help="Number of samples per vLLM call per problem (default: 50)",
     )
+    parser.add_argument(
+        "--start_idx",
+        type=int,
+        default=None,
+        help="First problem index to process (inclusive). Default: 0.",
+    )
+    parser.add_argument(
+        "--end_idx",
+        type=int,
+        default=None,
+        help="Last problem index to process (exclusive). Default: n_problems.",
+    )
     return parser.parse_args()
 
 
@@ -121,17 +133,25 @@ def main():
     n_problems = len(formatted_problems)
     print(f"Loaded {n_problems} MATH test problems.")
 
-    # 2. Determine output path.
+    # 2. Determine problem index range.
+    start_idx = args.start_idx if args.start_idx is not None else 0
+    end_idx = args.end_idx if args.end_idx is not None else n_problems
+    start_idx = max(0, start_idx)
+    end_idx = min(n_problems, end_idx)
+    print(f"Processing problems [{start_idx}, {end_idx}) ({end_idx - start_idx} problems).")
+
+    # 3. Determine output path.
     model_short_name = args.model_name.split("/")[-1]
-    output_path = (
-        Path(args.output_dir)
-        / model_short_name
-        / f"temp={args.temperature}"
-        / "samples.jsonl"
-    )
+    base_dir = Path(args.output_dir) / model_short_name / f"temp={args.temperature}"
+    # Use a shard-specific filename when processing a subset.
+    if args.start_idx is not None or args.end_idx is not None:
+        filename = f"samples_shard_{start_idx}_{end_idx}.jsonl"
+    else:
+        filename = "samples.jsonl"
+    output_path = base_dir / filename
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 3. Count existing samples per problem (for resumability).
+    # 4. Count existing samples per problem (for resumability).
     existing_counts = Counter()  # problem_idx -> count
     if output_path.exists():
         with open(output_path, "r") as f:
@@ -150,10 +170,10 @@ def main():
         else:
             print("Found existing file but no valid samples.")
 
-    # 4. Compute how many samples each problem still needs.
+    # 5. Compute how many samples each problem still needs.
     remaining = {
         i: max(0, args.target_n - existing_counts.get(i, 0))
-        for i in range(n_problems)
+        for i in range(start_idx, end_idx)
     }
     total_remaining = sum(remaining.values())
     problems_needing_samples = sum(1 for v in remaining.values() if v > 0)
@@ -174,17 +194,19 @@ def main():
     model = LLM(
         model=args.model_name,
         dtype="bfloat16",
-        enforce_eager=True,
+        enforce_eager=False,
     )
 
-    # 6. Generate in batches, flush after each problem.
+    # 7. Generate in batches, flush after each problem.
+    n_in_range = end_idx - start_idx
     with open(output_path, "a") as f_out:
-        for problem_idx in range(n_problems):
+        for problem_idx in range(start_idx, end_idx):
             n_needed = remaining[problem_idx]
             if n_needed == 0:
                 total_samples = existing_counts.get(problem_idx, 0)
                 print(
-                    f"Problem {problem_idx + 1}/{n_problems}: "
+                    f"Problem {problem_idx + 1 - start_idx}/{n_in_range} "
+                    f"(idx={problem_idx}): "
                     f"{total_samples} total samples (generated 0 new)"
                 )
                 continue
@@ -224,7 +246,8 @@ def main():
             f_out.flush()
             total_samples = sample_idx_start + n_needed
             print(
-                f"Problem {problem_idx + 1}/{n_problems}: "
+                f"Problem {problem_idx + 1 - start_idx}/{n_in_range} "
+                f"(idx={problem_idx}): "
                 f"{total_samples} total samples (generated {n_needed} new)"
             )
 
