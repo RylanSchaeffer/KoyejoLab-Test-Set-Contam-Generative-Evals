@@ -10,9 +10,9 @@
 
 - **Finding #5 (SFT) misattributed.** Mmea: performance drop is catastrophic forgetting, not a memorization-generalization tension. 6RQA: conjecture could be tested rather than assumed. [Mmea, 6RQA — different critiques]
 
-- **Finding #8 (survival process) needs justification or clarity.** 4xWn: model is "never justified" and "mathematically discover" is misleading (note: paper says "mathematically describe" — misquote). THKB: exposition is "compacted." [4xWn — validity; THKB — clarity]
+- **Finding #8 (survival process) needs justification or clarity.** 4xWn: model is "never justified" and "mathematically discover" is misleading. THKB: exposition is "compacted." [4xWn — validity; THKB — clarity]
 
-- **Overstated claims.** (a) "most rigorous measurement" not justified; (b) "focused on discriminative benchmarks" ignores Kocyigit et al. 2025; (c) "tens-to-thousands of tokens" contradicts MATH's short answers; (d) single-replica result is corpus-dependent. [4xWn, 6RQA]
+- **Overstated claims.** (a) "a more rigorous measurement" not justified; (b) "focused on discriminative benchmarks" ignores Kocyigit et al. 2025; (c) "tens-to-thousands of tokens" contradicts MATH's short answers; (d) single-replica result is corpus-dependent. [4xWn, 6RQA]
 
 - **Insufficient originality relative to Bordt et al.** Called "a replica of more complete work." [4xWn]
 
@@ -36,7 +36,7 @@ These details — number of documents, max sequence length, optimization steps, 
 
 We acknowledge this limitation. Two considerations:
 
-1. **Controlled contamination requires pretraining from scratch.** This constraint applies to all prior work, including Bordt et al. (models up to ~1.6B — larger than ours, but still well below frontier scale).
+1. **Controlled contamination requires pretraining from scratch.** This constraint applies to all prior work. Bordt et al. uses models up to ~1.6B, but achieves this by contaminating disjoint subsets of the test set at different replica counts within a single training run — a cheaper but less controlled design. We pretrain separate models per contamination level for tighter experimental control, which is more expensive and limits our maximum scale.
 
 2. **Our scaling law analysis (Finding #3) extrapolates beyond experimental scale.** Fitting $\mathcal{L}(C, R) = E(R) + C_0(R) \cdot C^{-\alpha(R)}$ provides falsifiable predictions at larger compute budgets. This is a core contribution, not a post-hoc rationalization.
 
@@ -44,7 +44,7 @@ We will make the scale limitation more prominent in revision.
 
 ### Soundness 3a: "More rigorous measurement" not justified
 
-The reviewer quotes "a more rigorous measurement"; our paper says "the **most** rigorous measurement." Regardless, we will revise to "which enable the most direct causal measurement."
+We accept this phrasing was imprecise. Controlled contamination studies enable *causal* measurement of contamination effects, in contrast to observational approaches that can only establish correlations. We will revise to "which enable the most direct causal measurement."
 
 ### Soundness 3b: Prior work claim ignores Kocyigit et al. 2025
 
@@ -52,9 +52,9 @@ We already cite Kocyigit et al. (2025) in the introduction (paragraph 2) and App
 
 ### Soundness 4a: Finding #8 "never justified"; "mathematically discover" is misleading
 
-The survival process model is *derived* from the in-context scaling law (Equation 3): per-token NLL $\ell_t \sim E + A \cdot t^{-\alpha}$, survival probability $P(T) = \prod_{t=1}^{T} p_t$ (Equation 4), three regimes from the asymptotic behavior depending on $E$ and $\alpha$. We will make this derivation more explicit.
+The survival process model is *derived* from the in-context scaling law (Equation 3): per-token NLL $\ell_t \sim E + A \cdot t^{-\alpha}$, survival probability $P(T) = \prod_{t=1}^{T} p_t$ (Equation 4), three regimes from the asymptotic behavior depending on $E$ and $\alpha$. We will make this derivation more explicit in revision.
 
-Regarding "mathematically discover": our paper says **"mathematically describe"** (Section 1, contribution bullet 3). The reviewer appears to have misquoted the text.
+We agree that "mathematically discover" overstates the contribution. We will revise to "mathematically characterize."
 
 ### Soundness 4b: MATH answers are short
 
@@ -88,7 +88,7 @@ We agree 344M cannot do multi-step competition math reasoning. See framing above
 
 Two responses:
 
-1. **Controlled contamination requires pretraining from scratch.** Bordt et al. (2025) uses models up to ~1.6B for the same reason — still well below frontier scale.
+1. **Controlled contamination requires pretraining from scratch.** Bordt et al. (2025) reaches ~1.6B by contaminating disjoint test subsets at different replica counts within a single run — cheaper but less controlled. We pretrain separate models per contamination level, which is more expensive and limits our scale but provides tighter experimental control.
 
 2. **Scaling laws (Finding #3) bridge to larger scales.** Parameters vary smoothly across model sizes; average fitting error $< 10^{-2}$ for all $R$. These make falsifiable predictions beyond our experimental range.
 
@@ -138,13 +138,11 @@ We raise concerns about Review 4xWn (score 2, confidence 5).
 
 2. The reviewer says MATH has "very short" answers, contradicting our generative framing. MATH requires generating full chain-of-thought solutions (15–1,949 tokens). The reviewer conflates final answers with solutions.
 
-3. The reviewer attributes "mathematically discover" to our paper (L.081) and calls it "obviously misleading." Our paper says **"mathematically describe"** (Section 1, contribution bullet 3). The reviewer misquoted the text and critiqued the misquotation.
-
 **Internal inconsistencies:**
 
-4. Originality score 1 (poor), yet the reviewer acknowledges Finding #3 is "a new experimental result" that "contradicts other existing work."
+3. Originality score 1 (poor), yet the reviewer acknowledges Finding #3 is "a new experimental result" that "contradicts other existing work."
 
-5. Calls our work "a replica of Bordt et al." without elaboration. Bordt studies 7 MCQA (discriminative) benchmarks. Findings #6, #7, #8 have no analog in Bordt.
+4. Calls our work "a replica of Bordt et al." without elaboration. Bordt studies 7 MCQA (discriminative) benchmarks. Findings #6, #7, #8 have no analog in Bordt.
 
 **Sparse engagement:**
 
