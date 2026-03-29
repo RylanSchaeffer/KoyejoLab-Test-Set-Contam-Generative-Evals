@@ -82,7 +82,8 @@ def run_lm_eval_teacher_forcing(wandb_config: Dict[str, Any]) -> Dict[str, float
         test_dataset = raw_datasets["test"]
         doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
     elif wandb_config["data_config"]["dataset"] == "stellaathena/math_perturbed":
-        test_dataset = src.data.load_dataset_math_perturbed()
+        raw_datasets = src.data.load_dataset_math_perturbed()
+        test_dataset = raw_datasets["test"]
         doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
     else:
         raise NotImplementedError

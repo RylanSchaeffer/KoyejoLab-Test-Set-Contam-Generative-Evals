@@ -484,8 +484,8 @@ def load_dataset_hendrycks_math() -> DatasetDict:
     return raw_datasets
 
 
-def load_dataset_math_perturbed():
-    """Load the stellaathena/math_perturbed dataset (test split).
+def load_dataset_math_perturbed() -> DatasetDict:
+    """Load the stellaathena/math_perturbed dataset.
 
     This dataset contains perturbed versions of MATH problems with different
     numerical values but the same problem structure. Each problem has a full
@@ -493,11 +493,9 @@ def load_dataset_math_perturbed():
     memorized the original MATH test set cannot solve these perturbed variants.
 
     Returns:
-        Dataset: The test split containing perturbed MATH problems with fields
-            including 'problem', 'solution', 'level', 'type', etc.
+        DatasetDict with a "test" split containing perturbed MATH problems.
     """
-    ds = load_dataset("stellaathena/math_perturbed")
-    return ds["test"]
+    return load_dataset("stellaathena/math_perturbed")
 
 
 def load_dataset_gsm8k_platinum() -> DatasetDict:
