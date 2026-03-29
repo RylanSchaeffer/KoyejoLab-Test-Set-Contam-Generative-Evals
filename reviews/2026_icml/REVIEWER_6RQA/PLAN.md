@@ -84,33 +84,20 @@ Each run is fast — teacher forcing requires no generation, just a forward pass
 - `answer` is only populated for 3250/5000 rows
 - Not used in this experiment, but could be used for Math Verify evaluation later
 
-## Implementation Details
+## Implementation Status
 
-The key change to `scripts/eval_language_model_teacher_forcing.py` is at lines 80–85. Current code:
-```python
-if wandb_config["data_config"]["dataset"] == "EleutherAI/minerva_math":
-    raw_datasets = src.data.load_dataset_hendrycks_math()
-    test_dataset = raw_datasets["test"]
-    doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
-else:
-    raise NotImplementedError
+**All code changes are implemented and pushed (commit `f966ed9`).**
+
+- `src/data.py`: Added `load_dataset_math_perturbed()` at line 487. Returns `DatasetDict` (caller indexes `["test"]`).
+- `scripts/eval_language_model_teacher_forcing.py`: Added `elif` branch at line 84 for `"stellaathena/math_perturbed"`.
+- `sweeps/eval_pt_teacher_forcing/math_perturbed/eval_sft_models.yaml`: 34-model sweep (344M + 153M, pre-SFT + post-SFT).
+
+**To run on the cluster:**
+```bash
+git pull
+wandb sweep sweeps/eval_pt_teacher_forcing/math_perturbed/eval_sft_models.yaml
+wandb agent <sweep-id>
 ```
-
-Add before the `else`:
-```python
-elif wandb_config["data_config"]["dataset"] == "stellaathena/math_perturbed":
-    test_dataset = src.data.load_dataset_math_perturbed()
-    doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
-```
-
-The new `load_dataset_math_perturbed()` in `src/data.py`:
-```python
-def load_dataset_math_perturbed():
-    ds = load_dataset("stellaathena/math_perturbed")
-    return ds["test"]
-```
-
-The rest of the script works unchanged — it just needs `test_dataset["problem"]`, `test_dataset["solution"]`, and `doc_to_text`.
 
 ## Analysis Considerations
 
