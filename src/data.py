@@ -283,7 +283,9 @@ def create_dataset_for_pretraining(
         # so we keep documents where cumsum < target (i.e., up to but not including
         # the first index where cumsum >= target).
         cumulative_lengths = np.cumsum(corpus_train_dataset_subset["token_length"])
-        idx_to_keep = np.searchsorted(cumulative_lengths, corpus_tokens_needed_per_epoch)
+        idx_to_keep = np.searchsorted(
+            cumulative_lengths, corpus_tokens_needed_per_epoch
+        )
         corpus_train_dataset_subset = corpus_train_dataset_subset.select(
             range(idx_to_keep)
         )
@@ -480,6 +482,22 @@ def load_dataset_hendrycks_math() -> DatasetDict:
         }
     )
     return raw_datasets
+
+
+def load_dataset_math_perturbed():
+    """Load the stellaathena/math_perturbed dataset (test split).
+
+    This dataset contains perturbed versions of MATH problems with different
+    numerical values but the same problem structure. Each problem has a full
+    chain-of-thought solution. Useful for measuring generalization: models that
+    memorized the original MATH test set cannot solve these perturbed variants.
+
+    Returns:
+        Dataset: The test split containing perturbed MATH problems with fields
+            including 'problem', 'solution', 'level', 'type', etc.
+    """
+    ds = load_dataset("stellaathena/math_perturbed")
+    return ds["test"]
 
 
 def load_dataset_gsm8k_platinum() -> DatasetDict:
