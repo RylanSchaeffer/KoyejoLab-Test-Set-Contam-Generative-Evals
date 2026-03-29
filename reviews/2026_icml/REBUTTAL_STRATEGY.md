@@ -4,13 +4,13 @@
 
 - **Model scale too small (344M max) to support claims about modern LLMs.** A 344M model cannot do multi-step reasoning on competition math, so performance gains may be trivially attributable to verbatim memorization rather than revealing interesting memorization-generalization dynamics. [6RQA, Mmea, 4xWn, THKB]
 
-- **Single benchmark (MATH only) limits generalizability.** Decoherence rates, scaling law parameters, and the three-regime framework may be artifacts of MATH's specific formatting or token distribution rather than general properties of generative contamination. [Mmea, 4xWn, THKB]
+- **Single benchmark (MATH only) limits generalizability.** Decoherence rates, scaling law parameters, and the three-regime framework may be artifacts of MATH's specific formatting or token distribution rather than general properties of generative contamination. [Mmea, THKB]
 
 - **Memorization vs. generalization not adequately disentangled.** The paper conjectures about this trade-off but never quantifies it. Could split the test set into seen/unseen subsets, or evaluate on perturbed/rephrased problems. Called "the difference between a borderline and an excellent contribution." [6RQA, Mmea]
 
-- **Finding #5 (SFT) misattributed as a memorization-generalization tension.** At 344M scale, the model cannot genuinely generalize on MATH, so the SFT performance drop is simply catastrophic forgetting of memorized content, not a tension between competing learning signals. [Mmea, 6RQA]
+- **Finding #5 (SFT) claimed to be a memorization-generalization tension, but evidence is insufficient.** Mmea argues the performance drop is simply catastrophic forgetting at 344M scale, not a genuine tension. 6RQA separately notes the conjecture could be tested rather than assumed. [Mmea, 6RQA — different critiques]
 
-- **Finding #8 (three regimes / survival process) insufficiently justified.** The modelization is never formally derived or validated. Terms like "survival process," "decoherence," and "lock-in" need further clarification. Claiming to "mathematically discover" these rules is misleading. [4xWn, THKB]
+- **Finding #8 (three regimes / survival process) needs more justification or clarity.** 4xWn says the model is "never justified" and "mathematically discover" is misleading. THKB's concern is milder: the exposition is "compacted" and terminology could be "further clarified." [4xWn — validity concern; THKB — clarity concern]
 
 - **Overstated or factually incorrect claims.** Specific instances: (a) "more rigorous measurement" (L.024) not justified; (b) "foundational work focused on discriminative benchmarks" ignores Kocygit et al. 2025 on machine translation; (c) positioning around "tens-to-thousands of tokens" contradicts MATH's short answers; (d) single-replica result depends on the pretraining data mix, which is never varied. [4xWn, 6RQA]
 
@@ -193,7 +193,7 @@ The practical implication is the same under either mechanism.
 
 ## Rebuttal to Reviewer THKB
 
-We thank the reviewer for their careful reading and for recognizing the value of tracing contamination effects across the full model lifecycle. We are glad the findings came across as "coherent and progressive." We address both concerns below.
+We thank the reviewer for their careful reading and for recognizing the value of tracing contamination effects across the full model lifecycle. We are glad the findings came across as "coherent and progressive." We address each point below.
 
 ### Weakness 1: Generalizability to larger models and real-world settings
 
@@ -224,6 +224,18 @@ We appreciate this feedback and will expand the exposition in the revision. To b
 - **Brittle memorization** (Regime II) is the intermediate case: $E \approx 0$ but $\alpha \leq 1$, so errors decay slowly and the survival probability goes to zero, but sub-exponentially (a stretched exponential). Memorization is possible for short solutions but increasingly fragile as length grows.
 
 We will incorporate this level of explanation into the main text.
+
+### Key Question 1: More evidence of external validity / applying findings to real-world practice?
+
+Please see our response to Weakness 1 above, where we outline concrete applications at each stage of the model lifecycle: temperature sweeps for detection, solution-length stratification, overtraining for mitigation, and the survival process framework for risk assessment.
+
+### Key Question 2: Can findings generalize to larger models on mixed corpora?
+
+The main differences between our controlled setting and realistic settings are: (1) model scale (344M vs. billions), (2) corpus composition (single high-quality web crawl vs. heterogeneous mixtures), and (3) contamination mechanism (exact replicas vs. near-duplicates or paraphrases). Our scaling law analysis (Finding #3) partially addresses (1) by providing extrapolation to larger compute budgets. Points (2) and (3) are genuine limitations — we would expect the qualitative findings (temperature sensitivity, solution-length decay, survival process regimes) to hold, but the specific quantitative thresholds (e.g., how many replicas trigger each regime) may shift. We will discuss these differences more explicitly in the revision.
+
+### Limitations placement
+
+The reviewer notes that we place limitations in the appendix rather than the main text. We will move the limitations discussion to the main body in the revision, as we agree this improves transparency. We also appreciate the concern about potential misuse of the memorization regimes as detection proxies — we will add a note cautioning that these regimes describe idealized dynamics and should be validated empirically before being used as detection criteria.
 
 ### On originality: connection to membership inference attacks
 
