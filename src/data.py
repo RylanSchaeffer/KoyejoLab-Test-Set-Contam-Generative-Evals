@@ -48,6 +48,47 @@ GSM8K_PLATINUM_DOC_TO_TEXT = """Q: {question}
         A: {answer}"""
 
 
+# 4-shot examples for minerva_math, hardcoded in EleutherAI lm-evaluation-harness.
+# Source: lm_eval/tasks/minerva_math/utils.py:list_fewshot_samples()
+MINERVA_MATH_FEWSHOT_EXAMPLES = [
+    {
+        "problem": "Find the domain of the expression  $\\frac{\\sqrt{x-2}}{\\sqrt{5-x}}$.}",
+        "solution": "The expressions inside each square root must be non-negative. Therefore, $x-2 \\ge 0$, so $x\\ge2$, and $5 - x \\ge 0$, so $x \\le 5$. Also, the denominator cannot be equal to zero, so $5-x>0$, which gives $x<5$. Therefore, the domain of the expression is $\\boxed{[2,5)}$.\nFinal Answer: The final answer is $[2,5)$. I hope it is correct.",
+    },
+    {
+        "problem": "If $\\det \\mathbf{A} = 2$ and $\\det \\mathbf{B} = 12,$ then find $\\det (\\mathbf{A} \\mathbf{B}).$",
+        "solution": "We have that $\\det (\\mathbf{A} \\mathbf{B}) = (\\det \\mathbf{A})(\\det \\mathbf{B}) = (2)(12) = \\boxed{24}.$\nFinal Answer: The final answer is $24$. I hope it is correct.",
+    },
+    {
+        "problem": "Terrell usually lifts two 20-pound weights 12 times. If he uses two 15-pound weights instead, how many times must Terrell lift them in order to lift the same total weight?",
+        "solution": "If Terrell lifts two 20-pound weights 12 times, he lifts a total of $2\\cdot 12\\cdot20=480$ pounds of weight.  If he lifts two 15-pound weights instead for $n$ times, he will lift a total of $2\\cdot15\\cdot n=30n$ pounds of weight.  Equating this to 480 pounds, we can solve for $n$:\n\\begin{align*}\n30n&=480\\\n\\Rightarrow\\qquad n&=480/30=\\boxed{16}\n\\end{align*}\nFinal Answer: The final answer is $16$. I hope it is correct.",
+    },
+    {
+        "problem": "If the system of equations\n\n\\begin{align*}\n6x-4y&=a,\\\n6y-9x &=b.\n\\end{align*}has a solution $(x, y)$ where $x$ and $y$ are both nonzero,\nfind $\\frac{a}{b},$ assuming $b$ is nonzero.",
+        "solution": "If we multiply the first equation by $-\\frac{3}{2}$, we obtain\n\n$$6y-9x=-\\frac{3}{2}a.$$Since we also know that $6y-9x=b$, we have\n\n$$-\\frac{3}{2}a=b\\Rightarrow\\frac{a}{b}=\\boxed{-\\frac{2}{3}}.$$\nFinal Answer: The final answer is $-\\frac{2}{3}$. I hope it is correct.",
+    },
+]
+
+
+def build_fewshot_prefix(
+    fewshot_examples=MINERVA_MATH_FEWSHOT_EXAMPLES,
+    doc_to_text=MINERVA_MATH_DOC_TO_TEXT,
+) -> str:
+    """Build the few-shot prefix string from the given examples.
+
+    Each example is formatted as "Problem:\\n{problem}\\n\\nSolution: {solution}"
+    and examples are separated by double newlines. The prefix ends with a
+    trailing newline so it can be directly prepended to a new problem prompt.
+
+    Returns:
+        A string containing the formatted few-shot examples.
+    """
+    parts = []
+    for ex in fewshot_examples:
+        parts.append(doc_to_text.format(problem=ex["problem"], solution=ex["solution"]))
+    return "\n\n".join(parts) + "\n\n"
+
+
 DEFAULT_COMPRESSION_TYPES = {
     "input_ids": Sequence(Value("int32")),
     "attention_mask": Sequence(Value("bool")),
@@ -496,6 +537,20 @@ def load_dataset_math_perturbed() -> DatasetDict:
         DatasetDict with a "test" split containing perturbed MATH problems.
     """
     return load_dataset("stellaathena/math_perturbed")
+
+
+def load_dataset_math_rephrased() -> DatasetDict:
+    """Load the RylanSchaeffer/math_rephrased dataset.
+
+    This dataset contains rephrased versions of MATH problems with the same
+    mathematical content but different wording. Each problem has a full
+    chain-of-thought solution. Useful for measuring generalization: models that
+    memorized the original MATH test set may struggle with rephrased variants.
+
+    Returns:
+        DatasetDict with a "test" split containing rephrased MATH problems.
+    """
+    return load_dataset("RylanSchaeffer/math_rephrased")
 
 
 def load_dataset_gsm8k_platinum() -> DatasetDict:

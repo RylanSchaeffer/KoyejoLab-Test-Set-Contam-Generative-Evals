@@ -25,44 +25,10 @@ from collections import defaultdict
 from pathlib import Path
 from datetime import datetime
 
-from math_verify import parse, verify
+from math_verify import parse
 
 import src.data
-
-
-def extract_boxed_answer(text: str) -> str | None:
-    """Extract content of the last \\boxed{...} in text using brace-depth matching.
-
-    Returns the content inside the braces, or None if no \\boxed{} is found.
-    Handles nested braces correctly (e.g., \\boxed{\\frac{1}{2}} -> \\frac{1}{2}).
-    """
-    idx = text.rfind("\\boxed{")
-    if idx == -1:
-        return None
-    start = idx + len("\\boxed{")
-    depth = 1
-    i = start
-    while i < len(text) and depth > 0:
-        if text[i] == "{":
-            depth += 1
-        elif text[i] == "}":
-            depth -= 1
-        i += 1
-    if depth != 0:
-        return None
-    return text[start : i - 1]
-
-
-def score_response(gold_parsed, response_text: str) -> bool:
-    """Score a response by extracting \\boxed{} answer and verifying with math-verify."""
-    boxed_content = extract_boxed_answer(response_text)
-    if boxed_content is None:
-        return False
-    try:
-        target_parsed = parse(f"\\boxed{{{boxed_content}}}")
-        return bool(verify(gold=gold_parsed, target=target_parsed))
-    except Exception:
-        return False
+from src.scoring import extract_boxed_answer, score_response
 
 
 def pass_at_k(n: int, c: int, k: int):

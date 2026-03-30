@@ -23,32 +23,46 @@ data_dir, results_dir = src.analyze.setup_notebook_dir(
     refresh=False,
 )
 
+# Temperatures available in P1 4-shot sweeps: 0.0, 0.316, 1.0 for 62M/93M/153M/344M;
+# 34M has additional: 0.1, 0.1778, 0.5623.
+# Extended temperatures (0.75, 0.93804187, 1.29154967, 1.5) require P3 dose-response sweeps.
 temperatures_to_display = np.round(
     [
         0.0,
         # 0.1,
         # 0.1778,
-        # 0.3162,
-        0.5623,
+        0.316,
+        # 0.5623,
         # 0.75,
-        0.93804187,
+        # 0.93804187,
         1.0,
-        1.29154967,
-        1.5,
+        # 1.29154967,
+        # 1.5,
     ],
     decimals=2,
 )
 
+# Old 0-shot eval sweep IDs (pre-4-shot fix):
+# sweep_ids = [
+#     "6y9dy2ow",  # Qwen 3   34M     1xOT    Subset Fraction=1.0
+#     "lnrpy3ed",  # Qwen 3   34M     1xOT    Subset Fraction=1.0     More temperatures.
+#     "5oo55o9s",  # Qwen 3   62M     1xOT    Subset Fraction=1.0
+#     "10q465ij",  # Qwen 3   62M     1xOT    Subset Fraction=1.0     More temperatures.
+#     "q5uoy1eu",  # Qwen 3   93M     1xOT    Subset Fraction=1.0
+#     "f5djvfth",  # Qwen 3   93M     1xOT    Subset Fraction=1.0     More temperatures.
+#     "vnz1h147",  # Qwen 3  153M     1xOT    Subset Fraction=1.0
+#     "xkzfmbhk",  # Qwen 3  153M     1xOT    Subset Fraction=1.0
+#     "39rugx2e",  # Qwen 3  343M     1xOT    Subset Fraction=1.0     More temperatures.
+# ]
+
+# New 4-shot eval sweep IDs (boxed-required scoring):
 sweep_ids = [
-    "6y9dy2ow",  # Qwen 3   34M     1xOT    Subset Fraction=1.0
-    "lnrpy3ed",  # Qwen 3   34M     1xOT    Subset Fraction=1.0     More temperatures.
-    "5oo55o9s",  # Qwen 3   62M     1xOT    Subset Fraction=1.0
-    "10q465ij",  # Qwen 3   62M     1xOT    Subset Fraction=1.0     More temperatures.
-    "q5uoy1eu",  # Qwen 3   93M     1xOT    Subset Fraction=1.0
-    "f5djvfth",  # Qwen 3   93M     1xOT    Subset Fraction=1.0     More temperatures.
-    "vnz1h147",  # Qwen 3  153M     1xOT    Subset Fraction=1.0
-    "xkzfmbhk",  # Qwen 3  153M     1xOT    Subset Fraction=1.0
-    "39rugx2e",  # Qwen 3  343M     1xOT    Subset Fraction=1.0     More temperatures.
+    "qx2c4702",  # Qwen 3   34M     1xOT    Subset Fraction=1.0     4-shot
+    "dkiui6we",  # Qwen 3   62M     1xOT    Subset Fraction=1.0     4-shot
+    "cx8y41bw",  # Qwen 3   93M     1xOT    Subset Fraction=1.0     4-shot
+    "4w5x8hez",  # Qwen 3  153M     1xOT    Subset Fraction=1.0     4-shot
+    "mprek7pj",  # Qwen 3  344M     1xOT    Subset Fraction=1.0     4-shot
+    # TODO: Add dose-response (P3) sweep IDs here for extended temperature sweep
 ]
 
 eval_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(

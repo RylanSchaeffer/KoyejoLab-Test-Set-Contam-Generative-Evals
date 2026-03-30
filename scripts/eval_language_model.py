@@ -40,7 +40,7 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import editdistance
 import gc
 import logging
-from math_verify import parse, verify
+from math_verify import parse
 import pprint
 import time
 import torch
@@ -55,6 +55,7 @@ import wandb
 
 import src.data
 import src.globals
+import src.scoring
 
 
 logging.basicConfig(level=logging.INFO)
@@ -84,12 +85,22 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
         raw_datasets = src.data.load_dataset_hendrycks_math()
         test_dataset = raw_datasets["test"]
         doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
-        formatted_problems = [
-            doc_to_text.format(problem=question, solution="").rstrip()
-            for question in test_dataset["problem"]
-        ]
+    elif wandb_config["data_config"]["dataset"] == "stellaathena/math_perturbed":
+        raw_datasets = src.data.load_dataset_math_perturbed()
+        test_dataset = raw_datasets["test"]
+        doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
+    elif wandb_config["data_config"]["dataset"] == "RylanSchaeffer/math_rephrased":
+        raw_datasets = src.data.load_dataset_math_rephrased()
+        test_dataset = raw_datasets["test"]
+        doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
     else:
         raise NotImplementedError
+
+    fewshot_prefix = src.data.build_fewshot_prefix()
+    formatted_problems = [
+        fewshot_prefix + doc_to_text.format(problem=question, solution="").rstrip()
+        for question in test_dataset["problem"]
+    ]
 
     # For debugging purposes...
     # # Cap vLLM to ~10 GiB per GPU.
@@ -130,9 +141,9 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
         log_probs_per_problem_response.append(log_probs_per_token)
 
     results = [
-        verify(
-            gold=parse(solution),
-            target=parse(response),
+        src.scoring.score_response(
+            gold_parsed=parse(solution),
+            response_text=response,
         )
         for solution, response in zip(test_dataset["solution"], problem_responses)
     ]
@@ -174,7 +185,7 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
 
         wandb.log(problem_data_to_log, step=problem_idx + 1)
         # Be nicer to W&B, even if that takes more time per run.
-        time.sleep(1.0 / 10.0)
+        time.sleep(0.01)
 
 
 if __name__ == "__main__":

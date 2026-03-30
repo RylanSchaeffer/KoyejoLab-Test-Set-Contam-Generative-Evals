@@ -126,8 +126,9 @@ def main():
     raw_datasets = src.data.load_dataset_hendrycks_math()
     test_dataset = raw_datasets["test"]
     doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
+    fewshot_prefix = src.data.build_fewshot_prefix()
     formatted_problems = [
-        doc_to_text.format(problem=q, solution="").rstrip()
+        fewshot_prefix + doc_to_text.format(problem=q, solution="").rstrip()
         for q in test_dataset["problem"]
     ]
     n_problems = len(formatted_problems)

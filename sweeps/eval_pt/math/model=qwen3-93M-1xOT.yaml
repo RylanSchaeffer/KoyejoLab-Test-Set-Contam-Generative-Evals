@@ -15,14 +15,14 @@ parameters:
     parameters:
       model:
         values: [
-          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_replicas_316_epch_1_ot_1_pt",
-          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_replicas_100_epch_1_ot_1_pt",
-          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_replicas_0_epch_1_ot_1_pt",
-          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_replicas_1_epch_1_ot_1_pt",
-          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_replicas_10_epch_1_ot_1_pt",
-          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_replicas_32_epch_1_ot_1_pt",
-          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_replicas_3_epch_1_ot_1_pt",
-          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_replicas_1000_epch_1_ot_1_pt",
+          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_rep_0_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_rep_1_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_rep_3_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_rep_10_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_rep_32_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_rep_100_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_rep_316_sbst_1.0000_epch_1_ot_1",
+          "RylanSchaeffer/mem_Qwen3-93M_minerva_math_rep_1000_sbst_1.0000_epch_1_ot_1",
         ]
       dtype:
         values: [ "bfloat16" ]

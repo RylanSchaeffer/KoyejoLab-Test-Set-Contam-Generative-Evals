@@ -88,6 +88,11 @@ def run_lm_eval_teacher_forcing(wandb_config: Dict[str, Any]) -> Dict[str, float
     else:
         raise NotImplementedError
 
+    # NOTE: Teacher forcing intentionally stays 0-shot. We measure P(solution | prompt)
+    # where the prompt matches what was injected during pretraining. Adding a 4-shot
+    # prefix would change the conditioning context and dilute the memorization signal.
+    # See TODO.md for full rationale.
+
     # Create prompts (without solutions) and full sequences (with solutions).
     prompts = [
         doc_to_text.format(problem=question, solution="").rstrip()

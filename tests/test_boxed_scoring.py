@@ -1,10 +1,11 @@
 """Comprehensive tests for the \\boxed{}-required scoring implementation.
 
-Tests extract_boxed_answer() and score_response() from both score_pass_at_k.py
-and incremental_scorer.py. Verifies:
+Tests extract_boxed_answer() and score_response() from the canonical
+src.scoring module (which is re-exported by score_pass_at_k.py and
+incremental_scorer.py). Verifies:
   1. Correct extraction of \\boxed{} content with nested braces
   2. False positive elimination (bare numbers no longer score as correct)
-  3. Equivalence between the two scoring scripts
+  3. Equivalence: scripts import from the same canonical source
   4. Integration with math-verify parse() and verify()
   5. Realistic MATH benchmark answer formats
 """
@@ -12,6 +13,9 @@ and incremental_scorer.py. Verifies:
 import pytest
 from math_verify import parse, verify
 
+from src.scoring import extract_boxed_answer, score_response
+
+# The scripts now re-export from src.scoring; verify the imports resolve.
 from scripts.score_pass_at_k import (
     extract_boxed_answer as extract_boxed_scorer,
     score_response as score_response_scorer,
