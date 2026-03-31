@@ -92,6 +92,8 @@ Each run is fast — teacher forcing requires no generation, just a forward pass
 - `scripts/eval_language_model_teacher_forcing.py`: Added `elif` branch at line 84 for `"stellaathena/math_perturbed"`.
 - `sweeps/eval_pt_teacher_forcing/math_perturbed/eval_sft_models.yaml`: 34-model sweep (344M + 153M, pre-SFT + post-SFT).
 
+**W&B project:** `memorization-scoring-vs-sampling-eval-teacher-forcing` (same project as the existing teacher-forcing evaluations on the original MATH test set). Runs are distinguished by the `dataset` config field (`"stellaathena/math_perturbed"` vs `"EleutherAI/minerva_math"`).
+
 **To run on the cluster:**
 ```bash
 git pull

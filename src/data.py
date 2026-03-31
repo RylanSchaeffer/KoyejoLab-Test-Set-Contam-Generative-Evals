@@ -526,7 +526,7 @@ def load_dataset_hendrycks_math() -> DatasetDict:
 
 
 def load_dataset_math_perturbed() -> DatasetDict:
-    """Load the stellaathena/math_perturbed dataset.
+    """Load the RylanSchaeffer/math_perturbed dataset.
 
     This dataset contains perturbed versions of MATH problems with different
     numerical values but the same problem structure. Each problem has a full
@@ -536,7 +536,21 @@ def load_dataset_math_perturbed() -> DatasetDict:
     Returns:
         DatasetDict with a "test" split containing perturbed MATH problems.
     """
-    return load_dataset("stellaathena/math_perturbed")
+    return load_dataset("RylanSchaeffer/math_perturbed")
+
+
+def load_dataset_math_rephrased() -> DatasetDict:
+    """Load the RylanSchaeffer/math_rephrased dataset.
+
+    This dataset contains rephrased versions of MATH problems with different
+    surface wording but identical mathematical content. Created by cleaning
+    stellaathena/math_rephrased (fixing 23 wrong answers, 7 stale name
+    references, 1 perturbed problem, and ~68 formatting inconsistencies).
+
+    Returns:
+        DatasetDict with a "test" split containing rephrased MATH problems.
+    """
+    return load_dataset("RylanSchaeffer/math_rephrased")
 
 
 def load_dataset_math_rephrased() -> DatasetDict:
