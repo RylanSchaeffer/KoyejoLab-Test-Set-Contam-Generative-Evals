@@ -12,8 +12,6 @@ Checks:
 import json
 import os
 import re
-import sys
-from collections import defaultdict
 
 BATCH_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

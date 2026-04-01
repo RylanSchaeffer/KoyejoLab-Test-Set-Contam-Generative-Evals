@@ -7,9 +7,6 @@ Saves each batch as data/math_perturbed_batches/batch_{NNN}_input.json.
 
 import json
 import os
-import re
-import sys
-
 from datasets import concatenate_datasets, load_dataset
 
 BATCH_SIZE = 25
