@@ -1,0 +1,228 @@
+# Quality Audit: `stellaathena/math_rephrased` Dataset
+
+**Date**: 2026-03-29
+**Dataset**: `stellaathena/math_rephrased` (HuggingFace, split=`test`, 5000 rows)
+**Columns**: `idx`, `original_problem`, `problem` (rephrased), `answer`, `solution`, `level`, `type`
+
+## Executive Summary
+
+Three classes of issues were found:
+
+| Issue Category | Count | Severity |
+|---|---|---|
+| Wrong `answer` field (disagrees with solution's `\boxed{}`) | 23 verified | High |
+| Solution references names not in rephrased problem | 7 | Medium |
+| Problem perturbed (math changed, not just rephrased) | 1 | High |
+| Formatting-only `answer` vs `\boxed{}` mismatches | ~68 | Low |
+
+The `solution` field is the **original MATH solution verbatim** in all 5000 rows. This is confirmed and is by design, but creates inconsistencies when the rephrased problem removed person names that the solution still references.
+
+---
+
+## Investigation 1: Solution-Problem Consistency (Name Mismatches)
+
+### Background
+
+Since the `solution` field contains the original MATH solution, any person names or contextual nouns referenced in the solution must also appear in the rephrased problem for the solution to make sense as a standalone explanation. In 7 rows, the rephraser removed person names from the problem text, but the solution still references those names.
+
+### Confirmed Mismatches (7 rows)
+
+These are cases where a reader seeing only the rephrased problem + solution would encounter names in the solution that don't appear in the problem.
+
+**idx=7** (Algebra, Level 4)
+- Original: "**Mr. Madoff** invests 1000 dollars in a fund..."
+- Rephrased: "**An investment** of 1000 dollars in a fund..."
+- Solution says: "Then after three years, **Mr. Madoff's** investment is $1000 \cdot \left( 1 + \frac{r}{100} \right)^3$"
+
+**idx=1367** (Counting & Probability, Level 3)
+- Original: "**Joe's** batting average is .323..."
+- Rephrased: "**A baseball player** has a batting average of .323..."
+- Solution says: "Each of **Joe's** hits is independent of the others."
+
+**idx=2583** (Intermediate Algebra, Level 1)
+- Original: "**Sasha** and **Chloe** are throwing darts at a map of the complex plane. **Sasha's** dart lands on the point $15+8i$. **Chloe's** dart lands on the point $3-4i$."
+- Rephrased: "**Two darts** are thrown at the complex plane. **One** lands at $15 + 8i$ and **the other** lands at $3 - 4i$."
+- Solution says: "The distance from **Sasha's** dart is $|15+8i| = 17$. The distance from **Chloe's** dart is $|3-4i| = 5$."
+
+**idx=2822** (Intermediate Algebra, Level 4)
+- Original: "**Jonathon** is given the following problem... **Jonathon** reasons as follows..."
+- Rephrased: "**A student** attempts this problem using AM-GM..."
+- Solution says: "The reason that **Jonathon's** solution doesn't work is because..."
+
+**idx=3593** (Prealgebra, Level 3)
+- Original: "**Javier** is biking at 15 miles per hour."
+- Rephrased: "**A cyclist** travels at a speed of 15 miles per hour."
+- Solution says: "Since 15 miles per hour is 1/4 mile per minute, **Javier** travels $(5280)(1/4) = 1320$ feet in one minute."
+
+**idx=3598** (Prealgebra, Level 3)
+- Original: "**Dave's sister** baked $3$ dozen pies..."
+- Rephrased: "**A baker** made 3 dozen pies."
+- Solution says: "In order to make the number of pies with none of these ingredients as small as possible, **Dave's sister** should put all of these ingredients in different pies..."
+
+**idx=4378** (Prealgebra, Level 5)
+- Original: "**Nancy** generates a two-digit integer by rolling a six-sided die twice."
+- Rephrased: "**A two-digit number** is formed by rolling a standard six-sided die two times."
+- Solution says: "The largest number **Nancy** can generate is 66."
+
+### Names Removed Without Solution Inconsistency (10 rows)
+
+In these rows, person names were removed during rephrasing but the solution does not reference those names, so there is no inconsistency. These are noted for completeness but are not bugs.
+
+| idx | Names Removed | Type |
+|---|---|---|
+| 999 | Vanessa | Algebra |
+| 1465 | Alex, Betty, Carl, D'Angelo | Counting & Probability |
+| 1571 | Camy | Counting & Probability |
+| 1597 | John | Counting & Probability |
+| 2695 | Katie | Intermediate Algebra |
+| 3624 | Mary | Prealgebra |
+| 3636 | Joe, Alina | Prealgebra |
+| 3642 | Bekah | Prealgebra |
+| 4266 | Kailin | Prealgebra |
+| 4392 | Mario | Prealgebra |
+
+### Methodology
+
+The analysis searched all 5000 rows for capitalized words (potential person names) appearing in both the `original_problem` and `solution` but absent from the rephrased `problem`. Patterns checked included possessives (`Name's`), name-verb constructions (`Name travels`), and explicit name lists. False positives (common English words like "The", "In", math terms like "Euler", etc.) were filtered through a curated stop list and manual verification. All 7 confirmed cases above were individually read and verified.
+
+---
+
+## Investigation 2: Answer Field Accuracy
+
+### Overview
+
+Of 5000 rows, 99 have `answer` != last `\boxed{}` in `solution`. After normalization for LaTeX formatting differences (`\dfrac` vs `\frac`, `\!` comma spacing, `\text{}` wrappers, whitespace, etc.), **68 are formatting-only differences** and **31 are genuinely different values**.
+
+Of the 31 genuinely different values:
+- **23 are verified WRONG** in the `answer` field (the `\boxed{}` in the solution is correct)
+- **7 are multi-value answers** where the `answer` field correctly concatenates multiple `\boxed{}` entries (for problems asking "list all solutions")
+- **1 is a case where the `answer` field is actually correct** and the original MATH `\boxed{}` is wrong for the question asked
+
+### Verified Wrong Answers (23 rows)
+
+Every case below was verified either by manual computation or by confirming that the rephrased problem is mathematically identical to the original (so the solution's boxed answer must be correct).
+
+| idx | `answer` field | Correct answer (`\boxed{}`) | Type | Level | Notes |
+|---|---|---|---|---|---|
+| 1256 | 230,400 | 864,000 | C&P | 3 | License plate counting |
+| 1260 | 25/648 | 5/162 | C&P | 5 | Dice probability (verified: 5/162 is correct) |
+| 1264 | 1/3 | 1/5 | C&P | 4 | Digit arrangement probability (verified: 1/5 is correct) |
+| 1266 | 12,441,600 | 3,110,400 | C&P | 3 | Seating arrangement (verified: 3,110,400 is correct) |
+| 1281 | 11 | 19 | C&P | 5 | Grid squares counting |
+| 1289 | 60 | 48 | C&P | 3 | Grid rectangles (verified: 48 is correct) |
+| 1290 | 12 | 13 | C&P | 2 | Shortest path (verified: 13 is correct) |
+| 1292 | 3 | 10 | C&P | 5 | Bracelet counting (verified via Burnside's lemma: 10 is correct) |
+| 1364 | 1/2 | 5/9 | C&P | 3 | Non-standard dice (verified: 5/9 is correct) |
+| 1379 | 1/19 | 10/19 | C&P | 5 | Dodecahedron interior diagonals (verified: 10/19 is correct) |
+| 1387 | 12 | 14 | C&P | 5 | Inclusion-exclusion (verified: 14 is correct) |
+| 1397 | 150 | 300 | C&P | 3 | Even palindromes (verified: 300 is correct) |
+| 1463 | 7/15 | 9/20 | C&P | 4 | Bag selection probability (verified: 9/20 is correct) |
+| 1469 | 1728 | 864 | C&P | 4 | Pet distribution |
+| 1496 | 1792/6561 | 1904/6561 | C&P | 5 | Fruit selection (answer is P(3 oranges) only; missing P(6 apples) term) |
+| 1527 | 30240 | 20160 | C&P | 5 | Bead grid arrangements |
+| 1529 | 61,488 | 61,328 | C&P | 3 | 5-digit numbers (verified: 90000 - 7*8^4 = 61,328) |
+| 1541 | 263/272 | 507/595 | C&P | 5 | Card suit probability (verified: 507/595 is correct) |
+| 1563 | 49 | 50 | C&P | 5 | C(n,2) odd count (verified computationally: 50 is correct) |
+| 1638 | 17/243 | 8/81 | C&P | 5 | Plant probability (verified: 8/81 = 24/243 is correct) |
+| 1657 | 16 | 26 | C&P | 4 | Digit 6 counting (verified computationally: 26 is correct) |
+| 1658 | 1 | 0 | C&P | 2 | Cards from 2001 (verified: all 3-card selections include a 0) |
+| 4383 | 48 | 80 | Prealgebra | 2 | **Perturbation**: rephrased changed the angles (see Investigation 3) |
+
+**Notable pattern**: 22 of the 23 wrong answers are in **Counting & Probability**. This strongly suggests a systematic issue with the answer generation process for that problem type.
+
+### Multi-Value Answers (7 rows, not bugs)
+
+These problems ask for "all solutions" and the `answer` field correctly joins multiple `\boxed{}` entries.
+
+| idx | `answer` field | `\boxed{}` entries | Type |
+|---|---|---|---|
+| 2152 | `5 - 10i, 11, -3 + 6i` | Three separate `\boxed{}` | Intermediate Algebra |
+| 2549 | `-3/2, -3/4` | Two separate `\boxed{}` | Intermediate Algebra |
+| 2656 | `-10879, 10879` | Two separate `\boxed{}` | Intermediate Algebra |
+| 2703 | `3, 2/5` | Two separate `\boxed{}` | Intermediate Algebra |
+| 4559 | `-1, 2` | Two separate `\boxed{}` | Precalculus |
+| 4562 | `30, 45, 105` (degrees) | Three separate `\boxed{}` | Precalculus |
+| 4860 | `pi/4, 5pi/4` | Two separate `\boxed{}` | Precalculus |
+
+### One-of-Multiple Selection (2 rows, not bugs)
+
+These problems have multiple valid `\boxed{}` entries and the `answer` field picks one.
+
+| idx | `answer` field | All `\boxed{}` | Notes |
+|---|---|---|---|
+| 2912 | `(3/2, -5/2)` | `(3/2,-5/2)` and `(-5/2,-5/2)` | Problem says "one of the vertices" |
+| 2936 | `(3,-5)` | `(3,-5)` and `(0,0)` | Problem says "what other point" (singular) |
+
+### Answer Field Correct, Solution Boxed Wrong (1 row)
+
+**idx=4405** (Prealgebra, Level 5): Both original and rephrased ask for "the length of $DF$". The solution correctly derives $DF = 4\sqrt{2}$ (via $DM = MF = 2\sqrt{2}$) but then reports $\boxed{8}$ which is $x^2 = EM^2$, answering a different question. The `answer` field value of $4\sqrt{2}$ is correct for the question asked.
+
+### Formatting-Only Differences (~68 rows)
+
+These are cosmetic LaTeX differences that do not affect the mathematical value:
+- `\dfrac` vs `\frac` (e.g., `\dfrac{5}{36}` vs `\frac{5}{36}`)
+- Comma formatting: `75,\!075` vs `75075`
+- `\text{}` wrappers: `\text{Sunday}` vs `Sunday`
+- Whitespace: `\frac{7}{15}` vs ` \frac{7}{15}`
+- Degree symbols: `10` vs `10^\circ`
+- Minor spacing in LaTeX expressions
+
+---
+
+## Investigation 3: Rephrasing Quality
+
+### Methodology
+
+A stratified random sample of 70 problems (10 per type, 2 per level within each type) was manually reviewed by reading the original and rephrased versions side by side.
+
+### Overall Assessment
+
+The rephrasing quality is **adequate but minimal**. The vast majority of rephrasings are true rephrasings: same mathematical content with different surface wording. The most common transformations are:
+
+1. **Verb substitution**: "Find" -> "Determine" / "Calculate" / "Compute"
+2. **Sentence restructuring**: "What is the value of X?" -> "Determine X."
+3. **Name anonymization**: "Nancy rolls a die" -> "A die is rolled" (in ~10 cases)
+4. **Slight rewording**: "How many ways can..." -> "In how many different ways..."
+5. **LaTeX normalization**: Slight formatting changes in math expressions
+
+### Asymptote Diagram Handling
+
+- **419 problems** in the original have Asymptote diagram code
+- **187 retain** the diagram in the rephrased version (often unchanged or minimally altered)
+- **232 remove** the diagram and extract key information into text
+
+The diagram-to-text extraction is **generally correct**. The one confirmed error is idx=4383 (see below). The extraction at idx=1290 was also verified and found to be correct (distances were read from labeled edges, not computed from coordinates). The spinner problem at idx=1297 was also correctly extracted (section sizes and labels preserved in text).
+
+### Confirmed Perturbation (1 row)
+
+**idx=4383** (Prealgebra, Level 2)
+- **Original** (from Asymptote diagram): Two angles on a straight line are $x^\circ$ and $(x+20)^\circ$. Equation: $x + (x+20) = 180$, giving $x = 80$.
+- **Rephrased** (invented new angles): Two angles on a straight line are $(x+26)^\circ$ and $(2x+10)^\circ$. Equation: $(x+26) + (2x+10) = 180$, giving $x = 48$.
+- The rephraser **changed the mathematical content** by inventing different angle expressions not present in the original diagram. This makes the rephrased problem a genuinely different math problem with a different answer.
+- The `answer` field (48) matches the rephrased problem; the `\boxed{}` in the solution (80) matches the original.
+
+### Rephrasing Depth
+
+Most rephrasings are shallow -- a few words changed per sentence. The mathematical expressions, numerical values, and variable names are almost always preserved exactly. This is consistent with the goal of changing only the linguistic surface form while keeping the math identical.
+
+---
+
+## Summary of Recommended Fixes
+
+### High Priority
+
+1. **Fix 23 wrong `answer` field values** (listed in Investigation 2 table). These are concentrated in Counting & Probability and will cause incorrect evaluations if the `answer` field is used for grading.
+
+2. **Fix idx=4383 perturbation**: Either revert the rephrased problem to match the original's angle expressions, or update the `answer` and `solution` to match the rephrased problem.
+
+### Medium Priority
+
+3. **Fix 7 name-solution inconsistencies**: Either:
+   - (a) Keep the person names in the rephrased problems (preferred, since the solution references them), or
+   - (b) Rewrite the solutions to remove name references (more work)
+
+### Low Priority
+
+4. **Normalize formatting differences** in the `answer` field (~68 rows): Standardize `\dfrac` vs `\frac`, comma formatting in large numbers, `\text{}` usage, etc. These don't affect numerical correctness but could cause false negatives in string-matching evaluations.
+
+5. **Review the 232 diagram-removed rephrasings** for potential extraction errors. Only 1 confirmed error was found (idx=4383), but a more thorough review of all 232 may surface additional issues.
