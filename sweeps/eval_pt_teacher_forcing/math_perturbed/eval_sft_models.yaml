@@ -6,7 +6,7 @@ parameters:
   data_config:
     parameters:
       dataset:
-        values: [ "stellaathena/math_perturbed" ]
+        values: [ "RylanSchaeffer/math_perturbed" ]
       shuffle_seed:
         values: [0]
   model_config:

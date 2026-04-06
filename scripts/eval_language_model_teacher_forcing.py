@@ -81,7 +81,7 @@ def run_lm_eval_teacher_forcing(wandb_config: Dict[str, Any]) -> Dict[str, float
         raw_datasets = src.data.load_dataset_hendrycks_math()
         test_dataset = raw_datasets["test"]
         doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
-    elif wandb_config["data_config"]["dataset"] == "stellaathena/math_perturbed":
+    elif wandb_config["data_config"]["dataset"] == "RylanSchaeffer/math_perturbed":
         raw_datasets = src.data.load_dataset_math_perturbed()
         test_dataset = raw_datasets["test"]
         doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
@@ -190,7 +190,7 @@ def run_lm_eval_teacher_forcing(wandb_config: Dict[str, Any]) -> Dict[str, float
 
         wandb.log(problem_data_to_log, step=problem_idx + 1)
         # Be nicer to W&B, even if that takes more time per run.
-        time.sleep(1.0 / 10.0)
+        time.sleep(0.01)
 
 
 if __name__ == "__main__":

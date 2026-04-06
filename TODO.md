@@ -126,6 +126,18 @@ After re-running evals, regenerate in this order:
 
 ---
 
+## Future: Reduce GPU Idle Time in `eval_language_model.py`
+
+After vLLM inference completes, the GPU sits idle while the script does CPU work (scoring, tokenization, W&B logging). Across ~150 runs this wastes hours of GPU time. Potential fixes, in priority order:
+
+1. **Parallelize scoring** (lines 143-150): `parse()` + `score_response()` over 5000 problems is embarrassingly parallel. Use `concurrent.futures.ProcessPoolExecutor` with ~4 workers. Estimated savings: ~40s/run.
+2. **Parallelize edit distances** (lines 152-155): Same pattern — `editdistance.eval()` × 5000 is independent per problem. Can share the same pool as scoring.
+3. **Cache the tokenizer before destroying the model** (lines 128-165): The tokenizer is re-loaded from HuggingFace after the model is destroyed. Instead, save a reference before `destroy_model_parallel()` and reuse it for token counting. Avoids a redundant download.
+4. **Batch W&B logging** (lines 167-188): Replace 5000 individual `wandb.log()` calls with a single `wandb.Table` or `wandb.log()` of a summary dict. Current approach: 5000 × `sleep(0.01)` = 50s. A single table log would be ~1s.
+5. **Move all post-inference work to a background thread**: After extracting response texts from vLLM outputs, the GPU is freed. In principle, scoring + logging could happen in a background thread while the *next* sweep run starts loading its model — but this would require restructuring the wandb agent model (agent waits for `wandb.finish()` before starting the next run).
+
+---
+
 ## Verification Checklist
 
 - [ ] Sanity check: eval 34M R=0 at temp=0 with 4-shot — does the model attempt `\boxed{}` format?

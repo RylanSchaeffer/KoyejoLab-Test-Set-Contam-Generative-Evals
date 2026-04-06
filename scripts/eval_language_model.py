@@ -85,7 +85,7 @@ def run_lm_eval_custom(wandb_config: Dict[str, Any]) -> Dict[str, float]:
         raw_datasets = src.data.load_dataset_hendrycks_math()
         test_dataset = raw_datasets["test"]
         doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
-    elif wandb_config["data_config"]["dataset"] == "stellaathena/math_perturbed":
+    elif wandb_config["data_config"]["dataset"] == "RylanSchaeffer/math_perturbed":
         raw_datasets = src.data.load_dataset_math_perturbed()
         test_dataset = raw_datasets["test"]
         doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT

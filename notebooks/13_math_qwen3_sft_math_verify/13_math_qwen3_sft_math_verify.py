@@ -37,10 +37,14 @@ temperatures_to_display = np.round(
 #     "oj6o8idv",  # Qwen 3   34M,63M,93M,153M,344M,      1xOT    Subset Fraction=1.0
 # ]
 
-# TODO: Replace with new 4-shot SFT eval sweep ID after running P4 sweeps.
-# Config: sweeps/eval_sft/math/eval_joshua_pretrained_sfted_models.yaml
+# Old 0-shot SFT eval sweep ID (pre-4-shot fix):
+# sweep_ids = [
+#     "oj6o8idv",  # Qwen 3   34M,63M,93M,153M,344M,      1xOT    Subset Fraction=1.0
+# ]
+
+# New 4-shot SFT eval sweep ID (boxed-required scoring):
 sweep_ids = [
-    "oj6o8idv",  # Qwen 3   34M,63M,93M,153M,344M,      1xOT    Subset Fraction=1.0
+    "2zpwcnek",  # Qwen 3   34M,62M,93M,153M,344M,      1xOT    Subset Fraction=1.0    4-shot
 ]
 
 eval_runs_configs_df: pd.DataFrame = src.analyze.download_wandb_project_runs_configs(
