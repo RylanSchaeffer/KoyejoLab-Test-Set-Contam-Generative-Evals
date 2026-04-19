@@ -19,7 +19,7 @@ This suggests that contamination-driven performance is brittle; small adjustment
 
 \begin{figure*}[t!]
     \centering
-    \includegraphics[width=\linewidth]{figures/14_math_qwen3_pt_math_verify_teacher_forcing/y=nll_and_cumprob_x=token_index_hue=num_replicas_col=model_size_combined.pdf}
+    \includegraphics[width=0.9\linewidth]{figures/14_math_qwen3_pt_math_verify_teacher_forcing/y=nll_and_cumprob_x=token_index_hue=num_replicas_col=model_size_combined.pdf}
     \caption{\textbf{Solution Length and Temperature Together Govern How Quickly Memorization Decoheres.}
     \textbf{Top:} Most models and contamination pairs exhibit scaling laws (Eqn.~\ref{eqn:in_context_scaling_law}) as a function of the sequence length. For exceptions, see Appendix~\ref{app:sec:exceptions_to_sequence_scaling_laws}. \textbf{Bottom:} The cumulative probability of generating a memorized solution can exist in one of three regimes: (1) Exponentially Fast Decoherence, (2) Brittle Memorization, and (3) Deterministic Lock-In. Sampling temperature can shift a model between regimes.
     }
