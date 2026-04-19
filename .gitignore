@@ -228,3 +228,15 @@ manuscript/*.out
 manuscript/*.synctex.gz
 manuscript/*.toc
 manuscript/*.pdf
+manuscript_fdgm_icml_2026/*.aux
+manuscript_fdgm_icml_2026/*.bbl
+manuscript_fdgm_icml_2026/*.blg
+manuscript_fdgm_icml_2026/*.fdb_latexmk
+manuscript_fdgm_icml_2026/*.fls
+manuscript_fdgm_icml_2026/*.lof
+manuscript_fdgm_icml_2026/*.lot
+manuscript_fdgm_icml_2026/*.out
+manuscript_fdgm_icml_2026/*.synctex.gz
+manuscript_fdgm_icml_2026/*.toc
+manuscript_fdgm_icml_2026/00_main.pdf
+manuscript_fdgm_icml_2026/build_*.log
