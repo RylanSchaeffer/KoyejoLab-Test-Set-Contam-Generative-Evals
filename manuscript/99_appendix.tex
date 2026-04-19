@@ -188,3 +188,21 @@ We verified that these deviations are not artifacts of data corruption. The toke
 \end{figure*}
 
 \clearpage
+
+\section{Discussion (Continued)}
+\label{app:sec:discussion}
+
+\paragraph{Limitations}
+We focused on a single generative benchmark, MATH, to enable automatic verification and controlled contamination. Consequently, our findings may not fully capture how contamination behaves for other tasks such as coding or creative writing.
+Additionally, our experiments utilized decoder-only dense transformer models (Qwen 3) up to 344M parameters; results at this scale may not extrapolate to larger models or other architectures.
+Finally, our pretraining corpus represents a specific mixture of web-crawl data; specialized or heavily filtered corpora could alter the base difficulty of memorization and the specific thresholds at which contamination effects become visible.
+
+\paragraph{Future Directions}
+Several avenues for future research:
+%
+\begin{itemize}
+    \item \textbf{Reconciling Memorization Thresholds:} Our discovery that a single test set replica drives loss below the irreducible error contrasts with recent assertions that single-shot verbatim memorization is an ``illusion'' \citep{huang2024demystifying} or that membership inference is fundamentally capped \citep{hayes2025exploring}. Future work should investigate what the explanatory differences are; one possibility is that memorization depends on the amount relative to corpus size \citep{schaeffer2025doseresponse, wei2025hubblemodelsuiteadvance}.
+    \item \textbf{Inference-Time Detection Methods:} Since high-temperature sampling and long-context generation disproportionately harm contaminated models, future work could develop lightweight ``stress tests'' that sweep temperature or solution length to detect contamination without access to the pretraining corpus.
+    \item \textbf{Architectural Susceptibility:} We studied dense models, but it remains an open question whether Mixture-of-Experts (MoEs) or State Space Models (SSMs) exhibit different memorization patterns.
+    \item \textbf{Harder Benchmarks:} We hypothesize that contamination efficacy is inversely correlated with problem compressibility. Investigating whether harder benchmarks (e.g., AIME) require higher ``doses'' of leakage to achieve the same performance boost would be a valuable contribution to benchmark design.
+\end{itemize}

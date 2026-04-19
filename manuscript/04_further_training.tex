@@ -2,8 +2,7 @@
 \section{Further Training: Overtraining \& Supervised Finetuning}
 \label{sec:further_training}
 
-After pretraining, models typically undergo additional training.
-We now examine how two common additional training interventions---overtraining on fresh data and supervised finetuning---interact with pretraining contamination.
+We next examine how two common additional training stages---overtraining on fresh data and supervised finetuning---interact with pretraining contamination.
 
 \paragraph{Finding \#4: Overtraining with Fresh Data Mitigates Contamination}
 \citet{bordt2025howmuch} recently reported that for discriminative evaluations, the effect of contamination diminishes when models are trained beyond ``compute optimal'' on fresh data. We tested whether this so-called \emph{overtraining} \citep{touvron2023llama2openfoundation,sardana2024beyond,gadre2024languagemodelsscalereliably,schaeffer2025pretrainingscalinglawsgenerative} has similar effects for generative benchmarks.
@@ -15,38 +14,36 @@ D(m, N) \defeq m \times 20 \times N,
 %
 tokens per model, where $m$ is the \emph{overtraining multiplier} and $N$ is the number of model parameters.
 We swept $m \in \{1, 2, 4, 8, 16\}$.
-Following \citet{sardana2024beyond,gadre2024languagemodelsscalereliably}, we term $m=1$ ``compute-optimal training'' and term $m > 1$ ``overtraining''.
-Crucially, in \citet{bordt2025howmuch} and here, as the overtraining multiplier increases, the additional tokens are \emph{new, fresh, non-repeated tokens}; this differs from more practical settings where models might see select documents repeated tens-to-hundreds of times \citep{hernandez2022scalinglawsinterpretabilitylearning} or the entire corpus repeated for 4+ epochs \citep{muennighoff2023scaling,fang2025datasets}.
+We term $m=1$ ``compute-optimal training'' and $m > 1$ ``overtraining'' \citep{sardana2024beyond,gadre2024languagemodelsscalereliably}.
+Crucially, in \citet{bordt2025howmuch} and here, as the overtraining multiplier increases, the additional tokens are \emph{new, fresh tokens}; this differs from settings where models might see select documents repeated tens-to-hundreds of times \citep{hernandez2022scalinglawsinterpretabilitylearning} or the entire corpus repeated for 4+ epochs \citep{muennighoff2023scaling,fang2025datasets}.
 
 \begin{figure*}[t!]
     \centering
     \includegraphics[width=\linewidth]{figures/12_math_qwen3_sft_cross_entropy/combined_loss_analysis_hue=replicas_style=params.pdf}
     \caption{\textbf{Supervised Finetuning on the Train Set Has Opposing Effects, Depending on Pretraining Contamination.} For models pretrained with little-to-no contamination ($<10$ test set replicas), supervised finetuning (SFT) on the MATH \emph{train} set decreases loss on the \emph{test} set. For models pretrained with more contamination ($>10$ test set replicas), SFT on the train set increases loss on the test set.
-    We conjecture that during SFT, contaminated models learn to generalize but also forget their contaminated pretraining data, and the effects of contaminated test set data are more impactful than generalization for small models, leading to a net increase in test loss. 
+    We conjecture that during SFT, contaminated models learn to generalize but also forget their contaminated pretraining data, and the effects of contamination are more potent than generalization for small models, leading to a net increase in test loss. 
     }
     \label{fig:sft}
 \end{figure*}
 
-
-
-We find an interesting interaction between contamination and overtraining (Fig.~\ref{fig:overtraining}): for models with low contamination, cross entropy on the MATH test set decreases with increasing overtraining, but for models with high contamination, cross entropy on the MATH set increases with overtraining.
-The cross-over point between test set replicas and overtraining multiplier shifts with model size: the crossover point falls from 32 test set replicas for $34$M parameter models to 10 replicas for $63$M parameter models to 1 replica for $93$M parameter models.
+% We find an interesting interaction between contamination and overtraining :
+For models with low contamination, increasing overtraining decreases cross entropy on the MATH test set, but for models with high contamination, overtraining increases the cross entropy (Fig.~\ref{fig:overtraining}).
+The cross-over point between test set replicas and overtraining multiplier shifts with model size: the crossover point falls from 32 test set replicas for $34$M models to 1 replica for $93$M models.
 Thus, as models become larger, the performance boost from contamination diminishes when overtraining with fresh data.
-Our interpretation is that while more fresh data is generally useful for improving model performance generally, it dilutes the ``dose'' of the contaminated data, weakening how the model ``responds'' (as measured by task performance) \citep{schaeffer2025doseresponse}.
+While more fresh data is generally useful for improving model performance, it dilutes the ``dose'' of the contaminated data, weakening benchmark scores \citep{schaeffer2025doseresponse, wei2025hubblemodelsuiteadvance}.
 
 \paragraph{Finding \#5: Supervised Fine-Tuning on Training Set Has Opposing Effects, Depending on Pretraining Contamination}
 
-After pretraining, the first post-training step is oftentimes supervised finetuning (SFT) \citep{wei2022finetunedlanguagemodelszeroshot, ouyang2022training}. We turned to assessing what effect, if any, SFT has on contaminated pretrained models. \citet{kocyigit2025the} recently studied this question and found that SFT on the \emph{train} set improves performance on the \emph{test} set. However, as a key methodological difference, \citet{kocyigit2025the} induced test set contamination via continued pretraining \citep{jin2022lifelong,jang2022continualknowledgelearninglanguage,ibrahim2024simple, parmar2024reusedontretrainrecipe,yildiz2025investigatingcontinualpretraininglarge}, whereas we introduced test set contamination uniformly throughout pretraining.
-The MATH format was preserved between pretraining and SFT. 
-
+After pretraining, the first post-training step is oftentimes supervised finetuning (SFT) \citep{wei2022finetunedlanguagemodelszeroshot, ouyang2022training}. We turned to assessing what effect SFT has on contaminated pretrained models. \citet{kocyigit2025the} recently found that SFT on the \emph{train} set improves performance on the \emph{test} set. However, as a key methodological difference, \citet{kocyigit2025the} induced test set contamination via continued pretraining \citep{jin2022lifelong,jang2022continualknowledgelearninglanguage,ibrahim2024simple, parmar2024reusedontretrainrecipe,yildiz2025investigatingcontinualpretraininglarge}, whereas we introduced contamination via pretraining.
+The MATH format was preserved between pretraining and SFT.
 
 \begin{figure*}[t!]
     \centering
     \includegraphics[width=\linewidth]{figures/11_math_qwen3_pt_math_verify/y=math_verify_x=num_replicas_hue=compute_col=temp.png}
     \caption{\textbf{Sampling Temperature Degrades Performance, Particularly for Contaminated Models.} 
-    We report Math Verify scores as a function of test set replicas and model size across six sampling temperatures.
+    % We report Math Verify scores as a function of test set replicas and model size across six sampling temperatures.
     As sampling temperature increases, Math Verify scores drop precipitously, falling from near 100\% to under 1\% in many configurations.
-    The penalty for high temperature is disproportionately larger for highly contaminated models: increasing temperature from 0 to 1 reduces performance by a factor of $\sim2$ at low contamination levels ($\leq 10$ replicas), whereas it reduces performance by a factor of up to 40 at high contamination levels ($1000$ replicas).
+    The penalty for high temperature is disproportionately larger for highly contaminated models: increasing temperature from 0 to 1 reduces performance by a factor of $\sim2$ at low contamination ($\leq 10$ replicas), whereas it reduces performance by a factor of up to 40 at high contamination ($1000$ replicas).
     }
     \label{fig:math_verify_replicas_temp}
 \end{figure*}
@@ -55,16 +52,15 @@ The MATH format was preserved between pretraining and SFT.
 \begin{figure*}[t!]
     \centering
     \includegraphics[width=\linewidth]{figures/11_math_qwen3_pt_math_verify/y=math_verify_x=solution_length_hue=num_replicas_col=temp_row=params_153M_344M.png}
-    \caption{\textbf{Performance Declines with Increasing Solution Token Length.} Math Verify Scores decrease with solution length, with the effects modulated by temperature.  At high rates of contamination and higher temperatures, math verify scores fall exponentially with the solution length.  At lower temperatures, and high rates of contamination, solution length has almost no effect.  Models exposed to less contamination also exhibit declining scores with longer solution lengths, but the dropoff is concave up and occurs much more slowly.
+    \caption{\textbf{Performance Declines with Increasing Solution Token Length.} Math Verify Scores decrease with increasing solution length, modulated by temperature.  At high rates of contamination and higher temperatures, Math Verify scores fall exponentially with the solution length.  At lower temperatures, and high rates of contamination, solution length has almost no effect.  Models exposed to less contamination also exhibit declining scores with longer solution lengths, but the dropoff is concave up and occurs much more slowly.
     % Shaded regions represent 95\% confidence intervals.
     }
     \label{fig:temp_and_solution_length}
 \end{figure*}
 
-One might expect that SFT on the train set should increase test set performance across the board.
-We discover that, surprisingly, the opposite is sometimes true: SFT on the train set can both help and hurt model performance on the test set, depending on the amount of contamination in pretraining (Fig.~\ref{fig:sft}).
-For models with no or low $(< 10)$ test set contamination, SFT on the train set significantly reduces loss on the test set (purple).
-At $10$ test set replicas, SFT has no effect (aqua), but as contamination increases, SFT on the train set significantly increases loss on the test set (yellow, green).
-We conjecture that during SFT, contaminated models learn to generalize but also forget their contaminated pretraining data, and the effects of contaminated test set data are more impactful than generalization for small models, leading to a net increase in test loss. 
-As studied in Section \ref{sec:pretraining}, the benefits of contamination on test loss dwarf those of generalization (which would be improved by SFT on the train set). 
-Therefore, the net impact of SFT on the train set for highly contaminated models is counterintuitively to increase cross entropy loss.
+We discover that, surprisingly, SFT on the train set can help or hurt performance on the test set, depending on the amount of pretraining contamination (Fig.~\ref{fig:sft}).
+For models with no or low $(< 10)$ test set replicas, SFT on the train set significantly reduces loss on the test set.
+At $10$ test set replicas, SFT has no effect, but as contamination increases, SFT on the train set significantly increases loss on the test set.
+We conjecture that during SFT, contaminated models learn to generalize, but also forget their contaminated pretraining data, and the effects of contamination are more impactful than generalization for small models, leading to a net increase in test loss. 
+As studied in Sec.~\ref{sec:pretraining}, the benefits of contamination on test loss dwarf those of generalization (which would be improved by SFT on the train set). 
+Therefore, the net impact of SFT on the train set for highly contaminated models is counterintuitively to increase loss.

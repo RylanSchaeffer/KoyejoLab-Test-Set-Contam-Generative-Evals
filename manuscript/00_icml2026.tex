@@ -21,7 +21,7 @@
 \newcommand{\theHalgorithm}{\arabic{algorithm}}
 
 % Use the following line for the initial blind version submitted for review:
-\usepackage[accepted]{icml2026}
+\usepackage{icml2026}
 
 % For theorems and such
 \usepackage{amsmath}
@@ -142,14 +142,15 @@
 % \printAffiliationsAndNotice{\icmlEqualContribution}
 
 \begin{abstract}
-    Test set contamination -- the inclusion of benchmarks in pretraining data -- is a critical threat to the trustworthy evaluation of frontier AI systems.
+    Test set contamination -- the inclusion of benchmarks in pretraining data -- is a critical threat to the trustworthy evaluation of AI systems.
     While its impact on \emph{discriminative} evaluations is well-studied, contamination on \emph{generative} evaluations remains underexplored.
     We quantitatively assess these effects across the language model lifecycle by pretraining models (up to 344M parameters) on web data contaminated with varying numbers of MATH test set replicas.
-    While performance expectedly improves with contamination and model size, the improvements stem from superficial memorization, not generalization.
+    Performance expectedly improves with contamination and model size, with improvements stemming from superficial memorization, not generalization.
     Our scaling law analysis reveals a fundamental breach: including even a single test set replica enables models to achieve lower loss than the irreducible error of training on the uncontaminated corpus.
-    We then study additional training: overtraining with fresh data dilutes contamination effects, whereas supervised finetuning on the training set improves performance for low contamination but degrades it for high contamination.
+    We then study additional training: overtraining with fresh data dilutes contamination effects, whereas supervised finetuning on the training set improves performance for low contamination but degrades performance for high contamination.
     At inference, we identify three distinct regimes of memorization—exponential decoherence to brittle memorization to deterministic lock-in—governed by solution length and sampling temperature.
-    Finally, we identify and fix a critical implementation error in EleutherAI's ALM Evaluation Harness that previously underreported mathematical reasoning performance. By characterizing how generation and memorization interact, we highlight new considerations for trustworthy AI evaluation.
+    Finally, we identify and fix a critical implementation error in EleutherAI's ALM Evaluation Harness that previously underreported mathematical reasoning performance. 
+    By characterizing how generation and memorization interact, we highlight new considerations for trustworthy AI evaluation.
 \end{abstract}
 
 
@@ -161,7 +162,8 @@
 \input{06_discussion}
 
 \clearpage
-\input{manuscript/07_acknowledgements}
+\input{07_impact_statement}
+
 \clearpage
 
 \bibliography{references_rylan}
