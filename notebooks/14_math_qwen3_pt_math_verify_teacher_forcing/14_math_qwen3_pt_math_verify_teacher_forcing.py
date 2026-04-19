@@ -484,7 +484,9 @@ param_values = [src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p] for p in unique_pa
 num_parameters_log_norm = LogNorm(vmin=min(param_values), vmax=max(param_values))
 flare_cmap = matplotlib.colormaps["flare"]
 params_palette = {
-    p: flare_cmap(num_parameters_log_norm(src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p]))
+    p: flare_cmap(
+        num_parameters_log_norm(src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p])
+    )
     for p in unique_params
 }
 
@@ -1553,7 +1555,9 @@ for idx, param in enumerate(selected_params_combined):
 # Create legend handles for ALL replicas that appear in the plot
 legend_replicas = unique_replicas  # Include all replicas (0 to 3162)
 handles = [
-    plt.Line2D([0], [0], color=replica_palette[str(r)], marker="o", linestyle="-", markersize=5)
+    plt.Line2D(
+        [0], [0], color=replica_palette[str(r)], marker="o", linestyle="-", markersize=5
+    )
     for r in legend_replicas
 ]
 fig.legend(

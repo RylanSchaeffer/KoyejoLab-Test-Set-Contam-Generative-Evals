@@ -28,9 +28,7 @@ plt.rcParams["text.latex.preamble"] = "\n".join([r"\usepackage{amsmath}"])
 plt.rcParams["font.size"] = 23
 
 
-def format_g_legend_in_scientific_notation(
-    g: Any, num_decimal_digits: int = 1
-) -> None:
+def format_g_legend_in_scientific_notation(g: Any, num_decimal_digits: int = 1) -> None:
     """Format legend labels as scientific notation.
 
     Converts numeric legend labels to scientific notation format

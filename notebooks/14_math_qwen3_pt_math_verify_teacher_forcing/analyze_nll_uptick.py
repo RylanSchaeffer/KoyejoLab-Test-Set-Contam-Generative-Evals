@@ -64,9 +64,7 @@ def load_run_configs(data_dir: str) -> pd.DataFrame:
     )
 
     # Extract model metadata
-    df["Model"] = df["model_config"].apply(
-        lambda x: ast.literal_eval(x)["model"]
-    )
+    df["Model"] = df["model_config"].apply(lambda x: ast.literal_eval(x)["model"])
     df["Parameters"] = df["Model"].apply(
         lambda x: re.search(r"Qwen3-([\d.]+[MB])", x).group(1)
     )
@@ -103,7 +101,8 @@ def load_nll_data(data_dir: str, configs_df: pd.DataFrame) -> pd.DataFrame:
 
     log_prob_cols = sorted(
         [
-            c for c in all_columns
+            c
+            for c in all_columns
             if c.startswith("log_prob_token_")
             and int(c.replace("log_prob_token_", "")) <= MAX_TOKEN_INDEX
         ],
@@ -137,16 +136,20 @@ def load_nll_data(data_dir: str, configs_df: pd.DataFrame) -> pd.DataFrame:
                     continue
 
                 nlls = -log_probs
-                aggregated_results.append({
-                    "Token Index": token_idx,
-                    "Parameters": config["Parameters"],
-                    "Num. Parameters": config["Num. Parameters"],
-                    "Num. MATH Test Set Replicas": config["Num. MATH Test Set Replicas"],
-                    "mean_NLL": nlls.mean(),
-                    "std_NLL": nlls.std(),
-                    "count": len(nlls),
-                    "run_id": run_id,
-                })
+                aggregated_results.append(
+                    {
+                        "Token Index": token_idx,
+                        "Parameters": config["Parameters"],
+                        "Num. Parameters": config["Num. Parameters"],
+                        "Num. MATH Test Set Replicas": config[
+                            "Num. MATH Test Set Replicas"
+                        ],
+                        "mean_NLL": nlls.mean(),
+                        "std_NLL": nlls.std(),
+                        "count": len(nlls),
+                        "run_id": run_id,
+                    }
+                )
 
         del chunk_df
         gc.collect()
@@ -155,9 +158,18 @@ def load_nll_data(data_dir: str, configs_df: pd.DataFrame) -> pd.DataFrame:
     per_run_df = pd.DataFrame(aggregated_results)
     nll_df = (
         per_run_df.groupby(
-            ["Token Index", "Parameters", "Num. Parameters", "Num. MATH Test Set Replicas"]
+            [
+                "Token Index",
+                "Parameters",
+                "Num. Parameters",
+                "Num. MATH Test Set Replicas",
+            ]
         )
-        .agg(mean_NLL=("mean_NLL", "mean"), std_NLL=("std_NLL", "mean"), count=("count", "sum"))
+        .agg(
+            mean_NLL=("mean_NLL", "mean"),
+            std_NLL=("std_NLL", "mean"),
+            count=("count", "sum"),
+        )
         .reset_index()
     )
     nll_df["sem_NLL"] = nll_df["std_NLL"] / np.sqrt(nll_df["count"])
@@ -169,7 +181,7 @@ def compute_nll_trends(nll_df: pd.DataFrame) -> pd.DataFrame:
     """Compute NLL trend (slope in log-log space) for each condition."""
     unique_params = sorted(
         nll_df["Parameters"].unique(),
-        key=lambda x: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[x]
+        key=lambda x: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[x],
     )
     unique_replicas = sorted(nll_df["Num. MATH Test Set Replicas"].unique())
 
@@ -196,7 +208,9 @@ def compute_nll_trends(nll_df: pd.DataFrame) -> pd.DataFrame:
             if valid.sum() < 10:
                 continue
 
-            slope, _, r_value, p_value, _ = stats.linregress(log_t[valid], log_nll[valid])
+            slope, _, r_value, p_value, _ = stats.linregress(
+                log_t[valid], log_nll[valid]
+            )
 
             # Late slope (token indices 400-800)
             late_mask = (t >= 400) & valid
@@ -207,20 +221,22 @@ def compute_nll_trends(nll_df: pd.DataFrame) -> pd.DataFrame:
             else:
                 late_slope, late_r, late_p = np.nan, np.nan, np.nan
 
-            trend_results.append({
-                "Parameters": param,
-                "Num. Replicas": replica,
-                "Overall Slope": slope,
-                "Overall R²": r_value**2,
-                "Overall p-value": p_value,
-                "Late Slope (400-800)": late_slope,
-                "Late R²": late_r**2 if not np.isnan(late_r) else np.nan,
-                "Late p-value": late_p,
-                "NLL Start": nll[0],
-                "NLL End": nll[-1],
-                "NLL Change": nll[-1] - nll[0],
-                "NLL % Change": (nll[-1] - nll[0]) / nll[0] * 100,
-            })
+            trend_results.append(
+                {
+                    "Parameters": param,
+                    "Num. Replicas": replica,
+                    "Overall Slope": slope,
+                    "Overall R²": r_value**2,
+                    "Overall p-value": p_value,
+                    "Late Slope (400-800)": late_slope,
+                    "Late R²": late_r**2 if not np.isnan(late_r) else np.nan,
+                    "Late p-value": late_p,
+                    "NLL Start": nll[0],
+                    "NLL End": nll[-1],
+                    "NLL Change": nll[-1] - nll[0],
+                    "NLL % Change": (nll[-1] - nll[0]) / nll[0] * 100,
+                }
+            )
 
     return pd.DataFrame(trend_results)
 
@@ -254,8 +270,12 @@ def analyze_problematic_conditions(nll_df: pd.DataFrame) -> None:
         print(f"Count range: {count.min()} to {count.max()}")
 
         min_idx, max_idx = np.argmin(nll), np.argmax(nll)
-        print(f"NLL minimum at token {t[min_idx]}: {nll[min_idx]:.4f} (count={count[min_idx]})")
-        print(f"NLL maximum at token {t[max_idx]}: {nll[max_idx]:.4f} (count={count[max_idx]})")
+        print(
+            f"NLL minimum at token {t[min_idx]}: {nll[min_idx]:.4f} (count={count[min_idx]})"
+        )
+        print(
+            f"NLL maximum at token {t[max_idx]}: {nll[max_idx]:.4f} (count={count[max_idx]})"
+        )
 
         early_count = count[t < 100].mean()
         late_count = count[t >= 400].mean()
@@ -266,14 +286,15 @@ def analyze_problematic_conditions(nll_df: pd.DataFrame) -> None:
         late_mask = t >= 400
         if late_mask.sum() > 10:
             corr, p = stats.pearsonr(count[late_mask], nll[late_mask])
-            print(f"Correlation between count and NLL (t>=400): r={corr:.3f}, p={p:.4f}")
+            print(
+                f"Correlation between count and NLL (t>=400): r={corr:.3f}, p={p:.4f}"
+            )
 
 
 def plot_problematic_conditions(nll_df: pd.DataFrame, results_dir: str) -> None:
     """Generate diagnostic plots for problematic conditions."""
     fig, axes = plt.subplots(
-        len(PROBLEMATIC_CONDITIONS), 2,
-        figsize=(14, 4 * len(PROBLEMATIC_CONDITIONS))
+        len(PROBLEMATIC_CONDITIONS), 2, figsize=(14, 4 * len(PROBLEMATIC_CONDITIONS))
     )
 
     for row, (param, replica) in enumerate(PROBLEMATIC_CONDITIONS):
@@ -292,7 +313,9 @@ def plot_problematic_conditions(nll_df: pd.DataFrame, results_dir: str) -> None:
 
         # Left: NLL vs token index
         ax1 = axes[row, 0]
-        ax1.errorbar(t, nll, yerr=1.96 * sem, fmt='-', alpha=0.7, linewidth=1, capsize=0)
+        ax1.errorbar(
+            t, nll, yerr=1.96 * sem, fmt="-", alpha=0.7, linewidth=1, capsize=0
+        )
         ax1.set_xlabel("Token Index")
         ax1.set_ylabel("Mean NLL")
         ax1.set_title(f"{param}, R={replica}: NLL vs Token Index")
@@ -301,7 +324,7 @@ def plot_problematic_conditions(nll_df: pd.DataFrame, results_dir: str) -> None:
 
         # Right: Count vs token index
         ax2 = axes[row, 1]
-        ax2.plot(t, count, 'g-', alpha=0.7)
+        ax2.plot(t, count, "g-", alpha=0.7)
         ax2.set_xlabel("Token Index")
         ax2.set_ylabel("Count (num. sequences)")
         ax2.set_title(f"{param}, R={replica}: Sample Count vs Token Index")
@@ -321,7 +344,7 @@ def compute_early_late_comparison(nll_df: pd.DataFrame) -> pd.DataFrame:
     """Compare early (token 1-50) vs late (token 600-800) NLL across conditions."""
     unique_params = sorted(
         nll_df["Parameters"].unique(),
-        key=lambda x: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[x]
+        key=lambda x: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[x],
     )
     unique_replicas = sorted(nll_df["Num. MATH Test Set Replicas"].unique())
 
@@ -351,16 +374,18 @@ def compute_early_late_comparison(nll_df: pd.DataFrame) -> pd.DataFrame:
             early_count = count[early_mask].mean()
             late_count = count[late_mask].mean()
 
-            results.append({
-                "Parameters": param,
-                "Num. Replicas": replica,
-                "Early NLL (1-50)": early_nll,
-                "Late NLL (600-800)": late_nll,
-                "Early Count": early_count,
-                "Late Count": late_count,
-                "Count Drop %": (1 - late_count / early_count) * 100,
-                "NLL Change %": (late_nll - early_nll) / early_nll * 100,
-            })
+            results.append(
+                {
+                    "Parameters": param,
+                    "Num. Replicas": replica,
+                    "Early NLL (1-50)": early_nll,
+                    "Late NLL (600-800)": late_nll,
+                    "Early Count": early_count,
+                    "Late Count": late_count,
+                    "Count Drop %": (1 - late_count / early_count) * 100,
+                    "NLL Change %": (late_nll - early_nll) / early_nll * 100,
+                }
+            )
 
     return pd.DataFrame(results)
 
@@ -380,7 +405,7 @@ def main():
 
     unique_params = sorted(
         nll_df["Parameters"].unique(),
-        key=lambda x: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[x]
+        key=lambda x: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[x],
     )
     unique_replicas = sorted(nll_df["Num. MATH Test Set Replicas"].unique())
     print(f"Model sizes: {unique_params}")
@@ -402,10 +427,19 @@ def main():
         "Overall Slope", ascending=False
     )
     print(f"\nFound {len(increasing)} conditions with increasing NLL:")
-    print(increasing[[
-        "Parameters", "Num. Replicas", "Overall Slope", "Overall R²",
-        "NLL Start", "NLL End", "NLL % Change"
-    ]].to_string(index=False))
+    print(
+        increasing[
+            [
+                "Parameters",
+                "Num. Replicas",
+                "Overall Slope",
+                "Overall R²",
+                "NLL Start",
+                "NLL End",
+                "NLL % Change",
+            ]
+        ].to_string(index=False)
+    )
 
     # Display late uptick conditions
     print("\n" + "=" * 70)
@@ -416,18 +450,36 @@ def main():
         "Late Slope (400-800)", ascending=False
     )
     print(f"\nFound {len(late_uptick)} conditions with late uptick:")
-    print(late_uptick[[
-        "Parameters", "Num. Replicas", "Late Slope (400-800)", "Late R²",
-        "NLL Start", "NLL End", "NLL % Change"
-    ]].to_string(index=False))
+    print(
+        late_uptick[
+            [
+                "Parameters",
+                "Num. Replicas",
+                "Late Slope (400-800)",
+                "Late R²",
+                "NLL Start",
+                "NLL End",
+                "NLL % Change",
+            ]
+        ].to_string(index=False)
+    )
 
     # All conditions sorted by slope
     print("\n" + "=" * 70)
     print("ALL CONDITIONS SORTED BY OVERALL SLOPE")
     print("=" * 70)
-    print(trend_df.sort_values("Overall Slope", ascending=False)[[
-        "Parameters", "Num. Replicas", "Overall Slope", "NLL Start", "NLL End", "NLL % Change"
-    ]].to_string(index=False))
+    print(
+        trend_df.sort_values("Overall Slope", ascending=False)[
+            [
+                "Parameters",
+                "Num. Replicas",
+                "Overall Slope",
+                "NLL Start",
+                "NLL End",
+                "NLL % Change",
+            ]
+        ].to_string(index=False)
+    )
 
     # Detailed analysis
     analyze_problematic_conditions(nll_df)
@@ -443,7 +495,8 @@ def main():
     print("\n" + "=" * 70)
     print("HYPOTHESIS: SELECTION BIAS DUE TO SEQUENCE LENGTH")
     print("=" * 70)
-    print("""
+    print(
+        """
 The key insight is that not all sequences have the same length.
 - Short sequences end early (e.g., at token 100)
 - Long sequences continue to token 800
@@ -456,7 +509,8 @@ This creates an artificial uptick in NLL at late positions.
 
 The 'count' column shows how many sequences contribute to each token position.
 If count drops and NLL rises, selection bias is likely the explanation.
-""")
+"""
+    )
 
     # Early vs late comparison
     print("\n" + "=" * 70)
@@ -464,7 +518,11 @@ If count drops and NLL rises, selection bias is likely the explanation.
     print("=" * 70)
 
     comparison_df = compute_early_late_comparison(nll_df)
-    print(comparison_df.sort_values("NLL Change %", ascending=False).to_string(index=False))
+    print(
+        comparison_df.sort_values("NLL Change %", ascending=False).to_string(
+            index=False
+        )
+    )
 
     # Correlation analysis
     print("\n" + "=" * 70)
@@ -474,11 +532,17 @@ If count drops and NLL rises, selection bias is likely the explanation.
     # Check if count drop has variance (if all identical, correlation is undefined)
     count_drop_std = comparison_df["Count Drop %"].std()
     if count_drop_std < 0.01:
-        print(f"Count Drop % is nearly constant ({comparison_df['Count Drop %'].mean():.2f}%)")
+        print(
+            f"Count Drop % is nearly constant ({comparison_df['Count Drop %'].mean():.2f}%)"
+        )
         print("Correlation undefined - count drop does not vary across conditions.")
-        print("This means sequence length distribution is identical for all conditions.")
+        print(
+            "This means sequence length distribution is identical for all conditions."
+        )
     else:
-        corr, p = stats.pearsonr(comparison_df["Count Drop %"], comparison_df["NLL Change %"])
+        corr, p = stats.pearsonr(
+            comparison_df["Count Drop %"], comparison_df["NLL Change %"]
+        )
         print(f"Correlation: r = {corr:.3f}, p = {p:.4f}")
 
         if corr > 0.3 and p < 0.05:

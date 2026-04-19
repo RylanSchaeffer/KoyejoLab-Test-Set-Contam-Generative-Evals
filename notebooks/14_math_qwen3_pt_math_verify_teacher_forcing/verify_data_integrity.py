@@ -97,15 +97,19 @@ def verify_run_configs(configs_df: pd.DataFrame) -> List[str]:
     print(configs_df.groupby("Num. MATH Test Set Replicas").size())
 
     print(f"\nRuns by (model size, replicas):")
-    cross_tab = configs_df.groupby(
-        ["Parameters", "Num. MATH Test Set Replicas"]
-    ).size().unstack(fill_value=0)
+    cross_tab = (
+        configs_df.groupby(["Parameters", "Num. MATH Test Set Replicas"])
+        .size()
+        .unstack(fill_value=0)
+    )
     print(cross_tab)
 
     return issues
 
 
-def verify_parquet_structure(parquet_path: str) -> Tuple[pq.ParquetFile, List[str], List[str]]:
+def verify_parquet_structure(
+    parquet_path: str,
+) -> Tuple[pq.ParquetFile, List[str], List[str]]:
     """Verify parquet file structure."""
     issues = []
 
@@ -127,15 +131,16 @@ def verify_parquet_structure(parquet_path: str) -> Tuple[pq.ParquetFile, List[st
     print(f"Total columns: {len(all_columns)}")
     print(f"Log prob columns: {len(log_prob_cols)}")
 
-    token_indices = sorted([int(c.replace("log_prob_token_", "")) for c in log_prob_cols])
+    token_indices = sorted(
+        [int(c.replace("log_prob_token_", "")) for c in log_prob_cols]
+    )
     print(f"Token index range: {min(token_indices)} to {max(token_indices)}")
 
     return parquet_file, log_prob_cols, issues
 
 
 def verify_run_id_coverage(
-    parquet_file: pq.ParquetFile,
-    configs_df: pd.DataFrame
+    parquet_file: pq.ParquetFile, configs_df: pd.DataFrame
 ) -> Tuple[Set[str], List[str]]:
     """Verify run_id coverage between parquet and config."""
     issues = []
@@ -170,8 +175,10 @@ def verify_row_counts(df: pd.DataFrame, config_run_ids: Set[str]) -> List[str]:
     print("-" * 50)
 
     rows_per_run = df.groupby("run_id").size()
-    print(f"Rows per run - min: {rows_per_run.min()}, max: {rows_per_run.max()}, "
-          f"mean: {rows_per_run.mean():.1f}")
+    print(
+        f"Rows per run - min: {rows_per_run.min()}, max: {rows_per_run.max()}, "
+        f"mean: {rows_per_run.mean():.1f}"
+    )
     print(f"Total rows: {len(df)}")
 
     if rows_per_run.nunique() == 1:
@@ -196,8 +203,11 @@ def verify_nan_patterns(df: pd.DataFrame, log_prob_cols: List[str]) -> List[str]
     print("-" * 50)
 
     sample_tokens = [0, 100, 200, 400, 600, 800]
-    sample_cols = [f"log_prob_token_{t}" for t in sample_tokens
-                   if f"log_prob_token_{t}" in log_prob_cols]
+    sample_cols = [
+        f"log_prob_token_{t}"
+        for t in sample_tokens
+        if f"log_prob_token_{t}" in log_prob_cols
+    ]
 
     print("Non-NaN counts by token position (should decrease for later tokens):")
     for col in sample_cols:
