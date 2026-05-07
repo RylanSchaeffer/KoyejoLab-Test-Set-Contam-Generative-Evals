@@ -19,27 +19,13 @@
 
     \item {\bf Experimental result reproducibility}
     \item[] Question: Does the paper fully disclose all the information needed to reproduce the main experimental results of the paper to the extent that it affects the main claims and/or conclusions of the paper (regardless of whether the code and data are provided or not)?
-    \item[] Answer: \answerTODO{}
-    \item[] Justification: Speculative draft, pending author confirmation: Sec.~\ref{sec:methods} and Appendix~\ref{app:sec:pretraining_implementation_details} describe the core recipe needed to reproduce the study, including data sources, contamination construction, model configurations, token budgets, optimizer settings, batch and learning-rate rules, sequence length, evaluation metrics, and training infrastructure. Finalize this as \answerYes{} only if the repository or supplement also provides exact run commands, software versions or environment files, data-preparation and figure-generation scripts, and seeds or a clear single-run convention; otherwise answer \answerNo{} and state the missing pieces.
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer \answerNA{} means that the paper does not include experiments.
-        \item If the paper includes experiments, a \answerNo{} answer to this question will not be perceived well by the reviewers: Making the paper reproducible is important, regardless of whether the code and data are provided or not.
-        \item If the contribution is a dataset and\slash or model, the authors should describe the steps taken to make their results reproducible or verifiable. 
-        \item Depending on the contribution, reproducibility can be accomplished in various ways. For example, if the contribution is a novel architecture, describing the architecture fully might suffice, or if the contribution is a specific model and empirical evaluation, it may be necessary to either make it possible for others to replicate the model with the same dataset, or provide access to the model. In general. releasing code and data is often one good way to accomplish this, but reproducibility can also be provided via detailed instructions for how to replicate the results, access to a hosted model (e.g., in the case of a large language model), releasing of a model checkpoint, or other means that are appropriate to the research performed.
-        \item While NeurIPS does not require releasing code, the conference does require all submissions to provide some reasonable avenue for reproducibility, which may depend on the nature of the contribution. For example
-        \begin{enumerate}
-            \item If the contribution is primarily a new algorithm, the paper should make it clear how to reproduce that algorithm.
-            \item If the contribution is primarily a new model architecture, the paper should describe the architecture clearly and fully.
-            \item If the contribution is a new model (e.g., a large language model), then there should either be a way to access this model for reproducing the results or a way to reproduce the model (e.g., with an open-source dataset or instructions for how to construct the dataset).
-            \item We recognize that reproducibility may be tricky in some cases, in which case authors are welcome to describe the particular way they provide for reproducibility. In the case of closed-source models, it may be that access to the model is limited in some way (e.g., to registered users), but it should be possible for other researchers to have some path to reproducing or verifying the results.
-        \end{enumerate}
-    \end{itemize}
+    \item[] Answer: \answerYes{}
+    \item[] Sec.~\ref{sec:methods} and Appendix~\ref{app:sec:pretraining_implementation_details} describe the core recipe needed to reproduce the study, including data sources, contamination construction, model configurations, token budgets, optimizer settings, batch and learning-rate rules, sequence length, evaluation metrics, and training infrastructure.
 
 
 \item {\bf Open access to data and code}
     \item[] Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?
-    \item[] Answer: \answerTODO{}
+    \item[] Answer: \answerNo{}
     \item[] Justification: Speculative draft, pending release audit: Appendix~\ref{app:sec:pretraining_implementation_details} links a public GitHub repository, names the MATH and FineWeb-Edu-Dedup data sources, and states that trained models were uploaded to HuggingFace Hub, so an open verification path may be intended. Finalize this as \answerYes{} only if the paper or supplement provides usable release links, environment and run instructions, data-preparation steps, and license or terms information for the released code, data products, and checkpoints; otherwise answer \answerNo{} and clearly identify what is not available.
     \item[] Guidelines:
     \begin{itemize}

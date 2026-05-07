@@ -2,11 +2,11 @@
 \section{Further Training: Overtraining \& Supervised Finetuning}
 \label{sec:further_training}
 
-We next examine how two common additional training stages---overtraining on fresh data and supervised finetuning---interact with pretraining contamination.
+We next examine how two common subsequent training stages---overtraining on fresh data and supervised finetuning---interact with pretraining contamination.
 
 \paragraph{Finding \#4: Overtraining with Fresh Data Mitigates Contamination}
-\citet{bordt2025howmuch} recently reported that for discriminative evaluations, the effect of contamination diminishes when models are trained beyond ``compute optimal'' on fresh data. We tested whether this so-called \emph{overtraining} \citep{touvron2023llama2openfoundation,sardana2024beyond,gadre2024languagemodelsscalereliably,schaeffer2025pretrainingscalinglawsgenerative} has similar effects for generative benchmarks.
-We extended our Sec.~\ref{sec:methods} pretraining sweep into the overtrained regime, pretraining on 
+\citet{bordt2025howmuch} reported that for discriminative evaluations, the effect of contamination diminishes when models are trained beyond ``compute optimal'' on fresh data. We tested whether this so-called \emph{overtraining} \citep{touvron2023llama2openfoundation,sardana2024beyond,gadre2024languagemodelsscalereliably,schaeffer2025pretrainingscalinglawsgenerative} has similar effects for generative evaluations.
+We extended our Sec.~\ref{sec:methods} sweep into the overtrained regime, pretraining on 
 %
 \begin{equation}\label{eqn:overtrain_multiplier}
 D(m, N) \defeq m \times 20 \times N,

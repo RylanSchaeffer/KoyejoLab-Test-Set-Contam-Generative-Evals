@@ -7,28 +7,68 @@ We begin at the first stage of the model lifecycle: pretraining.
 \paragraph{Finding \#1: Performance Increases with Contamination and Model Size}
 Consistent with discriminative evaluations, adding benchmark replicas to the pretraining corpus increases Math Verify scores and decreases cross entropies (Fig.~\ref{fig:math_verify_ce_temp_0} Left), as does increasing model size (Fig.~\ref{fig:math_verify_ce_temp_0} Right). The relationship between replicas and performance is non-linear: at low contamination ($\leq 10$ replicas), models perform near the baseline, but at $\mathord{\sim}100$ replicas, performance jumps to ceiling.
 
-\begin{wraptable}{r}{0.55\textwidth}  % {r} = right side, {0.5\textwidth} = width
+\begin{table}[t!]
     \centering
-    \begin{tabular}{crrr}
-        \toprule
-        \textbf{Model} & \textbf{Replicas} & \textbf{Rephrased} & \textbf{Perturbed} \\
-        \midrule
-        \multirow{9}{*}{344M} 
-          & 0    & 0.04\% & 0.00\% \\
-          & 1    & 0.00\% & 0.00\% \\
-          & 3    & 0.00\% & 0.00\% \\
-          & 10   & 0.00\% & 0.00\% \\
-          & 32   & 0.00\% & 0.00\% \\
-          & 100  & 0.02\% & 0.00\% \\
-          & 316  & 0.00\% & 0.00\% \\
-          & 1000 & 0.00\% & 0.00\% \\
-          & 3162 & 0.04\% & 0.00\% \\
-        \bottomrule
-    \end{tabular}
-    \caption{\textbf{Contamination-Driven Performance Is Memorization, Not Generalization.} When MATH test problems are rephrased or perturbed, model performance collapses to baseline regardless of contamination level or model size. Results were consistent across all model sizes.}
+    \begin{minipage}{0.32\textwidth}
+        \centering
+        \begin{tabular}{crr}
+            \toprule
+            \textbf{Replicas} & \textbf{Reph.} & \textbf{Pert.} \\
+            \midrule
+            0    & 0.04\% & 0.00\% \\
+            1    & 0.00\% & 0.00\% \\
+            3    & 0.00\% & 0.00\% \\
+            10   & 0.00\% & 0.00\% \\
+            32   & 0.00\% & 0.00\% \\
+            100  & 0.00\% & 0.00\% \\
+            316  & 0.02\% & 0.00\% \\
+            \phantom{0}\\
+            \phantom{0}\\
+            \bottomrule
+        \end{tabular}
+        \subcaption*{34M}
+    \end{minipage}\hfill
+    \begin{minipage}{0.32\textwidth}
+        \centering
+        \begin{tabular}{crr}
+            \toprule
+            \textbf{Replicas} & \textbf{Reph.} & \textbf{Pert.} \\
+            \midrule
+            0    & 0.04\% & 0.00\% \\
+            1    & 0.00\% & 0.00\% \\
+            3    & 0.00\% & 0.00\% \\
+            10   & 0.00\% & 0.00\% \\
+            32   & 0.00\% & 0.00\% \\
+            100  & 0.00\% & 0.00\% \\
+            316  & 0.00\% & 0.00\% \\
+            1000 & 0.00\% & 0.00\% \\
+            \phantom{0}\\
+            \bottomrule
+        \end{tabular}
+        \subcaption*{93M}
+    \end{minipage}\hfill
+    \begin{minipage}{0.32\textwidth}
+        \centering
+        \begin{tabular}{crr}
+            \toprule
+            \textbf{Replicas} & \textbf{Reph.} & \textbf{Pert.} \\
+            \midrule
+            0    & 0.04\% & 0.00\% \\
+            1    & 0.00\% & 0.00\% \\
+            3    & 0.00\% & 0.00\% \\
+            10   & 0.00\% & 0.00\% \\
+            32   & 0.00\% & 0.00\% \\
+            100  & 0.02\% & 0.00\% \\
+            316  & 0.00\% & 0.00\% \\
+            1000 & 0.00\% & 0.00\% \\
+            3162 & 0.04\% & 0.00\% \\
+            \bottomrule
+        \end{tabular}
+        \subcaption*{344M}
+    \end{minipage}
+    \caption{\textbf{Contamination-Driven Performance Is Memorization, Not Generalization.} When MATH test problems are rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to baseline regardless of contamination level or model size, confirming that gains from contamination are not attributable to general mathematical reasoning. Results were consistent across all model sizes.}
     \label{tab:rephrase_perturb}
-\end{wraptable}
-
+\end{table}
 
 \paragraph{Finding \#2: Contamination-Driven Performance Is Memorization, Not Generalization}
 To determine whether performance gains stemmed from generalization or memorization, we evaluated contaminated models on two modified versions of the MATH test set. First, we \emph{rephrased} the problems, keeping the original numerical values and logic but altering the linguistic surface form. Second, we \emph{perturbed} them, modifying numerical values and correct answers while preserving the problem structure. In both conditions, performance regresses to match uncontaminated models across all model sizes and contamination levels (Table~\ref{tab:rephrase_perturb}). This strongly suggests that gains from contamination rely on verbatim memorization rather than acquired mathematical reasoning.
@@ -100,7 +140,7 @@ To determine whether performance gains stemmed from generalization or memorizati
 
 How much does test set contamination ``buy" a model? 
 More specifically, how much pretraining compute must be spent on an uncontaminated pretraining corpus to match the performance of a model trained on a corpus containing $R$ replicas of the benchmark test set?
-To answer this question, we turned to neural scaling laws \citep{kaplan2020scaling, hoffman2022chinchilla, openai2024gpt4technicalreport, hu2024predictingemergentabilitiesinfinite, schaeffer2025pretrainingscalinglawsgenerative}. For each scaling series pretrained on corpora contaminated with $R$ replicas of the MATH test set, we fit neural scaling laws for the cross entropy loss $\mathcal{L}$ on the benchmark test set as a function of pretraining compute $C$:
+We answered this via scaling laws \citep{kaplan2020scaling, hoffman2022chinchilla, openai2024gpt4technicalreport, hu2024predictingemergentabilitiesinfinite, schaeffer2025pretrainingscalinglawsgenerative}. For each scaling series pretrained on corpora contaminated with $R$ replicas of the MATH test set, we fit neural scaling laws for the cross entropy loss $\mathcal{L}$ on the benchmark test set as a function of pretraining compute $C$:
 %
 \begin{equation}
     \label{eqn:neural_scaling_law}

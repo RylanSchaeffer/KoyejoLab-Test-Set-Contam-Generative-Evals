@@ -78,7 +78,9 @@ Each sequence was truncated to a maximum length of 2048 tokens and terminated wi
 Training used PyTorch's DistributedDataParallel (DDP) with the NCCL backend.
 All experiments were logged to Weights \& Biases, and trained models were uploaded to HuggingFace Hub.
 
-For more information, please see our \href{https://github.com/RylanSchaeffer/KoyejoLab-Memorization-Scoring-vs-Sampling/}{public GitHub repository}.
+% For more information, please see our \href{https://github.com/RylanSchaeffer/KoyejoLab-Memorization-Scoring-vs-Sampling/}{public GitHub repository}.
+
+Our public GitHub repository is currently omitted to preserve anonymity for NeurIPS 2026 review.
 
 \paragraph{Existing Asset Licenses}
 We cite or name the existing assets used in the study. The MATH benchmark is distributed from the authors' repository under the \href{https://github.com/hendrycks/math/blob/main/LICENSE}{MIT License}. The FineWeb-Edu-Dedup subset we use through the SmolLM Corpus is tagged \href{https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus/tree/main/fineweb-edu-dedup}{ODC-By}; FineWeb-Edu is likewise released under ODC-By and is subject to Common Crawl terms. Public Qwen 3 model materials are distributed under \href{https://huggingface.co/Qwen/Qwen3-0.6B/blob/main/LICENSE}{Apache-2.0}; our experiments use the Qwen 3 architecture from random initialization rather than pretrained Qwen weights. EleutherAI's LM Evaluation Harness is distributed under the \href{https://github.com/EleutherAI/lm-evaluation-harness/blob/main/LICENSE.md}{MIT License}, Flash Attention 2 under \href{https://github.com/Dao-AILab/flash-attention/blob/main/LICENSE}{BSD-3-Clause}, and PyTorch under a \href{https://github.com/pytorch/pytorch/blob/main/LICENSE}{BSD-style license}. Model hosting on HuggingFace Hub is subject to the \href{https://huggingface.co/terms-of-service}{HuggingFace Terms of Service}.
