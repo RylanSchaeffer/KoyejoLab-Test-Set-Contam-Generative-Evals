@@ -6,8 +6,10 @@
 For each model size, we created multiple pretraining corpora by contaminating a high quality corpus \citep{penedo2024finewebdatasetsdecantingweb} with a different number of replicas of the benchmark test set: from $0$ (uncontaminated) through $1, 3, 10, 32, 100, 316, 1000, 3162$ (logarithmically uniform).
 Pretraining floating point operations (FLOP) $C$ was approximated $ 6  \, N \, D$ \citep{kaplan2020scaling,sardana2024beyond,porian2024resolving,gadre2024languagemodelsscalereliably}, where $N$ is model parameters and $D$ is tokens.
 Each model was pretrained on 20 tokens-per-parameter \citep{hoffman2022chinchilla}. 
-For each pair of parameters and test set replicas, we trained one model.
+For each tuple of parameters and test set replicas, we trained one model.
 For details, see App.~\ref{app:sec:pretraining_implementation_details}.
+
+As a key distinction, \citet{bordt2025howmuch} pretrains models up to ~1.6B, but achieves this by contaminating disjoint subsets of the test set at different replica counts within a single training run — a cheaper but messier design. We pretrain separate models per contamination amount for tighter experimental control, which is significantly more expensive and thus limits our maximum scale.
 
 \textbf{Benchmark} We chose the MATH \citep{hendrycks2021measuringmathematicalproblemsolving} benchmark of competition math problems because it is comparatively large (5,000 test problems), and includes solutions as well as verifiable answers. 
 The MATH test set contains $\mathord{\sim}1.4$M tokens under the Qwen 3 tokenizer.

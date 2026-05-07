@@ -26,18 +26,7 @@
 \item {\bf Open access to data and code}
     \item[] Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?
     \item[] Answer: \answerNo{}
-    \item[] Justification: Speculative draft, pending release audit: Appendix~\ref{app:sec:pretraining_implementation_details} links a public GitHub repository, names the MATH and FineWeb-Edu-Dedup data sources, and states that trained models were uploaded to HuggingFace Hub, so an open verification path may be intended. Finalize this as \answerYes{} only if the paper or supplement provides usable release links, environment and run instructions, data-preparation steps, and license or terms information for the released code, data products, and checkpoints; otherwise answer \answerNo{} and clearly identify what is not available.
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer \answerNA{} means that paper does not include experiments requiring code.
-        \item Please see the NeurIPS code and data submission guidelines (\url{https://neurips.cc/public/guides/CodeSubmissionPolicy}) for more details.
-        \item While we encourage the release of code and data, we understand that this might not be possible, so \answerNo{} is an acceptable answer. Papers cannot be rejected simply for not including code, unless this is central to the contribution (e.g., for a new open-source benchmark).
-        \item The instructions should contain the exact command and environment needed to run to reproduce the results. See the NeurIPS code and data submission guidelines (\url{https://neurips.cc/public/guides/CodeSubmissionPolicy}) for more details.
-        \item The authors should provide instructions on data access and preparation, including how to access the raw data, preprocessed data, intermediate data, and generated data, etc.
-        \item The authors should provide scripts to reproduce all experimental results for the new proposed method and baselines. If only a subset of experiments are reproducible, they should state which ones are omitted from the script and why.
-        \item At submission time, to preserve anonymity, the authors should release anonymized versions (if applicable).
-        \item Providing as much information as possible in supplemental material (appended to the paper) is recommended, but including URLs to data and code is permitted.
-    \end{itemize}
+    \item[] Justification: Appendix~\ref{app:sec:pretraining_implementation_details} links a public GitHub repository, names the MATH and FineWeb-Edu-Dedup data sources, and states that trained models were uploaded to HuggingFace Hub, so an open verification path may be intended. The public links were suppressed to preserve anonymity during the NeurIPS 2026 review process.
 
 
 \item {\bf Experimental setting/details}
@@ -69,14 +58,7 @@
 \item {\bf Safeguards}
     \item[] Question: Does the paper describe safeguards that have been put in place for responsible release of data or models that have a high risk for misuse (e.g., pre-trained language models, image generators, or scraped datasets)?
     \item[] Answer: \answerNA{}
-    \item[] Justification: The study trains small research models, up to 344M parameters, to analyze benchmark contamination rather than to introduce a new capability model. Appendix~\ref{app:sec:broader_impacts} states that the work does not release new model capabilities, scraped data, or other assets that pose misuse risks independent of the contamination findings. The paper therefore does not describe a high-risk data or model release requiring controlled-access safeguards.
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer \answerNA{} means that the paper poses no such risks.
-        \item Released models that have a high risk for misuse or dual-use should be released with necessary safeguards to allow for controlled use of the model, for example by requiring that users adhere to usage guidelines or restrictions to access the model or implementing safety filters. 
-        \item Datasets that have been scraped from the Internet could pose safety risks. The authors should describe how they avoided releasing unsafe images.
-        \item We recognize that providing effective safeguards is challenging, and many papers do not require this, but we encourage authors to take this into account and make a best faith effort.
-    \end{itemize}
+    \item[] Justification: The study trains small research models, up to 344M parameters, to analyze benchmark contamination rather than to introduce a new capability model. 
 
 \item {\bf Licenses for existing assets}
     \item[] Question: Are the creators or original owners of assets (e.g., code, data, models), used in the paper, properly credited and are the license and terms of use explicitly mentioned and properly respected?
@@ -85,30 +67,23 @@
 
 \item {\bf New assets}
     \item[] Question: Are new assets introduced in the paper well documented and is the documentation provided alongside the assets?
-    \item[] Answer: \answerTODO{}
-    \item[] Justification: Speculative draft, pending asset-release confirmation: Appendix~\ref{app:sec:pretraining_implementation_details} says trained models were uploaded to HuggingFace Hub and links a public GitHub repository, so the submission may introduce code and checkpoint assets. Authors should change this to \answerYes{} only if the released assets include direct or anonymized links, licenses, intended-use and limitations notes, and model-card or repository documentation; if no new assets are released with the submission, \answerNA{} is the safer final answer.
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer \answerNA{} means that the paper does not release new assets.
-        \item Researchers should communicate the details of the dataset\slash code\slash model as part of their submissions via structured templates. This includes details about training, license, limitations, etc. 
-        \item The paper should discuss whether and how consent was obtained from people whose asset is used.
-        \item At submission time, remember to anonymize your assets (if applicable). You can either create an anonymized URL or include an anonymized zip file.
-    \end{itemize}
+    \item[] Answer: \answerNA{}
+    \item[] Appendix~\ref{app:sec:pretraining_implementation_details} says trained models were uploaded to HuggingFace Hub and links a public GitHub repository, so the submission may introduce code and checkpoint assets. We believe these fall short of being considered ``assets".
 
 \item {\bf Crowdsourcing and research with human subjects}
     \item[] Question: For crowdsourcing experiments and research with human subjects, does the paper include the full text of instructions given to participants and screenshots, if applicable, as well as details about compensation (if any)? 
     \item[] Answer: \answerNA{}
-    \item[] Justification: The experiments described in Secs.~\ref{sec:methods}--\ref{sec:inference} use existing benchmarks/corpora and model training/evaluation. The paper source does not describe crowdsourcing, participant studies, or human-subject data collection.
+    \item[] The paper does not use crowdsourcing, participant studies, or human-subject data collection.
 
 \item {\bf Institutional review board (IRB) approvals or equivalent for research with human subjects}
     \item[] Question: Does the paper describe potential risks incurred by study participants, whether such risks were disclosed to the subjects, and whether Institutional Review Board (IRB) approvals (or an equivalent approval/review based on the requirements of your country or institution) were obtained?
     \item[] Answer: \answerNA{}
-    \item[] Justification: No crowdsourcing or human-subject experiments are described in the paper source. Therefore participant-risk disclosures and IRB or equivalent approvals do not appear applicable.
+    \item[] The paper does not use crowdsourcing, participant studies, or human-subject data collection. Therefore participant-risk disclosures and IRB or equivalent approvals do not appear applicable.
 
 \item {\bf Declaration of LLM usage}
     \item[] Question: Does the paper describe the usage of LLMs if it is an important, original, or non-standard component of the core methods in this research? Note that if the LLM is used only for writing, editing, or formatting purposes and does \emph{not} impact the core methodology, scientific rigor, or originality of the research, declaration is not required.
     %this research? 
-    \item[] Answer: \answerYes{}
-    \item[] Justification: The paper's core experiments train and evaluate causal language models, and this usage is described in Sec.~\ref{sec:methods} and Appendix~\ref{app:sec:pretraining_implementation_details}. The source states that the models use the Qwen 3 architecture from random initialization and gives sizes, training setup, and evaluation metrics.
+    \item[] Answer: \answerNA{}
+    \item[] Much of this work was done prior to language model coding agents, and they were not used for the scientific research. Thus, declaration is not required.
 
 \end{enumerate}
