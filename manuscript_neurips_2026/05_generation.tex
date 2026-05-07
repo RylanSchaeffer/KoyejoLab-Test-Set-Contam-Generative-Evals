@@ -67,6 +67,8 @@ At intermediate contamination, the probability follows a Weibull-like stretched 
 \paragraph{Regime III: Deterministic Lock-In ($E \approx 0, \alpha > 1$).}
 At high contamination, $\alpha > 1$ flips the sign of the exponent in Eq.~\ref{eq:survival_prob}, causing the penalty term $T^{1-\alpha}$ to decay to zero and $P(T)$ converges to a non-zero constant even as $T \to \infty$. The model's certainty increases faster than error accumulates, enabling \textit{deterministic lock-in} of long solutions.
 
+These three regimes describe idealized asymptotic dynamics rather than sharp boundaries, and should be empirically validated before being used as detection criteria.
+
 \paragraph{The Effect of Sampling Temperature.}
 While the native scaling $\alpha$ is a property of the trained model, inference behavior is modulated by the sampling temperature $\tau$.
 % The dependence arises from the mechanics of the softmax distribution: in the regime of memorization, the model's unnormalized confidence (the logit gap) grows logarithmically with context length ($\Delta z_t \propto \alpha \ln t$).
