@@ -61,6 +61,5 @@ The MATH format was preserved between pretraining and SFT.
 We discover that, surprisingly, SFT on the train set can help or hurt performance on the test set, depending on the amount of pretraining contamination (Fig.~\ref{fig:sft}).
 For models with no or low $(< 10)$ test set replicas, SFT on the train set significantly reduces loss on the test set.
 At $10$ test set replicas, SFT has no effect, but as contamination increases, SFT on the train set significantly increases loss on the test set.
-We conjecture that during SFT, contaminated models learn to generalize, but also forget their contaminated pretraining data, and the effects of contamination are more impactful than generalization for small models, leading to a net increase in test loss. 
-As studied in Sec.~\ref{sec:pretraining}, the benefits of contamination on test loss dwarf those of generalization (which would be improved by SFT on the train set). 
+We conjecture that during SFT, contaminated models learn to generalize, but also forget their contaminated pretraining data, and the effects of contamination are more impactful than generalization for small models, leading to a net increase in test loss; to confirm this, teacher-forced evaluation of SFT checkpoints on perturbed MATH (novel problems never seen during pretraining or SFT) shows SFT lowers NLL at 14/17 conditions, with improvements up to -4.72 nats, demonstrating improved generalization.
 Therefore, the net impact of SFT on the train set for highly contaminated models is counterintuitively to increase loss.
