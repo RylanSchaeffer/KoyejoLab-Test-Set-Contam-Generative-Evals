@@ -1,0 +1,211 @@
+\section{Related Work}
+\label{app:sec:related_work}
+
+\paragraph{Data Contamination and its Consequences}
+Test set contamination, where benchmark data is included in pretraining corpora, is widely recognized as a threat to valid model evaluation, as it can lead to inflated performance metrics. Numerous survey and position papers have documented the various ways contamination can occur and have called for routine audits and transparent reporting for all benchmarks \citep{sainz2023nlp, sainz2024data, deng2024unveiling, xu2024benchmarkdatacontaminationlarge, reuel2025open}. Empirical studies of large web-scale datasets have confirmed significant overlap and duplication between training and test sets \citep{dodge2021documenting}. Research focused on ensuring benchmark integrity has identified multiple ways that language models might "cheat" on evaluations if contamination is not properly managed \citep{zhou2023dontmakellmevaluation, dong2024generalizationormemorization}. For instance, analyses of popular mathematics benchmarks have revealed signals of data leakage and potential overfitting \citep{zhang2024carefulexaminationlargelanguage}. Ongoing community efforts and open-source audits continue to measure the extent of contamination across different models and datasets \citep{li2024opensource}. The risks extend beyond evaluation integrity; scaling studies indicate that poisoning risks increase with model size, as larger models learn harmful behaviors from minuscule amounts of poisoned data far more rapidly than smaller models, underscoring the necessity of robust data curation \citep{bowen2025scalingtrendsdatapoisoning}. As a cautionary illustration, \citet{schaeffer2023pretrainingtestsetneed} demonstrated that pretraining on the test set is a trivial path to strong benchmark performance, reinforcing the importance of rigorous decontamination and auditing.
+
+\paragraph{Controlled Contamination During Pretraining}
+
+A line of research directly investigates the causal effects of contamination by intentionally adding benchmark data to pretraining corpora and observing the results. \citet{magar2022data} interleaved task-specific datasets into a general text corpus during pretraining, varying the duplication rate of the leaked examples. They differentiated between "memorization" (storing examples) and "exploitation" (using stored examples to boost test scores), finding that both model size and the number of repetitions increased exploitation. \citet{jiang2024investigatingdatacontaminationpretraining} pretrained models from scratch on corpora containing either only the inputs ("text-only") or the full input-output pairs ("ground-truth") of benchmark examples, sweeping the contamination frequency. They observed significant performance gains when ground-truth pairs were used and showed that simple n-gram-based detection methods could be bypassed by paraphrasing or partial data leaks. The problem also transcends language barriers; \citet{yao2024data} demonstrated a cross-lingual contamination channel where continuing to pretrain a model on non-English translations of English benchmarks led to material improvements on the original English tests, a form of contamination that string-matching would not detect. At a larger scale, \citet{bordt2025howmuch} varied the repetition count of leaked examples, model size (up to ~1.6B parameters), and the total training token budget, finding that performance scales predictably with size and repetition. They also showed that sufficiently long training on abundant unique data could mitigate or even reverse the effects of earlier contamination. In the context of machine translation, \citet{kocyigit2025overestimation} injected source-target pairs into the pretraining data of 1B and 8B parameter models, quantifying significant overestimation in BLEU scores, with larger models and low-resource languages showing more pronounced effects. Together, these causal intervention studies provide clear evidence that language models memorize and leverage benchmark data when it is present during pretraining.
+
+\paragraph{Repeated Data and Memorization Dynamics}
+
+Closely related is the study of memorization dynamics, particularly how repeated data affects model behavior. \citet{hernandez2022scalinglawsinterpretabilitylearning} trained models where a small portion of the data was repeated many times, observing strong double descent phenomena \citep{advani2020high,belkin2019reconciling,adlam2020understanding,bordelon2020spectrum,schaeffer2024double} and showing that repeating just 0.1\% of tokens 100 times could significantly degrade generalization. Studies tracking exact-sequence memorization have shown that larger models not only memorize more content and at a faster rate but also forget less over the course of training \citep{tirumala2022memorization}. \citet{carlini2023quantifying} quantified log-linear relationships between verbatim generation and model size, data duplication count, and prompt length. Other work has explored the feasibility of *forecasting* whether a model will memorize a specific string, finding that accurate prediction is possible but may require a substantial portion of the target model's pretraining compute \citep{biderman2023emergent}. Beyond explicit repetition, \citet{duan2025uncovering} discovered *latent memorization*, where memorized sequences that are not obvious at a final checkpoint can persist and be revealed later, posing privacy risks. Finally, memorization appears to be task-dependent: \citet{wang2025generalization} observed stronger memorization for knowledge-intensive QA, whereas machine translation and mathematical reasoning demonstrated greater novelty. Memorization also interacts with logical reasoning; using dynamically generated puzzles, \citet{xie2025memorizationlargelanguagemodels} showed that models could be fine-tuned to perfectly memorize training examples yet failed on slight variations, even as their genuine reasoning abilities also improved, revealing a complex balance between the two.
+
+\paragraph{Detecting and Proving Contamination}
+Another significant area of research focuses on detecting or proving test set contamination in existing models. \citet{oren2023proving} and \citet{ni2025trainingbenchmarkneed} proposed statistical tests with provable control over false positives by testing if a benchmark's canonical ordering is statistically privileged over random shuffles. \citet{shi2024detecting} introduced Min-$k\%$-Prob to determine if a sequence likely appeared in pretraining using only black-box probabilities. Two related works from \citet{golchin2023data,golchin2024time} frame detection as a multiple-choice "quiz" and use temporal information about model training windows versus benchmark release dates, a strategy also used by \citet{roberts2024to}. Broader audits have aimed to quantify leakage and decontamination across a wide range of tasks and models \citep{xu2024benchmarkingbenchmarkleakagelarge,deng2024investigating,li2024opensource}, while \citet{yang2023rethinking} showed that rephrasing benchmark questions can often bypass n-gram filters. In the domain of code generation, \citet{riddell2024quantifying} quantified contamination in popular coding benchmarks and connected the degree of overlap to performance differences. \citet{matton2024leakage} cataloged various channels for leakage and released a dataset (LBPP) to help mitigate these issues. Complementing these audits, \citet{yang2025rethinkingeffectsdatacontamination} systematically tested fine-grained contamination scenarios in code intelligence across different model types, finding that paired contamination substantially affects LLMs under a pretraining-plus-inference paradigm but has limited effect under a pretrain–finetune–inference pipeline. Other work has also provided instruments for detecting the origins of chain-of-thought sequences \citep{li2025diagnosing}.
+
+\paragraph{Preventing Test Set Contamination}
+The growing concern over contamination has spurred the development of new methods for creating benchmarks. These include dynamically updated benchmarks \citep{jain2025livecodebench, xia2024top, zhang2025dynamicbenchmarkconstructionevaluating, qian2024varbenchrobustlanguagemodel} and private or restricted-access benchmarks \citep{zhang2024carefulexaminationlargelanguage, glazer2025frontiermathbenchmarkevaluatingadvanced}. Recently, \citet{nie2025uqassessinglanguagemodels} released a benchmark consisting of unsolved scientific questions, which, by its nature, prevents models from being trained on the correct solutions.
+
+\paragraph{Retrieval- and Agent-Time Contamination}
+As model evaluation evolves from static prompting to using tool-augmented agents, the risk of contamination expands. \citet{han2025searchtimedatacontamination} introduced search-time contamination, where an agent retrieves benchmark questions and answers from the web during its evaluation process, which can artificially inflate its performance.
+
+\paragraph{Membership Inference Attacks}
+The field of Membership Inference Attacks (MIA) aims to determine if a specific data point was used to train a model, given only access to the model itself \citep{shokri2017membership}. This is highly relevant to contamination, as detection can be viewed as an MIA problem. While the MIA literature is extensive in computer vision \citep{yeom2018privacy, salem2018ml, sablayrolles2019white, jagielski2024students}, it has more recently been applied to language models \citep{carlini2021extracting,zarifzadeh2023low,shi2024detecting,mattern2023membership,li2023mope}. However, progress in sequence-level MIA for language models has been complicated by issues such as flawed evaluations \citep{meeus2024inherent,zhang2024membership,jiang2025a}. \citet{duan2024membership} argue that membership can be inherently "blurry" for natural language. \citet{das2024blind} and \cite{meeus2024inherent} report that existing MIA testbeds suffer from distribution shifts. \citet{kong2023can} refute MIAs with a theoretical attack, and \citet{liu2025language} and \citet{mangaokar2025really} demonstrate fundamental limitations and exploits of n-gram based methods. Due to these challenges, recent work explores strengthening the membership signal by using multiple correlated sequences as input \citep{maini2021dataset,kandpal2023user,maini2024llm}, which aligns more closely with detecting contamination of an entire test set rather than a single example \citep{golchin2023data,oren2023proving}.
+
+
+\clearpage
+
+\section{Pretraining Implementation Details}
+\label{app:sec:pretraining_implementation_details}
+
+\paragraph{Model Architecture}
+We pretrained Qwen 3 \citep{yang2025qwen3technicalreport} architecture causal language models from random initialization.
+Table~\ref{tab:model_architectures} shows the depth (number of layers) and width (hidden size) configurations for each model size.
+The intermediate size for the feed-forward layers follows Qwen 3's formula: $256 \cdot \lfloor (255 + \lfloor 8 \cdot \text{hidden\_size} / 3 \rfloor) / 256 \rfloor$.
+All models used Flash Attention 2 \citep{dao2023flashattention2fasterattentionbetter} and bfloat16 precision.
+
+\begin{table}[h]
+\centering
+\caption{Model architecture configurations following Qwen 3 scaling patterns.}
+\label{tab:model_architectures}
+\begin{tabular}{lcc}
+\toprule
+Parameters & Num. Layers & Hidden Size \\
+\midrule
+34M  & 3  & 96  \\
+62M  & 5  & 160 \\
+93M  & 6  & 224 \\
+153M & 9  & 320 \\
+344M & 14 & 576 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Optimizer and Learning Rate}
+We used the AdamW optimizer \citep{loshchilovde2019adamw} with HuggingFace defaults (i.e., $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$, weight decay $= 0$).
+We used linear warmup for 250 steps followed by cosine annealing to zero.
+Following \citet{shuai2024scalinglawlanguagemodels}, we scaled the batch size with the total number of training tokens $D$ as:
+\begin{equation}
+    \text{tokens per optimizer step} = 3.24 \times 10^3 \times D^{0.264}.
+\end{equation}
+The learning rate was scaled with the square root of the batch size: $\eta = 10^{-6} \times \sqrt{\text{tokens per optimizer step}}$.
+Gradients were clipped to a maximum norm of 1.0.
+
+\paragraph{Data Mixing and Contamination}
+For each configuration, we created a pretraining corpus by mixing documents from FineWeb-Edu-Dedup \citep{penedo2024finewebdatasetsdecantingweb} with replicated copies of the MATH test set.
+The MATH test set was formatted using the template from EleutherAI's LM Evaluation Harness: ``Problem: \{problem\}\textbackslash n\textbackslash nSolution: \{solution\}''.
+For a given number of test set replicas $R$, we:
+(1) replicated the tokenized MATH test set $R$ times,
+(2) computed the remaining token budget as $D_{\text{corpus}} = D_{\text{total}} - R \times |\text{MATH test set}|$,
+(3) sampled documents from FineWeb-Edu-Dedup to fill $D_{\text{corpus}}$ tokens, and
+(4) shuffled the combined dataset.
+This ensures that total training tokens remain constant across contamination levels, isolating the effect of contamination from the effect of additional data.
+Each sequence was truncated to a maximum length of 2048 tokens and terminated with an EOS token.
+
+\paragraph{Distributed Training}
+Training used PyTorch's DistributedDataParallel (DDP) with the NCCL backend.
+All experiments were logged to Weights \& Biases, and trained models were uploaded to HuggingFace Hub.
+
+For more information, please see our \href{https://github.com/RylanSchaeffer/KoyejoLab-Memorization-Scoring-vs-Sampling/}{public GitHub repository}.
+
+\paragraph{Existing Asset Licenses}
+We cite or name the existing assets used in the study. The MATH benchmark is distributed from the authors' repository under the \href{https://github.com/hendrycks/math/blob/main/LICENSE}{MIT License}. The FineWeb-Edu-Dedup subset we use through the SmolLM Corpus is tagged \href{https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus/tree/main/fineweb-edu-dedup}{ODC-By}; FineWeb-Edu is likewise released under ODC-By and is subject to Common Crawl terms. Public Qwen 3 model materials are distributed under \href{https://huggingface.co/Qwen/Qwen3-0.6B/blob/main/LICENSE}{Apache-2.0}; our experiments use the Qwen 3 architecture from random initialization rather than pretrained Qwen weights. EleutherAI's LM Evaluation Harness is distributed under the \href{https://github.com/EleutherAI/lm-evaluation-harness/blob/main/LICENSE.md}{MIT License}, Flash Attention 2 under \href{https://github.com/Dao-AILab/flash-attention/blob/main/LICENSE}{BSD-3-Clause}, and PyTorch under a \href{https://github.com/pytorch/pytorch/blob/main/LICENSE}{BSD-style license}. Model hosting on HuggingFace Hub is subject to the \href{https://huggingface.co/terms-of-service}{HuggingFace Terms of Service}.
+
+\clearpage
+
+\section{Math Verify Scoring Bug}
+\label{app:sec:math_verify_bug}
+
+During our experiments, we discovered that EleutherAI's Language Model Evaluation Harness \citep{gao2024evalharness} contained a bug in its Math Verify scoring implementation that caused systematically incorrect results.
+This bug affected the \texttt{minerva\_math} task and related mathematics evaluation tasks.
+
+\paragraph{The Problem}
+The \texttt{minerva\_math} task's utility code called \texttt{remove\_boxed()} on extracted answers \emph{before} passing them to \texttt{math\_verify.parse()}.
+The original implementation was:
+\begin{verbatim}
+res = verify(parse(doc["answer"]), parse(candidates))
+\end{verbatim}
+where \texttt{doc["answer"]} had already been processed to remove the \LaTeX{} \verb|\boxed{}| wrapper.
+
+The \texttt{math\_verify.parse()} function relies on the \verb|\boxed{}| notation to properly identify and extract mathematical expressions.
+When the boxed notation is stripped beforehand:
+\begin{itemize}
+    \item \texttt{parse("\textbackslash dfrac\{9\}\{7\}")} returns empty results (parsing fails)
+    \item \texttt{parse("\textbackslash boxed\{\textbackslash dfrac\{9\}\{7\}\}")} correctly returns the parsed expression
+\end{itemize}
+
+This caused Math Verify scores to return 0 even when the model's answer was mathematically correct.
+As a diagnostic, we evaluated the benchmark's own gold reference solutions and observed Math Verify scores of approximately 70\%---a clear indication that the scoring mechanism itself was flawed rather than the solutions.
+
+\paragraph{The Fix}
+\href{https://github.com/EleutherAI/lm-evaluation-harness/issues/3210}{We reported this issue} and \href{https://github.com/EleutherAI/lm-evaluation-harness/pull/3259}{a fix was merged} that passes the full solution text to \texttt{math\_verify.parse()}, allowing it to use its built-in extraction heuristics:
+\begin{verbatim}
+res = verify(gold=parse(doc["solution"]), target=parse(candidates))
+\end{verbatim}
+
+By using \texttt{doc["solution"]} (the complete solution with \verb|\boxed{}| intact) instead of the pre-processed \texttt{doc["answer"]}, the parser can correctly identify and extract the mathematical expressions.
+
+\paragraph{Implications}
+This bug was present in versions of the evaluation harness prior to v0.4.8 (August 2025).
+Any research reporting MATH benchmark scores using Math Verify from affected versions may have systematically underestimated model performance.
+We recommend that researchers using these benchmarks verify they are using a corrected version of the evaluation code.
+
+\clearpage
+
+\section{Exceptions to In-Context / Sequence Scaling Laws}
+\label{app:sec:exceptions_to_sequence_scaling_laws}
+
+
+In Sec.~\ref{sec:inference}, we reported that most model sizes and number of test set replicas exhibit in-context scaling laws (Eq.~\ref{eqn:in_context_scaling_law}).
+While the power law plus irreducible error model provides an excellent fit for the majority of experimental conditions, we observe a systematic deviation in specific edge cases.
+In these instances, the negative log-likelihood (NLL) \textit{increases} with token index $t$ rather than decaying.
+We identified significant positive slopes in the NLL-vs-token trajectory for two distinct groups of models.
+
+% \begin{table}[h]
+%     \centering
+%     \small
+%     \caption{\textbf{Conditions Exhibiting NLL Uptick.} In specific regimes, the NLL increases with sequence length, deviating from the expected power-law decay. This occurs in small, uncontaminated models (34M) and large, highly contaminated models (344M, R=3162).}
+%     \label{tab:nll_uptick_conditions}
+%     \begin{tabular}{lcccc}
+%         \toprule
+%         \textbf{Model Size} & \textbf{Replicas ($R$)} & \textbf{Slope} & \textbf{NLL Change} & \textbf{Regime Type} \\
+%         \midrule
+%         34M  & 0    & $+0.030$ & $+5\%$   & Capacity Limited \\
+%         93M  & 1000 & $+0.011$ & $+28\%$  & High Contamination \\
+%         153M & 1000 & $+0.022$ & $+20\%$  & High Contamination \\
+%         344M & 3162 & $+0.052$ & $+206\%$ & High Contamination \\
+%         \bottomrule
+%     \end{tabular}
+% \end{table}
+
+
+
+\paragraph{Group I: Capacity Limitations (Uncontaminated Regime)}
+For the smallest uncontaminated model (34M, $R=0$), the NLL increases monotonically from token 1 to token 645. This behavior is consistent with limited effective context windows in small architectures. Without the aid of memorization ($R=0$), the 34M parameter model struggles to model long-range dependencies, causing prediction quality to degrade as the necessary context grows beyond its effective capacity. Larger uncontaminated models (62M+) do not exhibit this behavior, showing standard NLL decay.
+
+\paragraph{Group II: Selection Bias (High Contamination Regime)}
+The most pronounced uptick occurs in the largest, most contaminated models (e.g., 344M, $R=3162$), where NLL is extremely low ($\sim 10^{-3}$) but rises sharply at late token indices. Our analysis suggests this is driven by \textbf{selection bias inherent to the dataset structure}.
+
+Because the MATH dataset contains solutions of varying lengths, the set of problems contributing to the NLL at $t=800$ is a small, non-random subset of the problems at $t=100$.
+\begin{itemize}
+    \item \textbf{Survivor Bias:} Only the 100 longest solutions in the test set reach token 800.
+    \item \textbf{Differential Memorizability:} We observe a strong correlation between solution length and residual NLL in the high-contamination regime. The uptick indicates that these long surviving sequences are systematically ``harder'' to memorize than the shorter sequences that drop out earlier.
+\end{itemize}
+
+We verified that these deviations are not artifacts of data corruption. The token-level sample counts are consistent across all runs, with $100\%$ of sequences (N=5,000) present at token 0, dropping to $2\%$ (N=100) at token 800. This attrition is strictly deterministic, governed by the length distribution of the MATH dataset.
+
+\begin{figure*}[h!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/14_math_qwen3_pt_math_verify_teacher_forcing/y=nll_x=token_index_hue=num_replicas_col=model_size.pdf}
+    \caption{\textbf{Deviations from In-Context / Sequence Scaling Laws.} Two groups of models exhibit increasing negative log likelihoods with increasing token index: smaller uncontaminated models and larger massively contaminated models.}
+\end{figure*}
+
+\clearpage
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/14_math_qwen3_pt_math_verify_teacher_forcing/y=fit_params_x=model_size_hue=num_replicas.pdf}
+    \caption{\textbf{Fit Parameters for In-Context / Sequential Scaling Laws by Model Size and Number of Test Set Replicas.} }
+\end{figure*}
+
+
+\clearpage
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/11_math_qwen3_pt_math_verify/y=math_verify_x=loss_hue=temp_col=params_filtered.png}
+    \caption{\textbf{Math Verify Score Is Correlated with Pretraining Loss.} Math Verify scores correlate strongly with the cross entropy loss achieved on the MATH Test Set during training, where differences in these graphs are attributable to increased repetition on the benchmark test set.  The correlation is significantly weaker for high temperatures and falls to nearly $0$ for temperatures above $1.0$.  }
+    \label{fig:loss_and_math_verify}
+\end{figure*}
+
+\clearpage
+
+\section{Discussion (Continued)}
+\label{app:sec:discussion}
+
+\paragraph{Additional Limitations}
+We focused on a single generative benchmark, MATH, to enable automatic verification and controlled contamination. Consequently, our findings may not fully capture how contamination behaves for other tasks such as coding or creative writing.
+Additionally, our experiments utilized decoder-only dense transformer models (Qwen 3) up to 344M parameters; results at this scale may not extrapolate to larger models or other architectures.
+Finally, our pretraining corpus represents a specific mixture of web-crawl data; specialized or heavily filtered corpora could alter the base difficulty of memorization and the specific thresholds at which contamination effects become visible.
+
+\paragraph{Future Directions}
+Several avenues for future research:
+%
+\begin{itemize}
+    \item \textbf{Reconciling Memorization Thresholds:} Our discovery that a single test set replica drives loss below the irreducible error contrasts with recent assertions that single-shot verbatim memorization is an ``illusion'' \citep{huang2024demystifying} or that membership inference is fundamentally capped \citep{hayes2025exploring}. Future work should investigate what the explanatory differences are; one possibility is that memorization depends on the amount relative to corpus size \citep{schaeffer2025doseresponse, wei2025hubblemodelsuiteadvance}.
+    \item \textbf{Inference-Time Detection Methods:} Since high-temperature sampling and long-context generation disproportionately harm contaminated models, future work could develop lightweight ``stress tests'' that sweep temperature or solution length to detect contamination without access to the pretraining corpus.
+    \item \textbf{Architectural Susceptibility:} We studied dense models, but it remains an open question whether Mixture-of-Experts (MoEs) or State Space Models (SSMs) exhibit different memorization patterns.
+    \item \textbf{Harder Benchmarks:} We hypothesize that contamination efficacy is inversely correlated with problem compressibility. Investigating whether harder benchmarks (e.g., AIME) require higher ``doses'' of leakage to achieve the same performance boost would be a valuable contribution to benchmark design.
+\end{itemize}

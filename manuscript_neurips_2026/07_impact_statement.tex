@@ -1,0 +1,13 @@
+\section{Broader Impacts}
+\label{app:sec:broader_impacts}
+
+This work studies how test set contamination affects the evaluation of generative language models. We expect both positive and negative societal impacts.
+
+\paragraph{Positive Impacts.}
+Our central contribution is to make generative evaluations more trustworthy. We show that even a single test set replica in pretraining can drive a model's loss below the irreducible error of training on uncontaminated data, giving reviewers and practitioners a concrete reason to scrutinize benchmark numbers whenever a model is pretrained on web data that may overlap with public benchmarks. The diagnostic levers we identify -- sampling temperature and solution length -- are simple, model-agnostic checks that anyone can run to distinguish brittle memorization from genuine reasoning. We also identify and fix a bug in EleutherAI's LM Evaluation Harness that previously underreported mathematical reasoning performance, a direct improvement to community evaluation infrastructure. Together, these contributions should make it harder to mistake memorized capability for real capability and easier to deploy language models with calibrated expectations of how they will behave on novel inputs.
+
+\paragraph{Negative Impacts.}
+The largest risk is the one this work is intended to address: contaminated models can be deployed based on inflated benchmark scores and then fail unpredictably in real settings, because their apparent capability rests on memorization rather than reasoning. A smaller concern is that documenting how memorization manifests could, in principle, help actors who wish to obscure contamination; in practice, the techniques we study are widely known, and we expect the work's net effect to be defensive rather than enabling. We do not release new model capabilities, scraped data, or other assets that would pose misuse risks independent of the contamination findings themselves.
+
+\paragraph{Mitigations.}
+The practical guidance that follows from our results -- treat suspiciously low loss as a warning sign, vary temperature and solution length when probing for memorization, and audit evaluation harnesses for implementation errors -- is meant to make these risks easier to spot and avoid in standard evaluation pipelines.

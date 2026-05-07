@@ -1,5 +1,21 @@
 # Experiment Plan: pass@k on MATH with Uncontaminated Models
 
+## ⚠️ STATUS UPDATE (2026-05-06)
+
+**ICML 2026 was rejected; this work is being resubmitted to NeurIPS 2026.** This plan is still active for the NeurIPS submission. Current status:
+
+| Component | Status | Reference |
+|---|---|---|
+| Boxed-only scoring integrated | DONE | commit `893f29d`, `src/scoring.py`, 94 tests in `tests/test_boxed_scoring.py` |
+| 4-shot prompting integrated | DONE | commit `db75c5f`, `MINERVA_MATH_FEWSHOT_EXAMPLES` + `build_fewshot_prefix()` in `src/data.py` |
+| Generation script | EXISTS | `scripts/generate_pass_at_k_samples.py` |
+| Scoring script | EXISTS | `scripts/score_pass_at_k.py` |
+| Launch wrappers | EXIST | `scripts/run_pass_at_k.sh`, `scripts/launch_pass_at_k_shards.sh`, `scripts/monitor_and_score_pass_at_k.sh` |
+| **Phase 1 (N=1000 on uncontaminated 344M) end-to-end run** | **NOT YET RUN** | Single biggest remaining experimental item for the Mmea response |
+| Phases 2–4 scaling | NOT YET RUN | Conditional on Phase 1 |
+
+The plan below is preserved verbatim; "What to Run" and the phased compute schedule still apply, but should now be executed against the corrected scorer/prompt rather than the original ICML-era pipeline.
+
 ## Motivation
 
 Reviewer Mmea's central objection is that 344M models "fundamentally lack the capacity to generalize or perform multi-step reasoning on competition-level mathematics," making contamination findings trivially about pure memorization. Running pass@k with large k can reveal whether uncontaminated models have any latent capability on MATH, even if pass@1 is ~0%.

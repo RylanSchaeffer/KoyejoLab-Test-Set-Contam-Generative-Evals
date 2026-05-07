@@ -1,5 +1,24 @@
 # Plan: Decomposing the SFT Effect (Reviewer 6RQA, Weakness 1)
 
+## ⚠️ STATUS UPDATE (2026-05-06)
+
+**ICML 2026 was rejected; this work is being resubmitted to NeurIPS 2026.** The experiment described in this plan has been **executed end-to-end and analyzed**. The body below is preserved as historical context.
+
+| Component | Status | Reference |
+|---|---|---|
+| Implementation (TF eval support for perturbed dataset) | DONE | commit `c95759c` |
+| Dataset | DONE | `RylanSchaeffer/math_perturbed` (uploaded 2026-03-30, 5000 rows) — see note below |
+| Sweep run | DONE | W&B sweep ID `onaspopu` — full 34-model sweep (344M + 153M × 9 contamination levels × pre/post-SFT) |
+| Analysis | DONE | `notebooks/16_sft_generalization_teacher_forcing_perturbed/` (553-line notebook, commit `17ad29c` Apr 6) |
+| Plots | DONE | `notebooks/16_sft_generalization_teacher_forcing_perturbed/results/y=delta_nll_perturbed_x=num_replicas_hue=model_size.{pdf,png}` and `y=mean_nll_perturbed_x=num_replicas_hue=stage_col=model_size.{pdf,png}` (committed Apr 18) |
+| Manuscript integration | **NOT YET DONE** | Paragraph + figure not yet inserted into `manuscript_neurips_2026/04_further_training.tex` |
+
+**Key finding (per notebook 16 docstring):** SFT reduces NLL on perturbed problems at *all* contamination levels (Δ up to −2.8 nats), providing direct evidence of generalization rather than memorization.
+
+### Stale dataset references in this document
+
+The body below repeatedly says `stellaathena/math_perturbed`. That dataset has been **superseded by `RylanSchaeffer/math_perturbed`** (uploaded 2026-03-30, cleaned via `scripts/create_clean_math_rephrased.py` and `scripts/assemble_and_push_math_perturbed.py`). The actual sweep YAML at `sweeps/eval_pt_teacher_forcing/math_perturbed/eval_sft_models.yaml` already uses `RylanSchaeffer/math_perturbed`; only the prose in this planning doc is misleading. See `reviews/2026_icml/REVIEWER_6RQA/math_perturbed_spot_check.md` STATUS UPDATE for the dataset re-audit.
+
 ## Goal
 
 Quantify whether SFT on the MATH train set induces **generalization** (not just forgetting of memorized test data) by measuring teacher-forced cross-entropy on `stellaathena/math_perturbed` — problems the model has never memorized, with different numerical values and new correct solutions.

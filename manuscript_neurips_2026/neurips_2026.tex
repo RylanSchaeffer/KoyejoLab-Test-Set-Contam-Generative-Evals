@@ -1,0 +1,171 @@
+%%%%%%%% NeurIPS 2026 SUBMISSION  %%%%%%%%%%%%%%%%%
+% Converted from the ICML 2026 source by Claude Code on 2026-05-05.
+% See CONVERSION_CHANGES.md for an itemized changelog of the format conversion.
+
+\documentclass{article}
+
+% --- Track / submission mode ---------------------------------------------------
+% Main Track in double-blind anonymized mode (no [final], no [preprint]).
+% When the paper is accepted, switch to:
+%   \usepackage[main, final]{neurips_2026}
+% Other tracks supported by neurips_2026.sty:
+%   [position] [eandd] [creativeai] [sglblindworkshop] [dblblindworkshop]
+\usepackage[main]{neurips_2026}
+
+% --- Packages from the NeurIPS template's reference main .tex ------------------
+% (natbib is auto-loaded by neurips_2026.sty. The packages below are loaded by
+% the official template's reference main file — neurips_2026.sty does NOT load
+% them on its own, so they MUST be loaded here.)
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+% --- Packages carried over from the ICML source --------------------------------
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{multirow}
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{wrapfig}
+
+\usepackage[capitalize,noabbrev]{cleveref}
+
+\input{math_commands}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\definecolor{legendblue}{RGB}{31, 119, 180}
+\definecolor{legendgreen}{RGB}{44, 160, 44}
+
+% Todonotes is disabled for submission/camera-ready source hygiene.
+\usepackage[disable,textsize=tiny]{todonotes}
+
+% --- Title ---------------------------------------------------------------------
+\title{Quantifying the Effect of Test Set Contamination on Generative Evaluations}
+
+% --- Authors -------------------------------------------------------------------
+% NeurIPS author block: name + (optional \thanks) + affiliation address(es) +
+% email. \And separates authors and lets LaTeX wrap; \AND forces a line break.
+% At submission this whole block is auto-hidden by neurips_2026.sty (no [final]
+% or [preprint] passed), but it still needs to be filled in for the
+% camera-ready version.
+\author{%
+  Rylan Schaeffer\thanks{Corresponding author: \texttt{rschaef@cs.stanford.edu}.} \\
+  Stanford Computer Science \\
+  \texttt{rschaef@cs.stanford.edu} \\
+  \And
+  Joshua Kazdan \\
+  Stanford Statistics \\
+  \And
+  Baber Abbasi \\
+  EleutherAI \\
+  \And
+  Ken Ziyu Liu \\
+  Stanford Computer Science \\
+  \And
+  Brando Miranda \\
+  Stanford Computer Science \\
+  \And
+  Ahmed Ahmed \\
+  Stanford Computer Science \\
+  \AND
+  Fazl Barez \\
+  University of Oxford \\
+  Martian \\
+  \And
+  Abhay Puri \\
+  ServiceNow Research \\
+  \And
+  Stella Biderman \\
+  EleutherAI \\
+  \And
+  Niloofar Mireshghallah \\
+  Carnegie Mellon University \\
+  \And
+  Sanmi Koyejo\thanks{Corresponding author: \texttt{sanmi@cs.stanford.edu}.} \\
+  Stanford Computer Science \\
+  \texttt{sanmi@cs.stanford.edu} \\
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+    Test set contamination -- the inclusion of benchmarks in pretraining data -- is a critical threat to the trustworthy evaluation of frontier AI systems.
+    While its impact on \emph{discriminative} evaluations is well-studied, contamination on \emph{generative} evaluations remains underexplored.
+    We quantitatively assess these effects across the language model lifecycle by pretraining models (up to 344M parameters) on web data contaminated with varying numbers of MATH test set replicas.
+    While performance expectedly improves with contamination and model size, the improvements stem from superficial memorization, not generalization.
+    Our scaling law analysis reveals a fundamental breach: including even a single test set replica enables models to achieve lower loss than the irreducible error of training on the uncontaminated corpus.
+    We then study additional training: overtraining with fresh data dilutes contamination effects, whereas supervised finetuning on the training set improves performance for low contamination but degrades it for high contamination.
+    At inference, we identify three distinct regimes of memorization -- exponential decoherence, brittle memorization, deterministic lock-in -- governed by solution length and sampling temperature.
+    Finally, we identify and fix a critical implementation error in EleutherAI's LM Evaluation Harness that previously underreported mathematical reasoning performance. By characterizing how generation and memorization interact, we highlight new considerations for trustworthy AI evaluation.
+\end{abstract}
+
+
+\input{01_introduction}
+\input{02_methodology}
+\input{03_pretraining}
+\input{04_further_training}
+\input{05_generation}
+\input{06_discussion}
+
+
+\input{07_acknowledgements}
+
+
+\bibliographystyle{plainnat}
+\bibliography{references_rylan}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{99_appendix}
+
+
+\input{07_impact_statement}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% NeurIPS Paper Checklist — REQUIRED. Papers submitted without
+% the checklist are desk-rejected. The checklist must follow the
+% references and (optional) supplementary material; it does NOT
+% count toward the page limit.
+% Some checklist entries remain \answerTODO{} where author confirmation is
+% needed; see checklist.tex for the reviewer-facing justifications.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\input{checklist.tex}
+
+
+\end{document}

@@ -3,6 +3,15 @@
 **Date:** 2026-03-28
 **Context:** While running pass@k experiments for the ICML rebuttal (Reviewer Mmea), we discovered that `math_verify.parse()` extracts bare numbers from free text, causing false positives when scoring garbage model outputs.
 
+## ⚠️ STATUS UPDATE (2026-05-06)
+
+**ICML 2026 was rejected; this work is being resubmitted to NeurIPS 2026.** The investigation below is preserved as historical context. Current state of the issues raised:
+
+- **Scoring fix: SHIPPED.** Commit `893f29d` (Mar 29) created `src/scoring.py` with `extract_boxed_answer()` and `score_response()`, both of which require `\boxed{}` in the response. The lenient `parse()` priority-300 false-positive fallback is no longer reachable in our pipeline. 94 unit tests live in `tests/test_boxed_scoring.py`.
+- **"Recommended Next Steps → Option A" was implemented exactly** (require `\boxed{}` + brace-depth extraction; do not strip `\boxed{}` before passing to `math_verify.verify()`).
+- **Methodology change shipped alongside scoring fix:** commit `db75c5f` (Mar 29) added `MINERVA_MATH_FEWSHOT_EXAMPLES` and `build_fewshot_prefix()` to `src/data.py`; all generative eval scripts now prepend the 4-shot prefix (teacher-forcing intentionally remained 0-shot).
+- **Pass@k re-run: STILL OPEN.** Generation scripts (`scripts/generate_pass_at_k_samples.py`, `scripts/score_pass_at_k.py`, `scripts/run_pass_at_k.sh`, `scripts/launch_pass_at_k_shards.sh`, `scripts/monitor_and_score_pass_at_k.sh`) all exist and use the corrected scorer, but the end-to-end run on uncontaminated 344M has not yet produced results. This is the single biggest remaining experimental item for the Mmea response.
+
 ---
 
 ## 1. How math_verify.parse() Works

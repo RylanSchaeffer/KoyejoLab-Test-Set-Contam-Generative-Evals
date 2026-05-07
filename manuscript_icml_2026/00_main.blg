@@ -1,0 +1,63 @@
+This is BibTeX, Version 0.99d (TeX Live 2022/dev/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: 00_main.aux
+Reallocated buffer (elt_size=1) to 40000 items from 20000.
+Reallocated sv_buffer (elt_size=1) to 40000 items from 20000.
+Reallocated ex_buf (elt_size=1) to 40000 items from 20000.
+Reallocated out_buf (elt_size=1) to 40000 items from 20000.
+Reallocated name_tok (elt_size=4) to 40000 items from 20000.
+Reallocated name_sep_char (elt_size=1) to 40000 items from 20000.
+The style file: icml2026.bst
+Database file #1: references_rylan.bib
+Reallocated buffer (elt_size=1) to 60000 items from 40000.
+Reallocated sv_buffer (elt_size=1) to 60000 items from 40000.
+Reallocated ex_buf (elt_size=1) to 60000 items from 40000.
+Reallocated out_buf (elt_size=1) to 60000 items from 40000.
+Reallocated name_tok (elt_size=4) to 60000 items from 40000.
+Reallocated name_sep_char (elt_size=1) to 60000 items from 40000.
+Reallocated str_pool (elt_size=1) to 130000 items from 65000.
+Reallocated str_pool (elt_size=1) to 195000 items from 130000.
+Warning--empty year in schaeffer2024double
+Warning--empty year in schaeffer2024double
+You've used 118 entries,
+            2773 wiz_defined-function locations,
+            1153 strings with 108221 characters,
+and the built_in function-call counts, 283522 in all, are:
+= -- 18562
+> -- 44420
+< -- 30
++ -- 14813
+- -- 14685
+* -- 31856
+:= -- 49377
+add.period$ -- 408
+call.type$ -- 118
+change.case$ -- 5230
+chr.to.int$ -- 108
+cite$ -- 238
+duplicate$ -- 2611
+empty$ -- 4606
+format.name$ -- 14813
+if$ -- 52895
+int.to.chr$ -- 11
+int.to.str$ -- 1
+missing$ -- 80
+newline$ -- 635
+num.names$ -- 494
+pop$ -- 10655
+preamble$ -- 1
+purify$ -- 5112
+quote$ -- 0
+skip$ -- 6609
+stack$ -- 0
+substring$ -- 1417
+swap$ -- 410
+text.length$ -- 22
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 1298
+warning$ -- 2
+while$ -- 448
+width$ -- 0
+write$ -- 1557
+(There were 2 warnings)

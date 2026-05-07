@@ -5,6 +5,24 @@
 **Reference dataset:** `EleutherAI/hendrycks_math` (test split, 5000 rows across 7 subsets)
 **Columns:** `idx`, `original_problem`, `problem`, `original_answer`, `answer`, `solution`, `level`, `type`
 
+## ⚠️ STATUS UPDATE (2026-05-06)
+
+**ICML 2026 was rejected; resubmitting to NeurIPS 2026.** This audit was of `stellaathena/math_perturbed`, which has been **REPLACED** by `RylanSchaeffer/math_perturbed` (uploaded 2026-03-30, 5000 rows; assembled via `scripts/assemble_and_push_math_perturbed.py`). All runtime code (`src/data.py`, `scripts/eval_language_model*.py`, sweep YAMLs) now points at the `RylanSchaeffer/*` version.
+
+### Independent re-audit of the cleaned dataset
+
+| Issue | `stellaathena/math_perturbed` (this doc) | `RylanSchaeffer/math_perturbed` (current) |
+|---|---|---|
+| Unperturbed rows (problem == original_problem) | 1332 | **0** |
+| Meta-description "solutions" | 728 | **16** |
+| FAILED-TO-PERTURB markers | 25 | **0** |
+| Empty answers | 4 | **0** |
+| Rows missing `\boxed{}` | (not measured) | 86 (~1.7% residual) |
+
+**Verdict:** the new dataset is fit for the planned teacher-forcing experiment. Sweep `onaspopu` ran the full 34-model perturbed teacher-forcing study against `RylanSchaeffer/math_perturbed`; analysis in `notebooks/16_sft_generalization_teacher_forcing_perturbed/`. Key finding: SFT reduces NLL on perturbed problems at all contamination levels (Δ up to −2.8 nats).
+
+The audit below is preserved as the original justification for replacing the stellaathena dataset.
+
 ---
 
 ## Executive Summary
