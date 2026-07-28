@@ -27,6 +27,53 @@ Note that two of the five projects were driven from **different repositories** (
 `KoyejoLab-Scaling-Memorization`) with their own environments. That is why pretraining configs and eval
 configs don't share a Python version.
 
+## Node hardware and filesystem layout
+
+| Node | GPUs | Notes |
+|---|---|---|
+| skampere1 | 8× A100-SXM4-80GB | This paper's evals/SFT |
+| skampere2 | 8× H200 | Pretraining (from other repo checkouts) |
+| skampere3 | 8× B200 | Blackwell — verify vLLM/CUDA support before relying on it |
+
+All three are heavily contended; expect roughly one fully free GPU per node at any moment. Check with
+`nvidia-smi` before launching, and prefer many short single-GPU jobs over whole-node jobs.
+
+Three filesystems, and the distinction matters:
+
+| Mount | Scope | Size | Speed |
+|---|---|---|---|
+| `/afs/cs.stanford.edu/u/rschaef` | every machine | **5 GB quota** | fast |
+| `/lfs/<host>/0/rschaef` | **per-machine** | hundreds of GB | fast |
+| `/dfs/scratch0/rschaef` | every machine | massive | **very slow** |
+
+Anything large or hot belongs on `/lfs`. AFS fills at 5 GB and then fails in confusing ways — `tar`
+reports `Unknown system error -122`, which is `EDQUOT`, and tools that don't check write truncated files.
+AFS also does not reliably serve `mmap` for large executables. DFS is shared but too slow for anything
+latency-sensitive.
+
+`~/.bashrc.lfs` derives `LFS_HOME` from the hostname, so the same rc file works on every node.
+
+## Installing Claude Code on a node
+
+Claude Code ships as a Bun single-file executable that mmaps itself at startup, so it must live on `/lfs`,
+never AFS — on AFS you get `Bus error` at launch, either from a quota-truncated binary or from AFS's mmap
+behaviour. `/lfs` is per-machine, so run this once per node:
+
+```bash
+bash scripts/setup_claude_node.sh
+```
+
+Idempotent. Installs nvm + Node 24 + Claude Code under `$LFS_HOME/nvm`, verifies the binary is not
+truncated, and does not touch any shell rc file. To update later, on that node:
+
+```bash
+npm install -g @anthropic-ai/claude-code@latest
+```
+
+Installed and verified on skampere1, skampere2, and skampere3 (2026-07-27, v2.1.220). Note there is also a
+root-owned `/usr/local/bin/claude` (v2.1.75) on these machines that you cannot update; the `/lfs` install
+shadows it because nvm's bin comes earlier on `PATH`.
+
 ## Getting on the node
 
 SSH aliases are defined in `~/.bashrc` on the local workstation:

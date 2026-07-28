@@ -90,8 +90,14 @@ Finished runs in `memorization-scoring-vs-sampling-eval`, grouped by checkpoint 
 | `ot=1_sft` | `EleutherAI/minerva_math` | **351** |
 | `ot ∈ {2,4,8,16}` | anything | **0** |
 
-Perturbed/rephrased coverage is **344M only** (9 replica levels each). The 34M and 93M columns of Table 1
-in the manuscript do not come from these sweeps — trace their provenance before citing them again.
+Perturbed/rephrased coverage is **344M only** (9 replica levels each), from sweeps `mprek7pj` (original),
+`w8j3qnru` (perturbed), `25xeednq` (rephrased) — all read by `notebooks/15_*`.
+
+> ⚠️ **Table 1 in `03_pretraining.tex` also reports 34M and 93M columns, which no sweep in the eval
+> project produces.** Reviewer 8RFz's Q4 is literally "How are the values in Table 1 calculated?", so this
+> must be resolved before answering: trace those numbers to a superseded sweep (possibly 0-shot, or the
+> retired `stellaathena/*` datasets), re-run the two sizes against `RylanSchaeffer/math_{rephrased,perturbed}`
+> (~16 runs, under two GPU-hours), or drop the columns.
 
 ### Evaluation protocol
 
