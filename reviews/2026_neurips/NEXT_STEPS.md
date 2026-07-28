@@ -166,8 +166,9 @@ routes `*.parquet`/`*.feather` through Git LFS, **whose budget is currently exha
 
 ## Repo hygiene
 
-- [ ] **Yegor Denisov-Blanch is missing from `manuscript_neurips_2026/00_main.tex`** (12 authors on
-      OpenReview, 11 in the tex). Fix before anything else touches that file.
+- [x] **Yegor Denisov-Blanch added to `manuscript_neurips_2026/00_main.tex`** (OpenReview lists 12
+      authors; the tex had 11). Affiliation set to Stanford Computer Science — **confirm with him before
+      camera-ready**.
 - [ ] `memorization-scoring-vs-sampling-pt` does not exist on W&B but is referenced 16× in
       `notebooks/10_*` and `sweeps/pt/*.yaml`. Repoint at `-pt-v2` or document the rename.
 - [ ] `scripts/*pass_at_k*.sh` lost their exec bits in the July 27 pull (`chmod +x`).
