@@ -114,9 +114,14 @@ run_id_to_config = configs_df.set_index("run_id")[
     ["Parameters", "Num. Parameters", "Num. MATH Test Set Replicas", "Stage"]
 ].to_dict("index")
 
-# Compute mean NLL per run (average across all tokens and all problems)
+# Compute per-problem mean NLL per run, then aggregate to run-level mean NLL.
+# Each problem (= column in the parquet) contributes ONE number = mean NLL over
+# its non-NaN tokens. Run-level Mean NLL = mean over problems with >=1 valid token.
+# This avoids the token-weighted bias where long solutions dominate.
 num_row_groups = parquet_file.metadata.num_row_groups
 mean_nll_results = []
+# (run_id, problem_id) -> per-problem mean NLL. Used for paired Δ in Fix 2.
+per_run_problem_nll = {}
 
 for rg_idx in range(num_row_groups):
     print(f"  Processing row group {rg_idx + 1}/{num_row_groups}...")
@@ -136,8 +141,11 @@ for rg_idx in range(num_row_groups):
         run_mask = run_ids_df["run_id"] == run_id
         num_sequences = run_mask.sum()
 
-        # Accumulate NLL sum and count across column batches
-        total_nll_sum = 0.0
+        # Per-problem NLL accumulators across column batches.
+        # problem_id (str column name like "log_prob_token_<id>") -> (sum, count)
+        problem_nll_sum = {}
+        problem_nll_count = {}
+        # Also track total tokens for backwards-compatible reporting.
         total_count = 0
 
         for batch_start in range(0, len(log_prob_cols), batch_size):
@@ -151,16 +159,37 @@ for rg_idx in range(num_row_groups):
             del table
 
             run_data = batch_df[batch_df["run_id"] == run_id][batch_cols]
-            # NLL = -log_prob. Sum all non-NaN values.
-            nll_vals = -run_data.values
+            # NLL = -log_prob. Compute per-column (per-problem) sum and count.
+            nll_vals = -run_data.values  # shape: (num_seqs, num_cols_in_batch)
             valid_mask = ~np.isnan(nll_vals)
-            total_nll_sum += np.nansum(nll_vals)
-            total_count += valid_mask.sum()
+            col_sums = np.nansum(nll_vals, axis=0)  # shape: (num_cols_in_batch,)
+            col_counts = valid_mask.sum(axis=0)  # shape: (num_cols_in_batch,)
+
+            for ci, col_name in enumerate(batch_cols):
+                if col_counts[ci] > 0:
+                    problem_nll_sum[col_name] = (
+                        problem_nll_sum.get(col_name, 0.0) + col_sums[ci]
+                    )
+                    problem_nll_count[col_name] = (
+                        problem_nll_count.get(col_name, 0) + int(col_counts[ci])
+                    )
+
+            total_count += int(valid_mask.sum())
 
             del batch_df, run_data
             gc.collect()
 
-        if total_count > 0:
+        # Per-problem mean NLL: mean over non-NaN tokens within that problem.
+        per_problem_nll = {
+            pid: problem_nll_sum[pid] / problem_nll_count[pid]
+            for pid in problem_nll_sum
+            if problem_nll_count[pid] > 0
+        }
+
+        if len(per_problem_nll) > 0:
+            per_run_problem_nll[run_id] = per_problem_nll
+            # Run-level: mean of per-problem means (NOT token-weighted).
+            run_mean_nll = float(np.mean(list(per_problem_nll.values())))
             mean_nll_results.append(
                 {
                     "run_id": run_id,
@@ -170,7 +199,8 @@ for rg_idx in range(num_row_groups):
                         "Num. MATH Test Set Replicas"
                     ],
                     "Stage": config["Stage"],
-                    "Mean NLL": total_nll_sum / total_count,
+                    "Mean NLL": run_mean_nll,
+                    "N Problems": len(per_problem_nll),
                     "Total Tokens": total_count,
                 }
             )
@@ -181,6 +211,32 @@ for rg_idx in range(num_row_groups):
 mean_nll_df = pd.DataFrame(mean_nll_results)
 print(f"\nComputed mean NLL for {len(mean_nll_df)} runs")
 print(mean_nll_df.groupby(["Parameters", "Stage"])[["Mean NLL"]].describe())
+
+# Build a long-form per-(run, problem) DataFrame for downstream paired Δ + CSV.
+per_run_problem_rows = []
+for run_id, prob_dict in per_run_problem_nll.items():
+    config = run_id_to_config[run_id]
+    for problem_id, nll in prob_dict.items():
+        per_run_problem_rows.append(
+            {
+                "run_id": run_id,
+                "problem_id": problem_id,
+                "Parameters": config["Parameters"],
+                "Num. Parameters": config["Num. Parameters"],
+                "Num. MATH Test Set Replicas": config["Num. MATH Test Set Replicas"],
+                "Stage": config["Stage"],
+                "Per-Problem Mean NLL": nll,
+            }
+        )
+per_run_problem_df = pd.DataFrame(per_run_problem_rows)
+per_run_problem_csv_path = os.path.join(
+    results_dir, "per_run_problem_nll_df.csv"
+)
+per_run_problem_df.to_csv(per_run_problem_csv_path, index=False)
+print(
+    f"Saved per-(run, problem) NLL DataFrame "
+    f"({len(per_run_problem_df)} rows) to {per_run_problem_csv_path}"
+)
 
 # ===========================================================================
 # 3. Also load original MATH teacher-forcing for comparison (best-effort)
@@ -369,25 +425,81 @@ plt.close()
 # ===========================================================================
 # 5. Plot 2: Delta NLL (Post-SFT minus Pre-SFT) on perturbed MATH
 # ===========================================================================
-# Compute delta: negative means SFT reduced NLL (= improved = generalization)
+# Paired-per-problem Δ:
+#   for each (model_size, R), find the intersection of problem_ids that appear
+#   in BOTH the pre-SFT run and the post-SFT run, compute (post - pre) per
+#   matched problem, then take the mean over those paired problems.
+# This avoids the difference-of-means bias when pre/post problem coverage
+# (NaN coverage) differs.
 delta_rows = []
 for param_label in ["153M", "344M"]:
     subset = mean_nll_df[mean_nll_df["Parameters"] == param_label]
-    pre = subset[subset["Stage"] == "Pre-SFT"].set_index("Num. MATH Test Set Replicas")
+    pre = subset[subset["Stage"] == "Pre-SFT"].set_index(
+        "Num. MATH Test Set Replicas"
+    )
     post = subset[subset["Stage"] == "Post-SFT"].set_index(
         "Num. MATH Test Set Replicas"
     )
     common_R = pre.index.intersection(post.index)
     for R in common_R:
+        pre_run_id = pre.loc[R, "run_id"]
+        post_run_id = post.loc[R, "run_id"]
+        pre_probs = per_run_problem_nll.get(pre_run_id, {})
+        post_probs = per_run_problem_nll.get(post_run_id, {})
+        matched_problem_ids = sorted(
+            set(pre_probs.keys()).intersection(post_probs.keys())
+        )
+        if len(matched_problem_ids) == 0:
+            continue
+        paired_deltas = np.array(
+            [post_probs[pid] - pre_probs[pid] for pid in matched_problem_ids]
+        )
         delta_rows.append(
             {
                 "Parameters": param_label,
                 "Num. MATH Test Set Replicas": R,
-                "Delta Mean NLL": post.loc[R, "Mean NLL"] - pre.loc[R, "Mean NLL"],
+                "Pre-SFT Mean NLL": float(np.mean(list(pre_probs.values()))),
+                "Post-SFT Mean NLL": float(np.mean(list(post_probs.values()))),
+                "Mean Delta NLL (Paired Per Problem)": float(paired_deltas.mean()),
+                "N Paired Problems": int(len(matched_problem_ids)),
             }
         )
 
 delta_df = pd.DataFrame(delta_rows)
+
+# Defensive assertion: expect 17 (model, R) cells (8 for 153M + 9 for 344M).
+expected_cells = {
+    ("153M", R)
+    for R in mean_nll_df[mean_nll_df["Parameters"] == "153M"][
+        "Num. MATH Test Set Replicas"
+    ].unique()
+}
+expected_cells |= {
+    ("344M", R)
+    for R in mean_nll_df[mean_nll_df["Parameters"] == "344M"][
+        "Num. MATH Test Set Replicas"
+    ].unique()
+}
+present_cells = set(
+    zip(delta_df["Parameters"].tolist(), delta_df["Num. MATH Test Set Replicas"].tolist())
+)
+missing_cells = sorted(expected_cells - present_cells)
+assert len(delta_df) == 17, (
+    f"Expected exactly 17 paired (model, R) rows (8 for 153M + 9 for 344M), "
+    f"got {len(delta_df)}. Missing cells (where pre/post pair did not yield "
+    f"any matched problems): {missing_cells}. Present cells: "
+    f"{sorted(present_cells)}."
+)
+
+# Save the per-(model, R) paired Δ DataFrame.
+paired_delta_csv_path = os.path.join(
+    results_dir, "paired_delta_nll_per_model_R_df.csv"
+)
+delta_df.to_csv(paired_delta_csv_path, index=False)
+print(
+    f"\nSaved per-(model, R) paired Δ NLL DataFrame "
+    f"({len(delta_df)} rows) to {paired_delta_csv_path}"
+)
 
 plt.close()
 fig, ax = plt.subplots(figsize=(10.67, 8))
@@ -399,7 +511,7 @@ for param_label, color in param_colors.items():
     )
     ax.plot(
         d["Num. MATH Test Set Replicas"],
-        d["Delta Mean NLL"],
+        d["Mean Delta NLL (Paired Per Problem)"],
         marker="o",
         color=color,
         label=f"Qwen3-{param_label}",
@@ -518,21 +630,25 @@ print("=" * 70)
 
 for param_label in ["153M", "344M"]:
     print(f"\n--- Qwen3-{param_label} ---")
-    subset = mean_nll_df[mean_nll_df["Parameters"] == param_label]
-
-    pre = subset[subset["Stage"] == "Pre-SFT"].set_index("Num. MATH Test Set Replicas")
-    post = subset[subset["Stage"] == "Post-SFT"].set_index(
+    delta_subset = delta_df[delta_df["Parameters"] == param_label].sort_values(
         "Num. MATH Test Set Replicas"
     )
 
-    print(f"{'R':>6s}  {'Pre-SFT NLL':>12s}  {'Post-SFT NLL':>13s}  {'Delta':>8s}  {'Direction':>12s}")
-    common_R = sorted(pre.index.intersection(post.index))
-    for R in common_R:
-        pre_nll = pre.loc[R, "Mean NLL"]
-        post_nll = post.loc[R, "Mean NLL"]
-        delta = post_nll - pre_nll
+    print(
+        f"{'R':>6s}  {'Pre-SFT NLL':>12s}  {'Post-SFT NLL':>13s}  "
+        f"{'PairedΔ':>9s}  {'NPaired':>8s}  {'Direction':>12s}"
+    )
+    for _, row in delta_subset.iterrows():
+        R = int(row["Num. MATH Test Set Replicas"])
+        pre_nll = row["Pre-SFT Mean NLL"]
+        post_nll = row["Post-SFT Mean NLL"]
+        delta = row["Mean Delta NLL (Paired Per Problem)"]
+        n_paired = int(row["N Paired Problems"])
         direction = "IMPROVED" if delta < 0 else "WORSENED"
-        print(f"{R:>6d}  {pre_nll:>12.4f}  {post_nll:>13.4f}  {delta:>+8.4f}  {direction:>12s}")
+        print(
+            f"{R:>6d}  {pre_nll:>12.4f}  {post_nll:>13.4f}  "
+            f"{delta:>+9.4f}  {n_paired:>8d}  {direction:>12s}"
+        )
 
     # Compare with original MATH
     if orig_mean_nll_df is None:
@@ -549,5 +665,60 @@ print("Key question: Does SFT reduce NLL on perturbed problems?")
 print("If Delta < 0 at any R: evidence of generalization (not just memorization)")
 print("If Delta > 0 at all R: SFT only helped via memorization, no transfer")
 print("=" * 70)
+
+# ===========================================================================
+# 8. Save DataFrames to CSV for downstream reporting
+# ===========================================================================
+mean_nll_csv_path = os.path.join(results_dir, "mean_nll_df.csv")
+mean_nll_df.to_csv(mean_nll_csv_path, index=False)
+print(f"\nSaved mean_nll_df to {mean_nll_csv_path}")
+
+delta_csv_path = os.path.join(results_dir, "delta_df.csv")
+delta_df.to_csv(delta_csv_path, index=False)
+print(f"Saved delta_df to {delta_csv_path}")
+
+# Pivot pre/post NLL with paired Δ into a single per-(model, R) table.
+combined_rows = []
+for param_label in ["153M", "344M"]:
+    subset = mean_nll_df[mean_nll_df["Parameters"] == param_label]
+    pre = subset[subset["Stage"] == "Pre-SFT"].set_index(
+        "Num. MATH Test Set Replicas"
+    )
+    post = subset[subset["Stage"] == "Post-SFT"].set_index(
+        "Num. MATH Test Set Replicas"
+    )
+    delta_lookup = delta_df[delta_df["Parameters"] == param_label].set_index(
+        "Num. MATH Test Set Replicas"
+    )
+    common_R = sorted(pre.index.intersection(post.index))
+    for R in common_R:
+        if R not in delta_lookup.index:
+            continue
+        combined_rows.append(
+            {
+                "Parameters": param_label,
+                "Num. MATH Test Set Replicas": int(R),
+                "Pre-SFT Mean NLL": pre.loc[R, "Mean NLL"],
+                "Post-SFT Mean NLL": post.loc[R, "Mean NLL"],
+                "Mean Delta NLL (Paired Per Problem)": delta_lookup.loc[
+                    R, "Mean Delta NLL (Paired Per Problem)"
+                ],
+                "N Paired Problems": int(
+                    delta_lookup.loc[R, "N Paired Problems"]
+                ),
+                "Pre-SFT Total Tokens": int(pre.loc[R, "Total Tokens"]),
+                "Post-SFT Total Tokens": int(post.loc[R, "Total Tokens"]),
+            }
+        )
+
+combined_df = pd.DataFrame(combined_rows)
+combined_csv_path = os.path.join(results_dir, "combined_df.csv")
+combined_df.to_csv(combined_csv_path, index=False)
+print(f"Saved combined_df to {combined_csv_path}")
+
+if orig_mean_nll_df is not None:
+    orig_csv_path = os.path.join(results_dir, "orig_mean_nll_df.csv")
+    orig_mean_nll_df.to_csv(orig_csv_path, index=False)
+    print(f"Saved orig_mean_nll_df to {orig_csv_path}")
 
 print("\nFinished 16_sft_generalization_teacher_forcing_perturbed.py")
