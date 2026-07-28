@@ -547,19 +547,13 @@ def load_dataset_math_rephrased() -> DatasetDict:
     stellaathena/math_rephrased (fixing 23 wrong answers, 7 stale name
     references, 1 perturbed problem, and ~68 formatting inconsistencies).
 
-    Returns:
-        DatasetDict with a "test" split containing rephrased MATH problems.
-    """
-    return load_dataset("RylanSchaeffer/math_rephrased")
+    Useful for measuring generalization: models that memorized the original
+    MATH test set cannot solve these rephrased variants.
 
-
-def load_dataset_math_rephrased() -> DatasetDict:
-    """Load the RylanSchaeffer/math_rephrased dataset.
-
-    This dataset contains rephrased versions of MATH problems with the same
-    mathematical content but different wording. Each problem has a full
-    chain-of-thought solution. Useful for measuring generalization: models that
-    memorized the original MATH test set may struggle with rephrased variants.
+    Note: this loader is not currently reachable from
+    create_dataset_for_supervised_finetuning(), which only dispatches on
+    "EleutherAI/minerva_math" and "madrylab/gsm8k-platinum". Wiring it up is the
+    prerequisite for using rephrased MATH as a pretraining contaminant.
 
     Returns:
         DatasetDict with a "test" split containing rephrased MATH problems.
