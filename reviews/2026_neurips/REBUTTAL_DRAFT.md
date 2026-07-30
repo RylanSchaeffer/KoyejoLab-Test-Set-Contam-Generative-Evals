@@ -102,14 +102,31 @@ half-width is **0.33 percentage points** against effects spanning ~1% to 100%. W
 in the paper that this is test-set sampling error and **not** multi-seed variance, and we commit
 to multiple seeds at pivotal configurations for the camera-ready.
 
-**4. Related-work framing** (8RFz W3, AC bullet 5). We accept this criticism in full. We remove
-the "first targeted examination" phrasing, add the missing references, and — most importantly —
+**4. Related-work framing** (8RFz W3, AC bullet 5). We accept the framing criticism. We remove the
+"first targeted examination" phrasing, add five missing references, and — most importantly —
 situate our Findings 1 and 2 against the work they respectively replicate and appear to
-contradict. Details in our response to 8RFz.
+contradict. One of the six papers listed as uncited, Jiang et al. (2024), is in fact already
+cited three times including a paragraph of appendix related work; we note that only because it
+bears on the Originality assessment. Details in our response to 8RFz.
 
-**5. Realistic leakage** (1wx9 W1/Q1, aPBL Q1, AC bullet 1). We have run the experiment: injecting
-**paraphrased** MATH into pretraining while measuring loss on the original test set. Details in
-our response to 1wx9.
+**5. Realistic leakage** (1wx9 W1/Q1, aPBL Q1, AC bullet 1). We ran it, as a three-arm ablation
+over *which component of a leaked document* carries the effect — exact replicas, problem-rephrased
+with verbatim solutions, and numerically perturbed with nothing verbatim. Details in our response
+to 1wx9.
+
+**6. A new result we did not go looking for, and the one we would most like read.** Pursuing (5)
+produced a clean dissociation between loss and correctness — the exact distinction 8RFz's W1
+rests on. A model contaminated with rephrased problems and verbatim solutions has cross-entropy
+78% of the way from clean to fully-contaminated, yet scores 1.52% where the exact-replica model
+scores 7.22%, and reproduces the gold solution verbatim **0 times in 5,000**. A positive control
+shows it memorizes exactly as strongly as the exact-replica model when measured on its own
+training items (7.56% vs 7.22%), and regurgitates verbatim 5.34% of the time there.
+
+So **memorization is of the solution text while retrieval is keyed on the problem text.** The
+model holds the answer and cannot get to it. This unifies Finding 2 with the new ablation, and it
+means we concede 8RFz's premise by demonstrating it rather than arguing around it. It also
+inverts the detection worry they raise: perplexity flags these models loudly while their benchmark
+scores stay near clean — a false-positive mode for loss-based contamination detection.
 
 We are grateful for reviews that were specific enough to be actionable. Every criticism above
 that we could address with data, we did.
