@@ -34,6 +34,11 @@ Before searching the repo to find out whether an experiment exists, read:
   the sweeps whose md5 actually explains the cache on disk. Regenerate with
   `scripts/scratch/audit_notebook_wandb_sources.py`.
 
+- **`docs/TOKEN_BUDGET_SHORTFALL.md`** — ⚠️ read before quoting a token budget or calling any model
+  "compute-optimal". The published runs got **14.3 tokens/parameter, not 20**, and total tokens rise
+  27% with contamination dose. Results are unaffected (the shortfall is uniform); four manuscript
+  claims are not.
+
 All were verified directly against the HF Hub and W&B APIs, not against repo documentation.
 
 ### Two traps that have already produced wrong numbers
@@ -71,6 +76,26 @@ against the Hub, W&B, or the `.tex` sources before relying on any such claim.
 
 ### Facts worth not re-deriving
 
+- **The published runs trained on 14.3 tokens/parameter, not 20** (a hard-coded corpus document
+  length of 1157 against a realised ~786 left the sampled pool short, so the trim kept every
+  document). The shortfall is **uniform** — 0.7136–0.7141 across every size and multiplier — so it
+  is a constant factor and **no result changes**; it is a one-line methods correction, nothing more.
+  Fixed in code 2026-07-30 with an assertion plus `PRETRAIN_LEGACY_TOKEN_BUDGET=1` for
+  reproducibility. **Do not re-derive or re-escalate this** — `docs/TOKEN_BUDGET_SHORTFALL.md` has
+  the verifications, including why the obvious padding explanation does not apply
+  (`DataCollatorWithFlattening` adds no padding).
+- **The 344M uncontaminated 0-shot runs are NOT missing.** The batch of ten from 2025-09-25 all
+  failed, which several analyses took to mean no data exists (and substituted the R=1 checkpoint as
+  a fallback baseline). Sweeps `woygzpil` (2025-12-19) and `oj6o8idv` (2025-12-31) contain finished
+  344M R=0 runs *with logged responses*, months before the 4-shot switch, hence 0-shot. Strict
+  scores 0.000-0.140% across tau in {0, 0.316, 1.0}. See
+  `reviews/2026_neurips/data/LENIENT_SCORER_AUDIT.md`.
+- **The lenient scorer is validated as an upper bound on capability**, not merely assumed: 229/229
+  recall on verbatim regurgitation, 100% on numeric answers across seven surface forms, superset of
+  strict scoring (1 exception in 20,004). Its one blind spot is bare *symbolic* answers without math
+  delimiters; a raw substring check closes it (<=0.78% on the 1,153 symbolic problems). Every one of
+  the 178 credited uncontaminated responses has been inspected and is spurious. Regenerate with
+  `scripts/audit_lenient_scorer.py`.
 - Cluster: evals/SFT ran on **skampere1** (8× A100-80GB), out of
   `/lfs/skampere1/0/rschaef/KoyejoLab-Scoring-vs-Sampling-Memorization`, env
   `mem_scoring_vs_sampling_env` — a **uv venv, not conda** (`source .../bin/activate`).

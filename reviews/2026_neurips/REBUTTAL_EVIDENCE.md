@@ -120,9 +120,12 @@ silently dropped 344M (no finished 0-shot R=0 run -> NaN advantage -> skipped by
 ratios. Rescoring itself moves tau=1.0 from 0.2495 to 0.2528, i.e. +0.3 pp. Independently
 re-derived from raw responses for all 370 runs; every per-run score reproduced to 5e-5.
 
-Note the largest model uses a fallback baseline: 344M has no 0-shot R=0 run, so its R=1
-checkpoint (0.04% strict at greedy, i.e. on the floor) stands in. Without 344M the tau=1.0
-figure is 12.5%.
+Note the largest model used a fallback baseline: 344M was believed to have no 0-shot R=0 run, so
+its R=1 checkpoint (0.04% strict at greedy, i.e. on the floor) stood in. **The real 344M R=0 runs
+have since been recovered** (sweeps `woygzpil` 2025-12-19 and `oj6o8idv` 2025-12-31, both
+pre-4-shot) and measure 0.000-0.140% strict across tau in {0, 0.316, 1.0} -- also on the floor, so
+the substitution moves nothing and this row stands. Without 344M the tau=1.0 figure is 12.5%.
+See `data/LENIENT_SCORER_AUDIT.md`.
 
 tau = 1.0 is the model's own distribution, not a hot setting, and roughly three quarters of the
 advantage is already gone. Restrict the claim to tau <= 1 and concede that everything degrades
@@ -133,11 +136,21 @@ above it.
 
 ## Capability baseline (aPBL "small models", supports the P3.1 reconciliation)
 
-**0 correct out of 5,000,000 samples** — uncontaminated 344M, 5,000 problems x 1,000 samples,
-tau = 1.0. Not one sample contains even a well-formed `\boxed{}`. Every point of contaminated
-performance is therefore unambiguously memorization, and the models provably have no latent
-capability to bridge surface-form changes.
+**Lead with the format-free bound, not the sample count.** Under the lenient scorer (no `\boxed{}`
+required) uncontaminated models score **0.38-1.26%**, at or below that scorer's own ~1.38%
+false-positive rate, and **all 178 credited responses have been inspected individually — every one
+is spurious** (75.8% single-digit gold answers; 0 contain a `\boxed{}`). The scorer is validated as
+generous rather than merely insensitive: 229/229 recall on verbatim regurgitation, 100% on numeric
+answers across seven surface forms, and a superset of strict scoring. See
+`data/LENIENT_SCORER_AUDIT.md`.
 
+Corroborating, at scale: **0 correct out of 5,000,000 samples** (uncontaminated 344M, 5,000
+problems x 1,000, tau = 1.0), and pass@25 = 0 on all 2,500 problems at 0-shot. These use
+boxed-required scoring and none of those samples contained a well-formed `\boxed{}`, so they
+establish that resampling uncovers nothing — the format-free bound is what rules out latent
+capability.
+
+- `reviews/2026_neurips/data/LENIENT_SCORER_AUDIT.md` (primary)
 - `results/pass_at_k/mem_Qwen3-344M_..._ot_1/temp=1.0/summary.md`
 
 ## Finding #3 — irreducible error (aPBL Q3)
