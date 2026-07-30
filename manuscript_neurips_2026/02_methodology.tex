@@ -5,7 +5,7 @@
 \textbf{Pretraining} We pretrained causal language models \citep{vaswani2017attention, brown2020language} using the Qwen 3 architecture \citep{yang2025qwen3technicalreport}, sweeping model sizes: $34$M, $62$M, $93$M, $153$M, $344$M.
 For each model size, we created multiple pretraining corpora by contaminating a high quality corpus \citep{penedo2024finewebdatasetsdecantingweb} with a different number of replicas of the benchmark test set: from $0$ (uncontaminated) through $1, 3, 10, 32, 100, 316, 1000, 3162$ (logarithmically uniform).
 Pretraining floating point operations (FLOP) $C$ was approximated $ 6  \, N \, D$ \citep{kaplan2020scaling,sardana2024beyond,porian2024resolving,gadre2024languagemodelsscalereliably}, where $N$ is model parameters and $D$ is tokens.
-Each model was pretrained on 20 tokens-per-parameter \citep{hoffman2022chinchilla}. 
+Each model was pretrained with a target of 20 tokens-per-parameter \citep{hoffman2022chinchilla}; the realized budget was uniformly $71.4\%$ of this target (App.~\ref{app:sec:pretraining_implementation_details}), which rescales all runs by a common factor and affects no comparison.
 For each tuple of parameters and test set replicas, we trained one model.
 For details, see App.~\ref{app:sec:pretraining_implementation_details}.
 

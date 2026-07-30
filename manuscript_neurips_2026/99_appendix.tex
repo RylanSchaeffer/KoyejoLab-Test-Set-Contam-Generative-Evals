@@ -6,7 +6,9 @@ Test set contamination, where benchmark data is included in pretraining corpora,
 
 \paragraph{Controlled Contamination During Pretraining}
 
-A line of research directly investigates the causal effects of contamination by intentionally adding benchmark data to pretraining corpora and observing the results. \citet{magar2022data} interleaved task-specific datasets into a general text corpus during pretraining, varying the duplication rate of the leaked examples. They differentiated between "memorization" (storing examples) and "exploitation" (using stored examples to boost test scores), finding that both model size and the number of repetitions increased exploitation. \citet{jiang2024investigatingdatacontaminationpretraining} pretrained models from scratch on corpora containing either only the inputs ("text-only") or the full input-output pairs ("ground-truth") of benchmark examples, sweeping the contamination frequency. They observed significant performance gains when ground-truth pairs were used and showed that simple n-gram-based detection methods could be bypassed by paraphrasing or partial data leaks. The problem also transcends language barriers; \citet{yao2024data} demonstrated a cross-lingual contamination channel where continuing to pretrain a model on non-English translations of English benchmarks led to material improvements on the original English tests, a form of contamination that string-matching would not detect. At a larger scale, \citet{bordt2025howmuch} varied the repetition count of leaked examples, model size (up to ~1.6B parameters), and the total training token budget, finding that performance scales predictably with size and repetition. They also showed that sufficiently long training on abundant unique data could mitigate or even reverse the effects of earlier contamination. In the context of machine translation, \citet{kocyigit2025overestimation} injected source-target pairs into the pretraining data of 1B and 8B parameter models, quantifying significant overestimation in BLEU scores, with larger models and low-resource languages showing more pronounced effects. Together, these causal intervention studies provide clear evidence that language models memorize and leverage benchmark data when it is present during pretraining.
+A line of research directly investigates the causal effects of contamination by intentionally adding benchmark data to pretraining corpora and observing the results. \citet{magar2022data} interleaved task-specific datasets into a general text corpus during pretraining, varying the duplication rate of the leaked examples. They differentiated between "memorization" (storing examples) and "exploitation" (using stored examples to boost test scores), finding that both model size and the number of repetitions increased exploitation. \citet{jiang2024investigatingdatacontaminationpretraining} pretrained models from scratch on corpora containing either only the inputs ("text-only") or the full input-output pairs ("ground-truth") of benchmark examples, sweeping the contamination frequency. They observed significant performance gains when ground-truth pairs were used and showed that simple n-gram-based detection methods could be bypassed by paraphrasing or partial data leaks. The problem also transcends language barriers; \citet{yao2024data} demonstrated a cross-lingual contamination channel where continuing to pretrain a model on non-English translations of English benchmarks led to material improvements on the original English tests, a form of contamination that string-matching would not detect. At a larger scale, \citet{bordt2025howmuch} varied the repetition count of leaked examples, model size (up to ~1.6B parameters), and the total training token budget, finding that performance scales predictably with size and repetition. They also showed that sufficiently long training on abundant unique data could mitigate or even reverse the effects of earlier contamination. In the context of machine translation, \citet{kocyigit2025overestimation} injected source-target pairs into the pretraining data of 1B and 8B parameter models, quantifying significant overestimation in BLEU scores, with larger models and low-resource languages showing more pronounced effects. Most recently, \citet{godey2025gaperon} deliberately contaminated a suite of openly released models during late pretraining, a large-scale analogue of the overtraining and finetuning conditions we study in Sec.~\ref{sec:further_training}. Together, these causal intervention studies provide clear evidence that language models memorize and leverage benchmark data when it is present during pretraining.
+
+Several of these studies bear directly on our own findings, and we situate ours against them rather than presenting either as new. Our Finding \#1 --- that contamination effects grow with the number of replicas --- \emph{replicates} the repeat-count effect reported by \citet{jiang2024investigatingdatacontaminationpretraining} and \citet{dekoninck2024constat}. Our Finding \#2 --- that contamination gains vanish under rephrasing --- \emph{appears to conflict} with \citet{mehrbakhsh2024confounders} and \citet{dekoninck2024evading}, who find that rephrased or otherwise disguised contamination still produces measurable effects on mathematical generative evaluations. We do not believe this is a contradiction so much as a regime boundary. Those studies contaminate models that are already capable of the task, so contamination supplies an advantage on top of competence that can bridge a change of surface form. Our models have no such competence to bridge with: an uncontaminated 344M model produces $0$ correct answers in $5{,}000{,}000$ samples (Sec.~\ref{sec:inference}). With no latent capability, all contaminated performance is verbatim memorization, and verbatim memorization cannot survive rephrasing. This predicts that transfer of contamination across paraphrase is a function of underlying capability and should switch on between our scale and theirs, which we regard as the natural next experiment. \citet{palavalli2024taxonomy} provide a taxonomy of contamination types that makes these distinctions --- exact versus paraphrased, input-only versus input-output --- explicit.
 
 \paragraph{Repeated Data and Memorization Dynamics}
 
@@ -71,12 +73,106 @@ For a given number of test set replicas $R$, we:
 (2) computed the remaining token budget as $D_{\text{corpus}} = D_{\text{total}} - R \times |\text{MATH test set}|$,
 (3) sampled documents from FineWeb-Edu-Dedup to fill $D_{\text{corpus}}$ tokens, and
 (4) shuffled the combined dataset.
-This ensures that total training tokens remain constant across contamination levels, isolating the effect of contamination from the effect of additional data.
 Each sequence was truncated to a maximum length of 2048 tokens and terminated with an EOS token.
+
+\paragraph{Realized Token Budget}
+Step (3) above sampled corpus documents using a fixed estimate of the average document length, taken from the corpus documentation ($220\text{B}/190{,}168{,}005 \approx 1157$ tokens per document).
+Under our tokenizer, with truncation at 2048 tokens, the realized average is approximately $786$.
+The sampled pool of corpus documents was therefore smaller than intended, and every run consumed about $71.4\%$ of its nominal budget: $14.3$ rather than $20$ tokens-per-parameter.
+We report this for completeness, and note that it does not affect any comparison in this paper.
+The shortfall is uniform, spanning $0.7136$--$0.7141$ across all five model sizes and all five overtraining multipliers, so it acts as a constant factor: comparisons across model size are unaffected, the overtraining multipliers $m$ remain exact in relative terms, and the scaling-law fits of Sec.~\ref{sec:pretraining} use \emph{measured} token counts rather than the nominal budget.
+Because the replicated test set was inserted in full while only the corpus portion fell short, total training tokens also rise modestly with contamination, from $486$M at $R=0$ to $617$M at $R=316$ for the 34M models.
+This is small relative to the effects we measure --- benchmark cross entropy falls from $7.14$ to $0.52$ over that same range --- and our contaminant ablation provides a direct control: an arm contaminated with numerically perturbed problems carries the identical token increase with dose yet shows no dose-response in either loss or accuracy.
 
 \paragraph{Distributed Training}
 Training used PyTorch's DistributedDataParallel (DDP) with the NCCL backend.
 All experiments were logged to Weights \& Biases, and trained models were uploaded to HuggingFace Hub.
+
+\section{Supervised Finetuning Implementation Details}
+\label{app:sec:sft_implementation_details}
+
+All 39 supervised finetuning (SFT) runs used identical optimization settings; only the initial pretrained checkpoint varied.
+We finetuned with TRL's \texttt{SFTTrainer} on the MATH \emph{training} split (the test split is used only for contamination and evaluation), for one epoch, in \texttt{bfloat16}.
+
+\begin{table}[h]
+\centering
+\caption{SFT hyperparameters. Identical across all 39 runs; verified against the logged configuration of every run rather than transcribed from defaults.}
+\label{app:tab:sft_hyperparameters}
+\begin{tabular}{ll}
+\toprule
+Setting & Value \\
+\midrule
+Optimizer & AdamW (\texttt{adamw\_torch}) \\
+Learning rate & $1 \times 10^{-4}$ \\
+LR schedule & Cosine decay \\
+Warmup ratio & $0.2$ \\
+Weight decay & $0$ \\
+Gradient clipping (max norm) & $1.0$ \\
+Epochs & $1$ \\
+Per-device train batch size & $16$ \\
+Gradient accumulation steps & $4$ \\
+Maximum sequence length & $2048$ \\
+Gradient checkpointing & Enabled \\
+Precision & \texttt{bfloat16} \\
+Attention implementation & Eager \\
+Training split & MATH \texttt{train} \\
+Evaluation strategy & Every 50 steps \\
+Checkpoint selection & Best on evaluation loss \\
+Data / shuffle seed & $0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The finetuned checkpoints span the pretraining grid: five model sizes ($34$M--$344$M) crossed with the contamination levels available at each size.
+Because we finetune for a single epoch at a fixed learning rate, the amount of SFT compute varies with model size only through parameter count, not through step count.
+
+\section{Construction and Validation of the Modified Test Sets}
+\label{app:sec:modified_test_set_validation}
+
+Our memorization-versus-generalization claim rests on two modified versions of the MATH test set, so we document how each was built, how it was validated, and the one respect in which the perturbed set is not a clean control.
+
+\paragraph{Construction}
+Both sets were generated with a language model and are index-aligned with the original test set, so problem $i$ in each corresponds to problem $i$ in MATH.
+The \textbf{rephrased} set restates the problem in different words while preserving its mathematical content, and leaves the solution untouched: $4{,}991$ of $5{,}000$ solutions ($99.8\%$) are byte-identical to the original.
+It therefore tests whether a model can reach a memorized solution when the retrieval cue changes.
+The \textbf{perturbed} set alters the numerical values in the problem and rewrites the solution to match, changing the ground-truth answer; only $4$ of $5{,}000$ solutions are byte-identical.
+It therefore tests whether a model can re-execute the reasoning rather than reproduce a stored answer.
+
+\paragraph{Distribution matching}
+Difficulty is matched exactly by construction, since both sets are index-aligned rewrites of the original problems: the Level 1--5 distribution is identical across all three sets ($8.7\%$, $17.9\%$, $22.6\%$, $24.3\%$, $26.5\%$).
+Lengths, measured in Qwen 3 tokens, are given in Table~\ref{app:tab:modified_test_set_lengths}.
+Problem statements are slightly shorter after modification (median $47 \rightarrow 45$, $46$), and rephrased solutions match the originals exactly, as expected.
+Perturbed solutions are materially shorter (mean $162.8$ versus $215.3$), which we flag because it means a perturbed replica delivers about $22\%$ fewer tokens than an original replica at the same nominal dose.
+
+\begin{table}[h]
+\centering
+\caption{Token-length statistics of the original and modified MATH test sets (Qwen 3 tokenizer, $n=5{,}000$ each).}
+\label{app:tab:modified_test_set_lengths}
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{Problem} & \multicolumn{2}{c}{Solution} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Set & Mean & Median & Mean & Median \\
+\midrule
+Original  & $68.7$ & $47$ & $215.3$ & $153$ \\
+Rephrased & $57.9$ & $45$ & $215.4$ & $153$ \\
+Perturbed & $58.5$ & $46$ & $162.8$ & $124$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Validation}
+Both sets were audited before use, and an earlier pair of candidate datasets was discarded and regenerated as a result.
+The discarded perturbed set left $26.6\%$ of problems unperturbed and carried $\boxed{}$ answers in only $24.9\%$ of solutions; the replacement leaves $0$ problems unperturbed, and $98.3\%$ of solutions carry a well-formed $\boxed{}$ answer.
+The discarded rephrased set contained $23$ rows whose stated answer disagreed with its own solution and $7$ whose solution referred to entities removed from the problem; the replacement reduces these to $8$ minor answer/$\boxed{}$ mismatches ($0.16\%$) and $0$ respectively.
+Validation combined automated checks (answer-to-$\boxed{}$ consistency, detection of unmodified problems, detection of generation-failure markers, empty answers) with manual inspection of sampled problems for faithfulness of rephrasing and consistency between problem and solution.
+
+\paragraph{A residual confound in the perturbed set, and how we handle it}
+Perturbing the numbers in a problem does not always change its answer.
+We find that $582$ of $5{,}000$ perturbed problems ($11.64\%$) retain the original ground-truth answer, whereas the rephrased set retains it by design ($99.96\%$).
+A model that has memorized the original answer scores correct on those $582$ problems without performing any reasoning, so they cannot support a memorization-versus-generalization claim.
+We therefore exclude them from the perturbed condition.
+The exclusion is material and we report it rather than absorb it: including these problems raises the perturbed score from $1.91\%$ to $4.84\%$ and inverts its ordering relative to the rephrased condition ($2.78\%$).
 
 % For more information, please see our \href{https://github.com/RylanSchaeffer/KoyejoLab-Memorization-Scoring-vs-Sampling/}{public GitHub repository}.
 
