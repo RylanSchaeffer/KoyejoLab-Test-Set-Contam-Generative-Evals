@@ -169,10 +169,15 @@ MODEL_NAMES_TO_PARAMETERS_DICT = {
     "16M": 16e6,
     "34M": 34e6,
     "48M": 48e6,
+    # 62M/63M and 153M/165M are near-duplicate sizes from different sweep generations, and
+    # checkpoints exist on the Hub under both names. Omitting the older spellings made
+    # `Parameters -> Num. Parameters` lookups drop those runs, so both are mapped.
+    "62M": 62e6,
     "63M": 63e6,  # Initially called 62M, renamed to 63M.
     "93M": 93e6,
     "111M": 111e6,
     "138M": 138e6,
+    "153M": 153e6,
     "165M": 165e6,
     "191M": 191e6,
     "223M": 223e6,
@@ -189,10 +194,12 @@ MODEL_NAMES_TO_PARAMETERS_DICT = {
     "Qwen3-16M": 16e6,
     "Qwen3-34M": 34e6,
     "Qwen3-48M": 48e6,
+    "Qwen3-62M": 62e6,
     "Qwen3-63M": 63e6,  # Initially called 62M, renamed to 63M.
     "Qwen3-93M": 93e6,
     "Qwen3-111M": 111e6,
     "Qwen3-138M": 138e6,
+    "Qwen3-153M": 153e6,
     "Qwen3-165M": 165e6,
     "Qwen3-191M": 191e6,
     "Qwen3-223M": 223e6,

@@ -56,35 +56,31 @@ def format_g_legend_to_millions_and_billions(g: Any) -> None:
     "1500000000" to "1B" for improved readability.
 
     Args:
-        g: Seaborn FacetGrid or similar object with a legend.
+        g: Seaborn FacetGrid, Axes, or similar object with a legend.
     """
-    # Get the legend object
-    legend = g.get_legend()
+    # FacetGrid keeps its legend on `_legend` and has no `get_legend()`; Axes has
+    # `get_legend()` and no `_legend`. Accept either, matching this module's
+    # `format_g_legend_in_scientific_notation`.
+    legend = getattr(g, "_legend", None)
+    if legend is None and hasattr(g, "get_legend"):
+        legend = g.get_legend()
+    if legend is None or not hasattr(legend, "get_texts"):
+        return
 
-    # Get the list of text objects in the legend
-    legend_texts = legend.get_texts()
-
-    # Iterate and update the text for each label
-    for text_obj in legend_texts:
-        # Get the current label (e.g., "34061856.0")
+    for text_obj in legend.get_texts():
         old_label_str = text_obj.get_text()
 
         try:
-            # Convert to a number
             num = float(old_label_str)
-
-            if 1e6 <= num < 1e9:
-                # Create the new label (e.g., "34M")
-                # We use int() to truncate (so 62.8M becomes "62M")
-                new_label = f"{int(num / 1e6)}M"
-            if 1e9 <= num:
-                new_label = f"{int(num / 1e9)}B"
-
-            # Set the new texts
-            text_obj.set_text(new_label)
         except ValueError:
-            # Failsafe in case a label isn't a number
-            pass
+            continue  # not a numeric label (e.g. the legend title)
+
+        # Leave sub-million values alone rather than falling through with a stale label.
+        if num >= 1e9:
+            text_obj.set_text(f"{int(num / 1e9)}B")
+        elif num >= 1e6:
+            # Truncate, so 62.8M renders as "62M".
+            text_obj.set_text(f"{int(num / 1e6)}M")
 
 
 def save_plot_with_multiple_extensions(

@@ -289,6 +289,217 @@ def download_wandb_project_runs_configs(
     return runs_configs_df
 
 
+def download_wandb_project_runs_configs_by_group(
+    wandb_project_path: str,
+    data_dir: str,
+    groups: List[str],
+    finished_only: bool = True,
+    refresh: bool = False,
+    wandb_username: Optional[str] = None,
+    filetype: str = "csv",
+    max_workers: int = 10,
+) -> pd.DataFrame:
+    """Download run configs selected by W&B **group** instead of by sweep.
+
+    `download_wandb_project_runs_configs` can only address runs that belong to a sweep. Runs
+    produced by `scripts/eval_language_model_multi_temperature.py` are launched directly (one
+    process evaluates many checkpoints, so there is no sweep controller) and are identified by
+    their `group` instead. Caching, the finished-only filter, and the returned schema all match
+    the sweep-based function so downstream analysis code is interchangeable.
+
+    Args:
+        wandb_project_path: W&B project name.
+        data_dir: Directory for caching downloaded data.
+        groups: List of W&B group names to download.
+        finished_only: If True, filter to only successfully finished runs.
+        refresh: If True, re-download even if cache exists.
+        wandb_username: W&B entity. If None, uses the API viewer's default.
+        filetype: Cache format ("csv", "feather", or "parquet").
+        max_workers: Number of parallel download threads.
+
+    Returns:
+        DataFrame with run configurations and summary metrics.
+    """
+    assert filetype in {"csv", "feather", "parquet"}
+
+    # Namespaced so a group cache can never collide with a sweep cache of the same name.
+    filename = "groups=" + ",".join(groups)
+    hashed_filename = hashlib.md5(filename.encode()).hexdigest()
+    runs_configs_df_path = os.path.join(
+        data_dir, hashed_filename + f"_runs_configs.{filetype}"
+    )
+
+    if refresh or not os.path.isfile(runs_configs_df_path):
+        print(f"Creating {runs_configs_df_path} anew.")
+
+        api = wandb.Api(timeout=600)
+        if wandb_username is None:
+            wandb_username = api.viewer.username
+
+        results_list = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_run = {}
+            for group in groups:
+                try:
+                    runs = api.runs(
+                        f"{wandb_username}/{wandb_project_path}",
+                        filters={"group": group},
+                        per_page=200,
+                    )
+                    for run in runs:
+                        future_to_run[
+                            executor.submit(
+                                download_wandb_project_runs_configs_helper, run
+                            )
+                        ] = run
+                except Exception as e:
+                    print(f"Error processing group {group}: {str(e)}")
+
+            for future in tqdm(
+                concurrent.futures.as_completed(future_to_run), total=len(future_to_run)
+            ):
+                result = future.result()
+                if result is not None:
+                    results_list.append(result)
+
+        runs_configs_df = pd.DataFrame(results_list)
+        runs_configs_df.reset_index(inplace=True, drop=True)
+
+        runs_configs_df.to_csv(
+            runs_configs_df_path.replace(filetype, "csv"), index=False
+        )
+        try:
+            runs_configs_df.to_feather(
+                runs_configs_df_path.replace(filetype, "feather")
+            )
+        except Exception as e:
+            print(f"Error saving to feather: {str(e)}")
+        try:
+            runs_configs_df.to_parquet(
+                runs_configs_df_path.replace(filetype, "parquet"), index=False
+            )
+        except Exception as e:
+            print(f"Error saving to parquet: {str(e)}")
+
+        print(f"Regenerated and wrote {runs_configs_df_path} to disk.")
+        del runs_configs_df
+
+    print(f"Reading {runs_configs_df_path} from disk.")
+    if filetype == "csv":
+        runs_configs_df = pd.read_csv(runs_configs_df_path)
+    elif filetype == "feather":
+        runs_configs_df = pd.read_feather(runs_configs_df_path)
+    else:
+        runs_configs_df = pd.read_parquet(runs_configs_df_path)
+    print(f"Loaded {runs_configs_df_path} from disk.")
+
+    finished_runs = runs_configs_df["State"] == "finished"
+    print(
+        f"% of successfully finished runs: {100.0 * finished_runs.mean():.2f}% "
+        f"({finished_runs.sum()} / {len(finished_runs)})"
+    )
+    if finished_only:
+        runs_configs_df = runs_configs_df[finished_runs]
+        assert len(runs_configs_df) > 0
+        runs_configs_df = runs_configs_df.copy()
+
+    return runs_configs_df
+
+
+def download_wandb_project_runs_histories_by_group(
+    wandb_project_path: str,
+    data_dir: str,
+    groups: List[str],
+    wandb_run_history_num_samples: int = 10000,
+    refresh: bool = False,
+    wandb_username: Optional[str] = None,
+    filetype: str = "parquet",
+    cols_to_drop: Optional[List[str]] = None,
+    cols_to_keep: Optional[List[str]] = None,
+    max_workers: int = 10,
+) -> pd.DataFrame:
+    """Download per-problem histories for runs selected by W&B group.
+
+    Group-addressed counterpart to `download_wandb_project_runs_histories`; see
+    `download_wandb_project_runs_configs_by_group` for why group addressing is needed.
+
+    Pass `cols_to_keep` whenever you know which metrics you need. The eval runs log one
+    `log_prob_token_{i}` column per generated token, so a run's history is ~2,000 columns wide
+    and `run.history()` transfers all of them — tens of GB across a sweep. `cols_to_keep`
+    switches to `run.scan_history(keys=...)`, which fetches only the named columns and turns
+    that into seconds and megabytes. `cols_to_drop` is applied afterwards and is ignored when
+    `cols_to_keep` is given.
+    """
+    assert filetype in {"csv", "feather", "parquet"}
+
+    filename = "groups=" + ",".join(groups)
+    hashed_filename = hashlib.md5(filename.encode()).hexdigest()
+    runs_histories_df_path = os.path.join(
+        data_dir, hashed_filename + f"_runs_histories.{filetype}"
+    )
+
+    if refresh or not os.path.isfile(runs_histories_df_path):
+        api = wandb.Api(timeout=6000)
+        if wandb_username is None:
+            wandb_username = api.viewer.username
+
+        runs_histories_list = []
+        print("Downloading runs' histories...")
+        for group in groups:
+            runs = list(
+                api.runs(
+                    f"{wandb_username}/{wandb_project_path}",
+                    filters={"group": group},
+                    per_page=200,
+                )
+            )
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=max_workers
+            ) as executor:
+                future_to_run = {
+                    executor.submit(
+                        download_wandb_project_runs_histories_helper,
+                        run,
+                        wandb_run_history_num_samples,
+                        cols_to_drop,
+                        cols_to_keep,
+                    ): run
+                    for run in runs
+                }
+                for future in tqdm(
+                    concurrent.futures.as_completed(future_to_run),
+                    total=len(future_to_run),
+                ):
+                    result = future.result()
+                    if result is not None:
+                        runs_histories_list.append(result)
+
+        runs_histories_df = pd.concat(runs_histories_list, sort=False, ignore_index=True)
+        runs_histories_df.reset_index(inplace=True, drop=True)
+
+        runs_histories_df.to_csv(
+            runs_histories_df_path.replace(filetype, "csv"), index=False
+        )
+        try:
+            runs_histories_df.to_parquet(
+                runs_histories_df_path.replace(filetype, "parquet"), index=False
+            )
+        except Exception as e:
+            print(f"Error saving to parquet: {str(e)}")
+        print(f"Wrote {runs_histories_df_path} to disk")
+        del runs_histories_df
+
+    if filetype == "csv":
+        runs_histories_df = pd.read_csv(runs_histories_df_path)
+    elif filetype == "feather":
+        runs_histories_df = pd.read_feather(runs_histories_df_path)
+    else:
+        runs_histories_df = pd.read_parquet(runs_histories_df_path)
+    print(f"Loaded {runs_histories_df_path} from disk.")
+
+    return runs_histories_df
+
+
 def download_wandb_project_runs_configs_helper(run: Any) -> Optional[Dict[str, Any]]:
     """Helper to extract config and summary from a single W&B run."""
     try:
@@ -532,12 +743,22 @@ def download_wandb_project_runs_histories_helper(
     run: Any,
     wandb_run_history_num_samples: int,
     cols_to_drop: Optional[List[str]] = None,
+    cols_to_keep: Optional[List[str]] = None,
 ) -> Optional[pd.DataFrame]:
-    """Helper to download history from a single run with retry logic."""
+    """Helper to download history from a single run with retry logic.
+
+    When `cols_to_keep` is given, uses `scan_history(keys=...)` so only those columns cross the
+    wire — see the caller's docstring for why that matters on these runs.
+    """
     history = None
     for num_attempts in range(5):
         try:
-            history = run.history(samples=wandb_run_history_num_samples)
+            if cols_to_keep is not None:
+                history = pd.DataFrame(
+                    list(run.scan_history(keys=list(cols_to_keep)))
+                )
+            else:
+                history = run.history(samples=wandb_run_history_num_samples)
             break
         except (requests.exceptions.HTTPError, wandb.errors.CommError):
             print(f"Retrying run {run.id}...")
@@ -546,8 +767,8 @@ def download_wandb_project_runs_histories_helper(
     if history is None or history.empty:
         return None
 
-    if cols_to_drop is not None:
-        history.drop(columns=cols_to_drop, inplace=True)
+    if cols_to_keep is None and cols_to_drop is not None:
+        history.drop(columns=cols_to_drop, inplace=True, errors="ignore")
     history["run_id"] = run.id
     return history
 
