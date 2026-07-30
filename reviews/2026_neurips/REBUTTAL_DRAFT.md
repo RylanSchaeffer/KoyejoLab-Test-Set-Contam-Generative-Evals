@@ -153,6 +153,41 @@ For Finding 5, at matched 0-shot protocol and matched scoring, SFT takes mean Ma
 median retained fraction of **0.028** (range 0.001–0.302). The range spans more than two orders of
 magnitude, so we quote it rather than a single multiplier.
 
+**We also found a regime where your objection is exactly right, and we think it is the most
+interesting result in this response.** Pursuing 1wx9's paraphrased-contamination request, we
+pretrained models on rephrased problems paired with verbatim original solutions, then evaluated
+them 0-shot on the original problems:
+
+| R | Loss, exact | Loss, rephrased | Accuracy, exact | Accuracy, rephrased | Verbatim solution rate |
+|---|---|---|---|---|---|
+| 100 | 1.4526 | 2.0077 | 1.70% | 1.58% | 0.000 |
+| 316 | 0.5243 | 1.9573 | 7.22% | **1.52%** | **0.000** |
+
+(Uncontaminated: loss 7.1437, accuracy 0.00%.)
+
+At R = 316 the rephrased model's cross-entropy on the original solutions is 78% of the way from
+the uncontaminated baseline to the exact-replica model's — by any loss-based measure it is
+heavily contaminated. Yet it scores 1.52% and reproduces the gold solution verbatim **0 times out
+of 5,000**. It holds the answer and cannot retrieve it. Loss and correctness genuinely come
+apart, precisely as you argued they could.
+
+The mechanism this exposes is that **memorization is of the solution text while retrieval is keyed
+on the problem text**. Rephrasing at training time stores the solution without the key;
+rephrasing at evaluation time (our Table 1) withholds the key from a model that has one. Both
+collapse generation for the same reason, which unifies Finding 2 with this new result.
+
+One further consequence worth flagging, because it runs opposite to the concern you raised: you
+noted that accuracy persisting while loss rises would let contamination evade perplexity-based
+detection. We observe the *other* asymmetry — **perplexity would flag these models loudly while
+their benchmark scores are barely inflated.** That is a false-positive mode for loss-based
+detection, and since realistic leakage rarely reproduces benchmark problems verbatim, it may be
+the more common case in practice.
+
+None of this rescues Findings 4–5 by itself; those stand on the accuracy-space measurements
+above, where the metrics do track. But it means we accept your framing rather than merely
+answering it: loss and correctness are not interchangeable, we can now show a case where they
+diverge sharply, and we report both metrics everywhere in the revision.
+
 **W2 / Q2 — the temperature confound.**
 
 You are right that Finding 6 as written does not separate "temperature reduces contamination
