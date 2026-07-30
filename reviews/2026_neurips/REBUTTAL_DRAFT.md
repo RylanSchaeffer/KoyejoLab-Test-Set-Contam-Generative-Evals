@@ -161,12 +161,12 @@ effects specifically" from "temperature degrades generation generally." The clea
 contamination *advantage* at **matched** temperature — score(R) − score(R = 0) with both terms at
 the same τ — so any uniform degradation cancels:
 
-| τ | 0 (greedy) | 0.56 | 0.75 | 0.94 | 1.0 | 1.29 |
-|---|---|---|---|---|---|---|
-| Fraction of greedy advantage retained | 100% | 90% | 72% | 39% | **25%** | 0.4% |
+| τ | 0 (greedy) | 0.32 | 0.56 | 0.75 | 0.94 | 1.0 | 1.29 |
+|---|---|---|---|---|---|---|---|
+| Fraction of greedy advantage retained | 100% | 92% | 77% | 55% | 20% | **9.6%** | 0.02% |
 
-So the effect is contamination-specific up to about τ = 1: at the model's own distribution — not
-a hot setting — 75% of the advantage is already gone, while general degradation has been
+So the effect is contamination-specific: at τ = 1.0 — the model's own distribution, not a hot
+setting — **over 90% of the advantage is already gone**, while general degradation has been
 controlled for. Above τ ≈ 1.3 we agree the two explanations are no longer separable and
 everything is degrading; we now restrict the claim to τ ≤ 1 and say so explicitly.
 

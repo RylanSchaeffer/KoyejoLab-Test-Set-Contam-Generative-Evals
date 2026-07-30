@@ -93,11 +93,16 @@ pretrained (~100%) against 4-shot SFT (~1-2%). Matched at 4-shot the figures are
 The clean control is the contamination advantage at **matched** temperature,
 `score(R) - score(R=0)` with both terms at the same tau, so uniform degradation cancels.
 
-| tau | 0 | 0.56 | 0.75 | 0.94 | 1.0 | 1.29 |
-|---|---|---|---|---|---|---|
-| Fraction of greedy advantage | 100% | 90% | 72% | 39% | **25%** | 0.4% |
+| tau | 0 | 0.32 | 0.56 | 0.75 | 0.94 | 1.0 | 1.29 |
+|---|---|---|---|---|---|---|---|
+| Fraction of greedy advantage | 100% | 92% | 77% | 55% | 20% | **9.6%** | 0.02% |
 
-tau = 1.0 is the model's own distribution, not a hot setting, and 75% of the advantage is
+⚠️ Rescored 2026-07-30 with boxed-required scoring. The previous row (100/90/72/39/25/0.4) came
+from leniently scored runs; the matched-temperature difference does NOT cancel that artifact,
+because the uncontaminated arm is almost all false positives while the contaminated arm is mostly
+real. Source: `notebooks/11_*/results/TEMPERATURE_RESPONSE_RESCORED.md`.
+
+tau = 1.0 is the model's own distribution, not a hot setting, and >90% of the advantage is
 already gone. Restrict the claim to tau <= 1 and concede that everything degrades above it.
 
 - `notebooks/11_math_qwen3_pt_math_verify/results/TEMPERATURE_RESPONSE.md`
