@@ -8,9 +8,13 @@ objection as the pivotal critique.
 [`PROTOCOL_CONFOUND.md`](PROTOCOL_CONFOUND.md) before editing any figure. Sources are in
 [`REBUTTAL_EVIDENCE.md`](REBUTTAL_EVIDENCE.md).
 
-Two placeholders marked **[PENDING]** are the paraphrased-contamination runs, launched
-2026-07-29 22:13 as sweep `mxamktp0` (34M, R = 32/100/316, ~3 h). If they do not land in time,
-delete those paragraphs — every other claim stands without them.
+**[PENDING]** marks numbers still running as of 2026-07-30 00:05:
+- contaminant ablation, sweeps `mxamktp0` (rephrased, 2 of 3 done) and `vrxwx4dz` (perturbed);
+  analysis is ready at `notebooks/21_paraphrased_contamination/` — just run it.
+- 0-shot pass@k sample count.
+
+Every other claim stands without them. If a run does not land, delete the row rather than
+softening it — a table with an honest gap beats a hedge.
 
 ---
 
@@ -264,28 +268,59 @@ main new experiment in this response.
 **W1 / Q1 — paraphrased rather than exact contamination in pretraining.**
 
 We agree this is the most important missing condition, and we ran it. We modified our pretraining
-pipeline so that *what is injected* can differ from *what loss is measured on*, then pretrained
-34M models with **paraphrased** MATH replicas (R = 32, 100, 316) injected into the corpus while
-measuring loss and accuracy on the **original** test set.
+pipeline so that *what is injected* can differ from *what loss is measured on*, and pretrained new
+34M models (R = 32, 100, 316) while measuring cross-entropy on the **original** test set
+throughout.
 
-To make this comparable to our published results rather than merely internally consistent, we
-reconstructed the exact pretraining configuration behind Figure 3 — the paraphrased runs differ
-from the published exact-replica runs in one variable only, the identity of the injected text —
-so the exact-replica arm at the same three doses serves directly as the control without
-retraining.
+To make these comparable to the paper rather than merely internally consistent, we reconstructed
+the exact pretraining configuration behind Figure 3, so the published exact-replica runs at the
+same three doses serve as the control without retraining. The injected text is the only variable.
 
-**[PENDING — insert result.]** Expected shape, to be replaced by measured values: paraphrased
-contamination transfers little to the original test set at this scale. Whichever way it lands,
-we report it: if transfer is negligible, it empirically answers your W2 and sharpens the
-memorization account; if transfer is substantial, it bounds how far the exact-replica results
-generalise and we will say so.
+Setting this up surfaced something we had not appreciated about our own data, and it changed the
+experiment for the better. **Our rephrased MATH set rephrases the problem but keeps the solution:
+4,991 of 5,000 solutions (99.8%) are byte-identical to the original.** Since the benchmark loss is
+cross-entropy on the solution, injecting that set is *solution-verbatim* leakage, not paraphrased
+leakage. Reporting it as the latter would have overstated paraphrase transfer considerably. Our
+perturbed set, which changes the numbers, differs on both sides (4/5,000 identical solutions).
+
+So instead of one condition we report an ablation over *which component of a leaked document
+carries the effect* — which we think is a more useful answer to your question than the one we set
+out to give:
+
+| Arm | Problem | Solution | R = 32 | R = 100 | R = 316 |
+|---|---|---|---|---|---|
+| Uncontaminated | — | — | 7.1437 | 7.1437 | 7.1437 |
+| Exact replicas | same | same | 2.5138 | 1.4526 | 0.5243 |
+| Rephrased (solution-verbatim) | differs | **same** | 2.6125 | 2.0077 | [PENDING] |
+| Perturbed (nothing verbatim) | differs | differs | [PENDING] | [PENDING] | [PENDING] |
+
+Two things follow from the rows we have:
+
+1. **The problem text contributes remarkably little.** Replacing every problem statement while
+   keeping the solutions recovers **97.9%** of the exact-replica loss reduction at R = 32 and
+   **90.2%** at R = 100. What is being memorized is overwhelmingly the solution text, not the
+   problem–solution association. The gap widens with dose, which is consistent with exact replicas
+   additionally learning the mapping.
+2. **This replicates a distinction from prior work we had failed to cite.** Jiang et al. (2024)
+   separate "text-only" from "ground-truth" contamination and find the latter far more damaging;
+   our exact-versus-rephrased contrast reaches the same conclusion from the opposite direction. We
+   now cite them for it (see also our response to 8RFz on related work).
+
+The perturbed arm — where nothing is leaked verbatim — is the one that speaks directly to
+realistic leakage, and we report it above.
+
+**A caveat we state rather than hide:** both modified corpora are still MATH-domain text with
+MATH-style solutions, so part of any reduction is domain adaptation rather than item-level
+leakage. Our R = 0 baseline saw no mathematics at all and therefore does not separate the two.
+Cleanly separating them needs a fourth arm contaminated with *disjoint* math problems, which we
+have not run. The perturbed number should be read as an upper bound on realistic-leakage transfer.
 
 On the design question behind the criticism: we chose exact replicas as a causal testbed — the
-same control-for-realism tradeoff we articulate against Bordt et al. — and we now frame the
+same control-for-realism tradeoff we articulate against Bordt et al. — and we now frame that
 result as what it is, an **upper bound** on contamination effects whose *lifecycle dynamics*
-(pretraining → overtraining → SFT → inference) are what the paper characterises. We agree that
-partial, translated, and discussion-embedded leakage remain untested, and we now list them
-explicitly as scope limits rather than leaving them implicit.
+(pretraining → overtraining → SFT → inference) are what the paper characterises. Partial,
+translated, and discussion-embedded leakage remain untested and are now listed explicitly as scope
+limits rather than left implicit.
 
 **W2 — "if we have a rephrased test set contamination in training, the evaluation on test set is
 similar to an uncontaminated model. Which is quite surprising."**
