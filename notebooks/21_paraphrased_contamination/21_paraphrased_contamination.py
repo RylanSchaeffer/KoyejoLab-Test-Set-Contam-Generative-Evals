@@ -1,15 +1,24 @@
-"""Does contamination with *paraphrased* benchmark items transfer to the original test set?
+"""Which part of a leaked document carries the contamination effect?
 
 Reviewers 1wx9 (W1/Q1), aPBL (Q1) and the AC (bullet 1) all press the same point: exact-replica
 contamination is a clean causal testbed but not the dominant realistic leakage mode. This
 measures the paraphrased case directly.
 
-DESIGN
-------
-Three 34M models pretrained with `RylanSchaeffer/math_rephrased` injected at R = 32, 100, 316,
-while `eval_after/eval_benchmark_loss` is measured on the ORIGINAL `EleutherAI/minerva_math` test
-set. So the loss answers exactly the question asked: does contamination with paraphrase i lower
-loss on original i?
+DESIGN -- three arms, see reviews/2026_neurips/CONTAMINANT_ABLATION.md
+------------------------------------------------------------------
+34M models pretrained at R = 32, 100, 316 with different contaminants injected, while
+`eval_after/eval_benchmark_loss` is always measured on the ORIGINAL `EleutherAI/minerva_math`
+test set.
+
+    arm         problem    solution   sweep       isolates
+    exact       same       same       published   full verbatim leakage
+    rephrased   differs    SAME       mxamktp0    solution-only leakage
+    perturbed   differs    differs    vrxwx4dz    no verbatim leakage
+
+The rephrased arm is NOT a paraphrase condition: `math_rephrased` keeps the original solution in
+99.8% of rows (4991/5000), and the loss is measured on solution text. Treating it as
+"paraphrased contamination" would badly overstate paraphrase transfer. `math_perturbed` differs
+on both sides (4/5000 identical solutions) and is the realistic-leakage arm.
 
 The control arm is not retrained. `scripts/pretrain_language_model_v1.py` reproduces the
 published (pre-934546a) optimizer configuration, and every other config value was read out of the
@@ -45,6 +54,10 @@ CACHE = os.path.join(
     "c39ba9b590fe96b52183328d3d4c7323_runs_configs.csv",
 )
 PROJECT = "rylan/memorization-scoring-vs-sampling-pt-paraphrased"
+ARM_BY_CONTAMINANT = {
+    "RylanSchaeffer/math_rephrased": "rephrased",
+    "RylanSchaeffer/math_perturbed": "perturbed",
+}
 LOSS = "eval_after/eval_benchmark_loss"
 os.makedirs(RESULTS, exist_ok=True)
 
@@ -87,7 +100,8 @@ def paraphrased_runs() -> pd.DataFrame:
                 "run_id": run.id,
                 "R": dc.get("num_benchmark_replicas_per_epoch"),
                 "contaminant": dc.get("contaminant"),
-                "paraphrased": loss,
+                "arm": ARM_BY_CONTAMINANT.get(dc.get("contaminant"), "unknown"),
+                "loss": loss,
                 "grad_accum": run.config.get("trainer_config", {}).get(
                     "gradient_accumulation_steps"
                 ),
@@ -98,66 +112,97 @@ def paraphrased_runs() -> pd.DataFrame:
 
 def main() -> None:
     exact = published_exact_replica()
-    para = paraphrased_runs()
-    if para.empty:
-        raise SystemExit("No finished paraphrased runs with a benchmark loss yet.")
+    runs = paraphrased_runs()
+    if runs.empty:
+        raise SystemExit("No finished contaminant runs with a benchmark loss yet.")
 
-    # Sanity: the v1 config must have taken effect, or the comparison is invalid.
-    bad = para[para["grad_accum"] != 9]
+    # The v1 optimizer config must have taken effect or nothing here is comparable to Fig. 3.
+    bad = runs[runs["grad_accum"] != 9]
     if len(bad):
-        print(f"!! {len(bad)} run(s) have gradient_accumulation_steps != 9 (published value); "
-              f"these are NOT comparable to Fig. 3:\n{bad}")
+        print(
+            f"!! {len(bad)} run(s) have gradient_accumulation_steps != 9 (the published value); "
+            f"these are NOT comparable to the published exact-replica losses:\n{bad}\n"
+        )
 
     floor = float(exact.loc[exact.R == 0, "exact"].iloc[0])
-    df = para.merge(exact, on="R", how="left").sort_values("R")
+    df = runs.merge(exact, on="R", how="left").sort_values(["arm", "R"])
     df["uncontaminated"] = floor
-    # Fraction of the exact-replica loss reduction that paraphrased contamination achieves.
-    df["transfer_fraction"] = (floor - df["paraphrased"]) / (floor - df["exact"])
-    df.to_csv(os.path.join(RESULTS, "paraphrased_vs_exact.csv"), index=False)
+    # Share of the exact-replica loss reduction that this contaminant achieves.
+    df["transfer_fraction"] = (floor - df["loss"]) / (floor - df["exact"])
+    df.to_csv(os.path.join(RESULTS, "contaminant_ablation.csv"), index=False)
+
+    wide = df.pivot_table(index="R", columns="arm", values="loss")
+    for col in ("rephrased", "perturbed"):
+        if col not in wide:
+            wide[col] = float("nan")
+    wide = wide.join(exact.set_index("R")["exact"]).sort_index()
 
     plt.close()
     plt.figure(figsize=src.plot.default_figsize)
     ax = plt.gca()
     ax.axhline(floor, color="0.4", linestyle=":", label="Uncontaminated ($R=0$)")
-    ax.plot(df["R"], df["exact"], marker="o", label="Exact replicas (published)")
-    ax.plot(df["R"], df["paraphrased"], marker="s", label="Paraphrased replicas")
+    ax.plot(wide.index, wide["exact"], marker="o", label="Exact replicas (problem $=$, solution $=$)")
+    ax.plot(wide.index, wide["rephrased"], marker="s",
+            label=r"Rephrased (problem $\neq$, solution $=$)")
+    ax.plot(wide.index, wide["perturbed"], marker="^",
+            label=r"Perturbed (problem $\neq$, solution $\neq$)")
     ax.set_xscale("log")
-    ax.set(xlabel="Num. MATH Test Set Replicas", ylabel="Benchmark Cross-Entropy (original test set)")
-    ax.legend(loc="lower left")
+    ax.set(xlabel="Num. MATH Test Set Replicas",
+           ylabel="Benchmark Cross-Entropy (original test set)")
+    ax.legend(loc="upper right")
     src.plot.save_plot_with_multiple_extensions(
         plot_dir=RESULTS, plot_filename="y=benchmark_loss_x=num_replicas_hue=contaminant"
     )
     plt.close()
 
-    with open(os.path.join(RESULTS, "PARAPHRASED_CONTAMINATION.md"), "w") as f:
+    with open(os.path.join(RESULTS, "CONTAMINANT_ABLATION.md"), "w") as f:
         f.write(
-            "# Paraphrased contamination during pretraining\n\n"
-            "Qwen3-34M, 1xOT, `RylanSchaeffer/math_rephrased` injected into the corpus; "
-            "cross-entropy measured on the **original** `EleutherAI/minerva_math` test set. "
-            "The exact-replica column is the published run at the same dose, reproduced under "
-            "the same (pre-`934546a`) optimizer configuration, so the contaminant is the only "
-            "variable.\n\n"
-            f"Uncontaminated baseline (R=0): **{floor:.4f}**\n\n"
-            "| R | Exact replicas | Paraphrased | Transfer fraction |\n|---|---|---|---|\n"
+            "# Which part of a leaked document carries the effect?\n\n"
+            "Qwen3-34M, 1xOT. Cross-entropy is always measured on the **original** "
+            "`EleutherAI/minerva_math` test set; only the injected contaminant changes. Run from "
+            "`scripts/pretrain_language_model_v1.py`, which reproduces the published "
+            "(pre-`934546a`) optimizer configuration, so the published exact-replica runs serve "
+            "as the control without retraining.\n\n"
+            "| Arm | Problem | Solution | Isolates |\n|---|---|---|---|\n"
+            "| Exact | same | same | full verbatim leakage |\n"
+            "| Rephrased | differs | **same** (99.8% identical) | solution-only leakage |\n"
+            "| Perturbed | differs | differs (0.1% identical) | no verbatim leakage |\n\n"
+            "⚠️ The rephrased arm is **not** a paraphrase condition — `math_rephrased` keeps the "
+            "original solution, and the loss is measured on solution text. See "
+            "`reviews/2026_neurips/CONTAMINANT_ABLATION.md`.\n\n"
+            f"Uncontaminated baseline (R = 0): **{floor:.4f}**\n\n"
+            "| R | Exact | Rephrased | Perturbed | Transfer: rephrased | Transfer: perturbed |\n"
+            "|---|---|---|---|---|---|\n"
         )
-        for _, r in df.iterrows():
-            tf = "—" if pd.isna(r["transfer_fraction"]) else f"{r['transfer_fraction']:.3f}"
-            f.write(
-                f"| {int(r['R'])} | {r['exact']:.4f} | {r['paraphrased']:.4f} | {tf} |\n"
-            )
+        for R in wide.index:
+            ex = wide.loc[R, "exact"]
+            row = [f"| {int(R)} ", f"| {ex:.4f} " if pd.notna(ex) else "| — "]
+            tf = {}
+            for arm in ("rephrased", "perturbed"):
+                v = wide.loc[R, arm]
+                row.append(f"| {v:.4f} " if pd.notna(v) else "| — ")
+                tf[arm] = (
+                    (floor - v) / (floor - ex)
+                    if pd.notna(v) and pd.notna(ex) and (floor - ex) != 0
+                    else float("nan")
+                )
+            for arm in ("rephrased", "perturbed"):
+                row.append(f"| {tf[arm]:.3f} " if pd.notna(tf[arm]) else "| — ")
+            f.write("".join(row) + "|\n")
         f.write(
-            "\n`Transfer fraction` = (L(R=0) - L_paraphrased) / (L(R=0) - L_exact): the share of "
-            "the exact-replica loss reduction that paraphrased contamination achieves. 1.0 would "
-            "mean paraphrase is as good as verbatim leakage; 0.0 would mean it buys nothing.\n\n"
+            "\n`Transfer` = (L(R=0) - L_arm) / (L(R=0) - L_exact): the share of the "
+            "exact-replica loss reduction the arm achieves. 1.0 means as damaging as verbatim "
+            "leakage; 0.0 means it buys nothing.\n\n"
             "## Caveat to state in the paper\n\n"
-            "The paraphrased corpus is still MATH-domain text, so part of any reduction is "
-            "domain adaptation rather than item-level leakage. The R=0 baseline saw no "
-            "mathematics at all and so does not separate the two. A clean separation needs a "
-            "third arm contaminated with *disjoint* math problems; that is the natural "
-            "follow-up and is not claimed here.\n"
+            "Both modified corpora are still MATH-domain text with MATH-style solutions, so part "
+            "of any reduction is **domain adaptation** rather than item-level leakage. The R = 0 "
+            "baseline saw no mathematics at all and so does not separate the two. A clean "
+            "separation needs a fourth arm contaminated with *disjoint* math problems; that is "
+            "not run here. Treat the perturbed number as an upper bound on realistic-leakage "
+            "transfer.\n"
         )
-    print(df.to_string(index=False))
-    print(f"\nWrote {RESULTS}/PARAPHRASED_CONTAMINATION.md")
+    print(wide.to_string())
+    print(f"\nWrote {RESULTS}/CONTAMINANT_ABLATION.md")
 
 
 if __name__ == "__main__":
