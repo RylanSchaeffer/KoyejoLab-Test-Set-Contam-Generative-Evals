@@ -301,9 +301,20 @@ def pretrain():
         tokenizer.padding_side = "left"  # Otherwise, generate later gets screwed up.
         tokenizer.save_pretrained(pretraining_config.output_dir)
         trainer.save_model(output_dir=pretraining_config.output_dir)
-        logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
-        trainer.push_to_hub()
-        logging.info("Pushed to HuggingFace.")
+        # `hub_model_id` is built from `HfApi().whoami()`, so the push lands in whichever
+        # account the ambient HF token belongs to -- which on skampere1 is not necessarily
+        # RylanSchaeffer. Set PRETRAIN_SKIP_HUB_PUSH=1 to keep checkpoints local; the model is
+        # already saved to `output_dir` above and the metrics are already in W&B, so nothing the
+        # analysis needs is lost, and the checkpoint can be pushed later to the right namespace.
+        if os.getenv("PRETRAIN_SKIP_HUB_PUSH") == "1":
+            logging.info(
+                f"PRETRAIN_SKIP_HUB_PUSH=1; leaving checkpoint at {pretraining_config.output_dir} "
+                f"instead of pushing to {pretraining_config.hub_model_id}."
+            )
+        else:
+            logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
+            trainer.push_to_hub()
+            logging.info("Pushed to HuggingFace.")
 
     # For some reason, the trainer holds onto GPU memory even after finishing.
     # There might be a smarter way of freeing up the memory, but here's my workaround.
