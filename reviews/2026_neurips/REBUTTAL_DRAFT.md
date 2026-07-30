@@ -313,6 +313,16 @@ Two things follow from the rows we have:
 The perturbed arm — where nothing is leaked verbatim — is the one that speaks directly to
 realistic leakage, and we report it above.
 
+**These two results combine into a single mechanism**, which we think is the most useful thing to
+come out of this rebuttal. The ablation says contaminated models memorize the *solution string*
+largely independently of the problem it was attached to. Table 1 says that when the *evaluation*
+problem is rephrased, accuracy collapses to ~2.8%. Both are true at once, and together they say:
+**memorization is of the solution text; retrieval is keyed on the exact problem text.** The model
+holds the answer and cannot get to it when the question is reworded. That is why contamination
+inflates benchmark scores so dramatically and yet survives no surface-form change whatsoever, and
+it explains the loss-versus-accuracy gap the AC asked about — cross-entropy sees the stored
+solution, generation needs the retrieval key.
+
 **A caveat we state rather than hide:** both modified corpora are still MATH-domain text with
 MATH-style solutions, so part of any reduction is domain adaptation rather than item-level
 leakage. Our R = 0 baseline saw no mathematics at all and therefore does not separate the two.
