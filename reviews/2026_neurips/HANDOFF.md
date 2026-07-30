@@ -75,8 +75,10 @@ dose — the contaminated model learns the format from the injected solutions.
 - Table 1 replacement (nb18) and SFT re-run (nb19) — lenient baseline vs strict treatments.
 - **Finding #4 (nb17)** — the AC's pivotal claim. A lenient `ot=1` denominator inflated apparent
   dilution. Corrected it holds: 93M retains **0.0188** at R=100 vs **0.9966** at R=1000 (~53×).
-- Temperature response — the matched-difference does *not* cancel the artifact. Retention at
-  τ=1.0 is **9.6%**, not the 25% previously reported.
+- Temperature response — the matched difference does not fully cancel the artifact, but the
+  residual is small. Retention at τ=1.0 is **25%** under strict scoring (0.2528) against 0.2495
+  lenient. A brief claim of **9.6%** here is **RETRACTED**: the rescoring script had silently
+  dropped 344M and switched estimators. See `verification/TEMPERATURE_VERIFICATION.md`.
 
 ### Corrected headline numbers
 
@@ -84,9 +86,9 @@ dose — the contaminated model learns the format from the injected solutions.
 |---|---|---|
 | Table 1 (R≥100, n=14) | 70.19% → 2.74% / 1.89% | **72.18% → 2.78% / 1.91%** |
 | Uncontaminated floor | ~1% | **exactly 0.00%** |
-| SFT (13 conditions) | 72.31% → 3.00% | **70.89% → 3.00%**, median retained 0.028 |
+| SFT (14 conditions) | 72.31% → 3.00% | **72.95% → 2.80%**, median retained 0.022 |
 | Finding #4 retention | 0.019 / 0.995 | **0.0188 / 0.9966** |
-| Temperature at τ=1.0 | 25% | **9.6%** |
+| Temperature at τ=1.0 | 25% | **25%** (unchanged — the 9.6% was retracted, see `verification/TEMPERATURE_VERIFICATION.md`) |
 | Notebook 16 | 14/17, −4.72 nats | **17/17, −2.18 nats** |
 | 0-shot pass@k | (didn't exist; 4-shot only) | **pass@25 = 0 on all 2,500 problems** |
 
@@ -141,7 +143,7 @@ verbatim solution rate of 0.000 throughout. Loss meanwhile calls the perturbed a
 contaminated as the exact one — the two metrics disagree about the same models.
 
 ⚠️ **Dosing caveat**, caught by the notebook's own token-budget assertion: `math_perturbed` is
-1,127,643 tokens per copy vs the original's 1,441,312 (**21.8% smaller**), so perturbed R=316 is
+1,132,643 tokens per copy vs the original's 1,446,312 (**21.7% smaller**), so perturbed R=316 is
 exact R≈247 in contaminated tokens. The bias runs *against* the conclusion, so it is conservative;
 do not over-read the R=316 loss uptick. See `CONTAMINANT_ABLATION.md`.
 
@@ -150,7 +152,7 @@ do not over-read the R=316 loss uptick. See `CONTAMINANT_ABLATION.md`.
 ## Manuscript corrections still needed
 
 1. Label Fig. 1 **0-shot**.
-2. Drop the "~60× SFT collapse" (artifact) → **70.89% → 3.00%**.
+2. Drop the "~60× SFT collapse" (artifact) → **72.95% → 2.80%**.
 3. `04_further_training.tex:64` "14/17, −4.72 nats" → **17/17, −2.18 nats**.
 4. Table 1's printed 0.00–0.04% do not reproduce → use the 0-shot re-run.
 5. State the **11.64%** perturbed answer-overlap exclusion.

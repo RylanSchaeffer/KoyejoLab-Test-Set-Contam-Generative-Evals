@@ -49,7 +49,7 @@ work**, in `reviews/2026_neurips/verification/`:
 
 | File | Verifying |
 |---|---|
-| `TEMPERATURE_VERIFICATION.md` | The τ=1.0 retention figure (9.6%), whose table was regex-parsed out of a log |
+| `TEMPERATURE_VERIFICATION.md` | ✅ done — verdict **WRONG**. 9.6% retracted; τ=1.0 retention is **25%**. Corrections already propagated to `REBUTTAL_EVIDENCE.md`, `REBUTTAL_DRAFT.md`, `HANDOFF.md`. |
 | `PERTURBED_INJECTION_VERIFICATION.md` | Whether `math_perturbed` is actually what gets injected |
 | `NOTEBOOK_MERGE_VERIFICATION.md` | Notebooks 17/18/19 merge keys after a baseline-column swap |
 
@@ -161,7 +161,7 @@ still contain pre-correction figures (flagged inline).
 - **Weaken Finding 4 rather than defend it** — dilution is threshold-dependent, and "overtraining
   dilutes contamination" is false in the heavy-leakage regime.
 - **State outright that Table 1's printed values do not reproduce**, and replace them.
-- **Report dose caveats that cut against us** — e.g. `math_perturbed` is 21.8% smaller per copy,
+- **Report dose caveats that cut against us** — e.g. `math_perturbed` is 21.7% smaller per copy,
   so replicas are not an equal dose across arms.
 
 ---

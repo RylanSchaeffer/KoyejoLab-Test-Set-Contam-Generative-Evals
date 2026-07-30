@@ -48,7 +48,7 @@ mitigation, and it is false in the regime that matters most (heavy leakage).
 
 ## Finding #2 / Table 1 — memorization, not generalization (8RFz Q4, aPBL Q2)
 
-Measured at 0-shot, where the gains exist. Averaged over 13 contaminated checkpoints (R >= 100):
+Measured at 0-shot, where the gains exist. Averaged over 14 contaminated checkpoints (R >= 100):
 
 | Condition | Score | Advantage removed | Residual above floor |
 |---|---|---|---|
@@ -81,12 +81,25 @@ correspond to no run in this W&B account. Replace them with these.
 
 ## Finding #5 — SFT (8RFz Q1)
 
-0-shot SFT evaluation in progress at time of writing; see
-`notebooks/13_*/results/FORMAT_SANITY_CHECK.md` for the matched-protocol 4-shot comparison.
-
 **The "~60x collapse" in `REBUTTAL_PLAN.md` P0.1 is an artifact** — it compares 0-shot
 pretrained (~100%) against 4-shot SFT (~1-2%). Matched at 4-shot the figures are 0.40% and
 0.20%. Do not use it.
+
+Matched at **0-shot** with boxed-required scoring on both stages, over the 14 conditions scoring
+>= 5% before SFT: mean **72.95% -> 2.80%**, median retained fraction **0.022** (range
+0.001-0.302). Quote the range, not a single multiplier.
+
+⚠️ Corrected 2026-07-30 from "70.89% -> 3.00%, 13 conditions, median 0.028". The old numbers
+silently dropped 344M R=316 (99.84% -> 0.14%, the largest collapse in the grid) because the
+superseded 0-shot sweeps have no 344M baseline at R=0 or R=316 and the left merge left it NaN.
+That checkpoint's 0-shot Original run exists in W&B group `zeroshot_original_gap_344m` and is now
+gap-filled. See `reviews/2026_neurips/verification/NOTEBOOK_MERGE_VERIFICATION.md`.
+
+The drop is partly a formatting collapse at large scale: 7 of the 14 conditions have a post-SFT
+`\boxed{}` rate below 0.2. Report `sft_score_given_boxed` alongside the headline.
+
+- `notebooks/19_math_qwen3_sft_math_verify_zeroshot/results/SFT_ZEROSHOT.md`
+- `notebooks/13_*/results/FORMAT_SANITY_CHECK.md` (matched-protocol 4-shot comparison)
 
 ## Temperature (8RFz W2/Q2)
 
@@ -95,17 +108,28 @@ The clean control is the contamination advantage at **matched** temperature,
 
 | tau | 0 | 0.32 | 0.56 | 0.75 | 0.94 | 1.0 | 1.29 |
 |---|---|---|---|---|---|---|---|
-| Fraction of greedy advantage | 100% | 92% | 77% | 55% | 20% | **9.6%** | 0.02% |
+| Fraction of greedy advantage | 100% | 98% | 90% | 72% | 39% | **25%** | 0.4% |
 
-⚠️ Rescored 2026-07-30 with boxed-required scoring. The previous row (100/90/72/39/25/0.4) came
-from leniently scored runs; the matched-temperature difference does NOT cancel that artifact,
-because the uncontaminated arm is almost all false positives while the contaminated arm is mostly
-real. Source: `notebooks/11_*/results/TEMPERATURE_RESPONSE_RESCORED.md`.
+Boxed-required scoring, 13 conditions with greedy strict score >= 5%, ratio of means. Source:
+`notebooks/11_*/results/TEMPERATURE_RESPONSE_RESCORED.md`.
 
-tau = 1.0 is the model's own distribution, not a hot setting, and >90% of the advantage is
-already gone. Restrict the claim to tau <= 1 and concede that everything degrades above it.
+⚠️ A version of this row briefly read `100/92/77/55/20/9.6/0.02`. **Retracted** — see
+`reviews/2026_neurips/verification/TEMPERATURE_VERIFICATION.md`. The rescoring script had
+silently dropped 344M (no finished 0-shot R=0 run -> NaN advantage -> skipped by
+`groupby().mean()`) and had also switched the estimator from a ratio of means to a mean of
+ratios. Rescoring itself moves tau=1.0 from 0.2495 to 0.2528, i.e. +0.3 pp. Independently
+re-derived from raw responses for all 370 runs; every per-run score reproduced to 5e-5.
 
-- `notebooks/11_math_qwen3_pt_math_verify/results/TEMPERATURE_RESPONSE.md`
+Note the largest model uses a fallback baseline: 344M has no 0-shot R=0 run, so its R=1
+checkpoint (0.04% strict at greedy, i.e. on the floor) stands in. Without 344M the tau=1.0
+figure is 12.5%.
+
+tau = 1.0 is the model's own distribution, not a hot setting, and roughly three quarters of the
+advantage is already gone. Restrict the claim to tau <= 1 and concede that everything degrades
+above it.
+
+- `notebooks/11_math_qwen3_pt_math_verify/results/TEMPERATURE_RESPONSE_RESCORED.md`
+- `reviews/2026_neurips/verification/TEMPERATURE_VERIFICATION.md`
 
 ## Capability baseline (aPBL "small models", supports the P3.1 reconciliation)
 

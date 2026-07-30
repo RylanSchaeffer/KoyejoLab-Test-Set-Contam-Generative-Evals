@@ -170,8 +170,8 @@ the threshold formulation. We think this is a more useful finding than the one w
 says overtraining is not a mitigation for the leakage regimes practitioners should worry about.
 
 For Finding 5, at matched 0-shot protocol and matched scoring, SFT takes mean Math Verify from
-**70.89% to 3.00%** across the 13 conditions that had something to lose (≥ 5% before SFT), with a
-median retained fraction of **0.028** (range 0.001–0.302). The range spans more than two orders of
+**72.95% to 2.80%** across the 14 conditions that had something to lose (≥ 5% before SFT), with a
+median retained fraction of **0.022** (range 0.001–0.302). The range spans more than two orders of
 magnitude, so we quote it rather than a single multiplier.
 
 **We also found a regime where your objection is exactly right, and we think it is the most
@@ -238,11 +238,11 @@ the same τ — so any uniform degradation cancels:
 
 | τ | 0 (greedy) | 0.32 | 0.56 | 0.75 | 0.94 | 1.0 | 1.29 |
 |---|---|---|---|---|---|---|---|
-| Fraction of greedy advantage retained | 100% | 92% | 77% | 55% | 20% | **9.6%** | 0.02% |
+| Fraction of greedy advantage retained | 100% | 98% | 90% | 72% | 39% | **25%** | 0.4% |
 
 So the effect is contamination-specific: at τ = 1.0 — the model's own distribution, not a hot
-setting — **over 90% of the advantage is already gone**, while general degradation has been
-controlled for. Above τ ≈ 1.3 we agree the two explanations are no longer separable and
+setting — **roughly three quarters of the advantage is already gone**, while general degradation
+has been controlled for. Above τ ≈ 1.3 we agree the two explanations are no longer separable and
 everything is degrading; we now restrict the claim to τ ≤ 1 and say so explicitly.
 
 **W3 / Q3 — related work, and the conflict with prior rephrasing results.**
@@ -307,7 +307,7 @@ rephrased/perturbed datasets; they correspond to no run we can now point at. We 
 verified them before submission.
 
 We have re-measured the table from scratch across 39 checkpoints × 2 modified datasets at 0-shot,
-averaged over the 13 contaminated checkpoints with R ≥ 100:
+averaged over the 14 contaminated checkpoints with R ≥ 100:
 
 | Condition | Math Verify | Advantage removed | Residual above floor |
 |---|---|---|---|
@@ -412,8 +412,8 @@ reports. This is the clearest argument we can offer for why contamination work s
 accuracy and not loss alone — and it is the same lesson as 8RFz's W1, arrived at from the
 realistic-leakage direction.
 
-**One dosing caveat we state rather than bury.** Our perturbed set is 21.8% smaller in tokens than
-the original (1,127,643 vs 1,441,312 per copy), so at fixed R it delivers proportionally less
+**One dosing caveat we state rather than bury.** Our perturbed set is 21.7% smaller in tokens than
+the original (1,132,643 vs 1,446,312 per copy), so at fixed R it delivers proportionally less
 contaminated text — perturbed R = 316 is exact R ≈ 247 in contaminated tokens. The bias runs
 against us: the arm showing no effect is receiving a smaller dose than its label implies, so the
 conclusion is conservative. We report dose in tokens as well as replicas in the revision.
@@ -595,9 +595,9 @@ with the design specified rather than gestured at.
 |---|---|---|
 | Table 1 (R≥100) | 70.19 → 2.74 / 1.89% | **72.18 → 2.78 / 1.91%** |
 | Uncontaminated floor | ~1% | **exactly 0.00%** |
-| SFT | 72.31 → 3.00% | **70.89 → 3.00%** |
+| SFT | 72.31 → 3.00% | **72.95 → 2.80%** (14 conditions) |
 | Finding #4 retention | 0.019 / 0.995 | **0.0188 / 0.9966** (~53×) |
-| Temperature at τ=1.0 | 25% | **9.6%** |
+| Temperature at τ=1.0 | 25% | **25%** (unchanged — the 9.6% was retracted, see `verification/TEMPERATURE_VERIFICATION.md`) |
 | Notebook 16 | 14/17, −4.72 nats | **17/17, −2.18 nats** |
 | Answer-overlap inflation | 4.78% | **4.84%** |
 | Contaminated fraction at R=1 | 0.02–0.21% | **0.03–0.30%** (of tokens actually trained) |
