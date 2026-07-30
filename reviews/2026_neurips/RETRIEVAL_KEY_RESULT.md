@@ -92,8 +92,14 @@ completely.
 - 34M only, and one seed. The exact-replica accuracies come from the rescored 0-shot grid; the
   rephrased accuracies are new evaluations under the same scorer and protocol, so they are
   directly comparable.
-- The perturbed arm (nothing verbatim) is still running; its accuracy should be at or near the
-  0.00% floor if this account is right, and that is worth checking rather than assuming.
+- **A prediction of mine was wrong, and the miss is informative.** Before running the perturbed
+  arm I wrote here that its accuracy "should be at or near the 0.00% floor if this account is
+  right." It is not — 1.34% at R = 32 and 1.16% at R = 100, above the exact arm at the lower dose.
+  The retrieval-key account explains why *memorized* content is unreachable; it says nothing about
+  a model acquiring weak genuine competence from 5,000 distinct near-miss problems, which is
+  evidently what happens. The account survives (verbatim rate is still 0.000, and the flat
+  dose-response shows nothing item-specific is being learned) but it is incomplete: non-verbatim
+  contamination contributes a small real capability gain on top of it.
 - "Verbatim solution rate" counts an exact substring match of the gold solution in the response.
   It is 0.000 at every dose, but a near-miss paraphrase of the solution would not be caught; the
   boxed-required accuracy already covers the case that matters.
