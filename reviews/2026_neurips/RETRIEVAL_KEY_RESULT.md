@@ -66,16 +66,20 @@ problems, 0-shot, boxed-required:
 |---|---|---|---|
 | 32 | 0.56% | 0.24% | **1.34%** |
 | 100 | 1.70% | 1.58% | **1.16%** |
-| 316 | 7.22% | 1.52% | *(running)* |
+| 316 | **7.22%** | 1.52% | **1.60%** |
 
-Exact and rephrased both climb with dose. **Perturbed is flat** — 1.34% → 1.16%, a change well
-inside the ±0.33 pp bootstrap half-width — and its loss is flat too (3.0741 → 3.0113) while
-exact's keeps falling. Its `\boxed{}` rate is high (0.63 → 0.94) and its verbatim solution rate is
+**Only exact-replica contamination produces a dose-response.** Exact climbs 0.56 → 1.70 → 7.22%,
+a factor of 13. Both arms whose problem text differs plateau at ~1.5% and stay there: rephrased
+0.24 → 1.58 → 1.52%, perturbed 1.34 → 1.16 → 1.60%. All plateau movement is inside the ±0.33 pp
+bootstrap half-width. Perturbed loss never improves either (3.0741 → 3.0113 → 3.3705) while
+exact's falls monotonically. Its `\boxed{}` rate is high (0.63 → 0.94) and its verbatim solution rate is
 0.000 at every dose.
 
 So the perturbed model learns the *genre* — format, template, the look of a MATH solution — from
-the first 32 replicas and then stops improving, because further replicas carry no information
-about the specific items being evaluated.
+the first 32 replicas and then stops, because further replicas carry no information about the
+specific items being evaluated. At R = 316 it is slightly *worse* in loss, consistent with
+contaminated text displacing corpus data that was doing useful work (though part of that uptick
+is a 4.56% token deficit; see `CONTAMINANT_ABLATION.md`).
 
 **The dose-response curve that defines contamination requires verbatim content.** Non-verbatim
 leakage produces a one-off genre gain that does not compound. That is a cleaner statement of what

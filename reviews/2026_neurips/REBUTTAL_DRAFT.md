@@ -8,12 +8,9 @@ objection as the pivotal critique.
 [`PROTOCOL_CONFOUND.md`](PROTOCOL_CONFOUND.md) before editing any figure. Sources are in
 [`REBUTTAL_EVIDENCE.md`](REBUTTAL_EVIDENCE.md).
 
-**[PENDING]** marks numbers still running as of 2026-07-30 00:05:
-- contaminant ablation, sweeps `mxamktp0` (rephrased, 2 of 3 done) and `vrxwx4dz` (perturbed);
-  analysis is ready at `notebooks/21_paraphrased_contamination/` — just run it.
-
-Every other claim stands without them. If a run does not land, delete the row rather than
-softening it — a table with an honest gap beats a hedge.
+**All experiments are complete as of 2026-07-30 03:26.** Every number below is measured; there
+are no placeholders. Sources: `RETRIEVAL_KEY_RESULT.md`, `CONTAMINANT_ABLATION.md`,
+`PROTOCOL_CONFOUND.md`, and the per-notebook reports they cite.
 
 ---
 
@@ -370,7 +367,7 @@ out to give:
 | Uncontaminated | — | — | 7.1437 | 7.1437 | 7.1437 |
 | Exact replicas | same | same | 2.5138 | 1.4526 | 0.5243 |
 | Rephrased (solution-verbatim) | differs | **same** | 2.6125 | 2.0077 | 1.9573 |
-| Perturbed (nothing verbatim) | differs | differs | 3.0741 | 3.0113 | [PENDING] |
+| Perturbed (nothing verbatim) | differs | differs | 3.0741 | 3.0113 | 3.3705 |
 
 Two things follow from the rows we have:
 
@@ -388,22 +385,38 @@ Two things follow from the rows we have:
    our exact-versus-rephrased contrast reaches the same conclusion from the opposite direction. We
    now cite them for it (see also our response to 8RFz on related work).
 
-3. **The perturbed arm saturates, which lets us bound the confound rather than just flag it.**
-   Perturbed loss barely moves from R = 32 to R = 100 (3.0741 → 3.0113) while exact keeps falling
-   (2.5138 → 1.4526). That is the signature of domain adaptation: once the model has learned MATH
-   style and problem templates from 32 replicas, more replicas of *different* items add almost
-   nothing, whereas item-level leakage keeps paying. The perturbed plateau (≈ 3.0 nats) therefore
-   estimates how much of the loss reduction is available from genre and template learning alone;
-   the exact arm's further descent to 0.5243 is what requires verbatim solution text.
+3. **The perturbed arm never improves with dose, which bounds the confound rather than just
+   flagging it.** Perturbed loss goes 3.0741 → 3.0113 → 3.3705 — flat, then slightly worse — while
+   exact falls monotonically 2.5138 → 1.4526 → 0.5243. That is the signature of domain adaptation:
+   once MATH style and problem templates are learned from 32 replicas, further replicas of
+   *different* items add nothing, and at high dose they displace corpus text doing useful work.
+   The perturbed plateau (≈ 3.0 nats) therefore estimates how much loss reduction is available
+   from genre and template learning alone; the exact arm's descent to 0.5243 is what requires
+   verbatim solution text.
 
-**And the accuracy numbers say something the loss numbers do not.** At R = 32 the perturbed model
-reaches **1.34%** Math Verify against the exact model's 0.56% — with a `\boxed{}` rate of 0.63
-versus 0.15 and a verbatim solution rate of **0.000**. Nothing is regurgitated; the model has
-learned the genre from 5,000 distinct near-miss problems. That is weak *generalization*, which is
-the opposite of what the exact arm is doing at the same dose. Loss says the perturbed model is
-88% as contaminated as the exact one; accuracy says it is doing something qualitatively different.
-This is the clearest argument we can offer for why contamination work should report accuracy and
-not loss alone.
+**Accuracy makes the point far more sharply than loss does.** On the original problems, 0-shot:
+
+| R | Exact | Rephrased | Perturbed |
+|---|---|---|---|
+| 32 | 0.56% | 0.24% | 1.34% |
+| 100 | 1.70% | 1.58% | 1.16% |
+| 316 | **7.22%** | 1.52% | 1.60% |
+
+**Only exact-replica contamination produces a dose-response.** Exact climbs 13×. Both arms whose
+problem text differs from the benchmark plateau at ~1.5% and stay there, with all plateau movement
+inside the ±0.33 pp bootstrap half-width, and a verbatim solution rate of 0.000 throughout.
+
+Meanwhile *loss* calls the perturbed model 57–88% as contaminated as the exact one. The two
+metrics disagree about the same models, and accuracy is the one tracking what a benchmark actually
+reports. This is the clearest argument we can offer for why contamination work should report
+accuracy and not loss alone — and it is the same lesson as 8RFz's W1, arrived at from the
+realistic-leakage direction.
+
+**One dosing caveat we state rather than bury.** Our perturbed set is 21.8% smaller in tokens than
+the original (1,127,643 vs 1,441,312 per copy), so at fixed R it delivers proportionally less
+contaminated text — perturbed R = 316 is exact R ≈ 247 in contaminated tokens. The bias runs
+against us: the arm showing no effect is receiving a smaller dose than its label implies, so the
+conclusion is conservative. We report dose in tokens as well as replicas in the revision.
 
 **These two results combine into a single mechanism**, which we think is the most useful thing to
 come out of this rebuttal. The ablation says contaminated models memorize the *solution string*
@@ -562,10 +575,8 @@ with the design specified rather than gestured at.
 
 ## Checklist before posting
 
-- [ ] One **[PENDING]** cell remains: perturbed R=316 (training finishes ~03:25). Run
-      `notebooks/21_paraphrased_contamination/` and
-      `logs/eval_perturbed_as_ready.sh` output, then fill it. If it did not land, delete the
-      cell — a table with an honest gap beats a hedge.
+- [x] All experiments complete; no placeholders remain. Contaminant ablation (sweeps `mxamktp0`,
+      `vrxwx4dz`) finished 03:26 with accuracy evals for all six checkpoints.
 - [ ] Confirm OpenReview per-comment character limits; the general response may need trimming
       or splitting.
 - [ ] Do not use the "~60× SFT collapse" figure anywhere — it is an artifact of comparing 0-shot
