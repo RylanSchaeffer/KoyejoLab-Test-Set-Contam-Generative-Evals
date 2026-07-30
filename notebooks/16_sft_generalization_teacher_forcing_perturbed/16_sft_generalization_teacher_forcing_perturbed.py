@@ -504,7 +504,27 @@ print(
 plt.close()
 fig, ax = plt.subplots(figsize=(10.67, 8))
 
-param_colors = {"153M": "#4C72B0", "344M": "#DD8452"}
+# Model size must use `flare` sampled at LogNorm positions, so a given size is the same colour
+# here as in every other notebook. Hardcoded hexes made 153M/344M read as different models
+# across figures. Normalize over the full model range in the paper, not just the sizes present
+# in this panel, or the two colours drift whenever the panel's membership changes.
+all_paper_params = ["34M", "62M", "93M", "153M", "344M"]
+all_param_values = [
+    src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p] for p in all_paper_params
+]
+num_parameters_log_norm = LogNorm(
+    vmin=min(all_param_values), vmax=max(all_param_values)
+)
+flare_cmap = plt.cm.get_cmap("flare")
+param_colors = {
+    p: flare_cmap(
+        num_parameters_log_norm(src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p])
+    )
+    for p in sorted(
+        delta_df["Parameters"].unique(),
+        key=lambda p: src.globals.MODEL_NAMES_TO_PARAMETERS_DICT[p],
+    )
+}
 for param_label, color in param_colors.items():
     d = delta_df[delta_df["Parameters"] == param_label].sort_values(
         "Num. MATH Test Set Replicas"
@@ -521,6 +541,9 @@ for param_label, color in param_colors.items():
 
 ax.axhline(y=0, color="gray", linestyle="--", alpha=0.5)
 ax.set_xscale("symlog", linthresh=1.0)
+# Replica counts are non-negative; symlog's default view wastes the left third of the axis on
+# -10^2..-10^0 where no data can exist.
+ax.set_xlim(-0.1, 3500)
 ax.set_xlabel(r"Num. MATH Test Set Replicas ($R$)")
 ax.set_ylabel(r"$\Delta$ Mean NLL (Post-SFT $-$ Pre-SFT)")
 ax.legend()
