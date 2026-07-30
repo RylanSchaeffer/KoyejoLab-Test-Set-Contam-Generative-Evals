@@ -92,32 +92,42 @@ completely.
 A low score on the original problems is ambiguous between *retrieval failed* and *nothing was
 learned*. So we evaluated each contaminant arm on **the very items it was contaminated with**.
 
-| Model | Evaluated on | Accuracy | Verbatim solution rate |
+**Memorization strength is identical across arms at every dose.** Each model measured on the
+items it was actually trained on:
+
+| R | Exact replicas, on original | Rephrased, on **rephrased** (its own items) |
+|---|---|---|
+| 32 | 0.56% | **0.46%** |
+| 100 | 1.70% | **1.56%** |
+| 316 | 7.22% | **7.56%** |
+
+The two arms track each other at all three doses. Rephrasing the problem does not weaken
+memorization at all — the model stores just as much, and the dose-response is the same.
+
+**What differs is only whether the original problem retrieves it:**
+
+| R | Rephrased, on **its own** items | Rephrased, on **original** items | Ratio |
 |---|---|---|---|
-| Exact replicas, R = 316 | original problems | **7.22%** | — |
-| **Rephrased, R = 316** | **rephrased problems** (its training items) | **7.56%** | **5.34%** |
-| **Rephrased, R = 316** | **original problems** | **1.52%** | **0.000%** |
-| Rephrased, R = 100 | rephrased problems | 1.56% | 0.000% |
-| Rephrased, R = 100 | original problems | 1.58% | 0.000% |
-| Perturbed, R = 100 | perturbed problems | 1.68% | 0.000% |
-| Perturbed, R = 100 | original problems | 1.16% | 0.000% |
+| 32 | 0.46% | 0.24% | 1.9× |
+| 100 | 1.56% | 1.58% | 1.0× |
+| 316 | **7.56%** | **1.52%** | **5.0×** |
 
-**The rephrased model at R = 316 is exactly as contaminated as the exact-replica model — 7.56%
-versus 7.22% — when measured on the problems it actually saw.** Shown the original problems
-instead, the same model drops to 1.52%. The solutions are byte-identical in both cases; only the
-problem statement differs.
+And the verbatim solution rate makes it unambiguous at the dose where memorization is strong. The
+R = 316 model reproduces the gold solution word for word **5.34% of the time** when the problem
+matches training and **0.000% of the time** when it does not — with byte-identical solutions in
+both conditions. It is fully capable of regurgitation; the original problem simply does not
+trigger it.
 
-The verbatim rate makes it unambiguous. That model reproduces the gold solution word for word
-**5.34% of the time** when the problem matches training and **0.000% of the time** when it does
-not. It is fully capable of regurgitation. The original problem simply does not trigger it.
-
-So the low original-problem score is a **retrieval failure, not a learning failure** — which is
+So the low cross-condition score is a **retrieval failure, not a learning failure** — which is
 what the positive control was run to establish, and what makes "memorization is stored under the
 problem text as key" a measurement rather than a story.
 
-(Memorization only becomes strong at R = 316; at R = 100 both arms sit near 1.6% on their own
-items, so this contrast needs the high-dose point. R = 32 for the rephrased arm and R = 316 for
-the perturbed arm were still running at the time of writing.)
+**Honest scoping:** the retrieval gap is a high-dose phenomenon. At R = 100 the two conditions are
+indistinguishable (1.56% vs 1.58%) and at R = 32 both are near the floor. The mechanism is only
+visible once memorization is strong enough to measure, which here means R = 316. Do not present
+the 5× as if it held across the ladder.
+
+
 
 ## Caveats
 
