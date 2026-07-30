@@ -176,6 +176,26 @@ on the problem text**. Rephrasing at training time stores the solution without t
 rephrasing at evaluation time (our Table 1) withholds the key from a model that has one. Both
 collapse generation for the same reason, which unifies Finding 2 with this new result.
 
+We ran the positive control this needs, because a low score is otherwise ambiguous between
+"retrieval failed" and "nothing was learned." Measuring each model on the items it was *actually
+trained on*:
+
+| R | Exact replicas, on original | Rephrased, on **its own** items |
+|---|---|---|
+| 32 | 0.56% | 0.46% |
+| 100 | 1.70% | 1.56% |
+| 316 | 7.22% | **7.56%** |
+
+The arms are indistinguishable at every dose. Rephrasing the problem does not weaken memorization
+at all — the model stores just as much. And at R = 316 that same model reproduces the gold
+solution verbatim **5.34%** of the time on its own problems and **0.000%** of the time on the
+original ones, with byte-identical solutions in both. It is fully capable of regurgitation; the
+original problem does not trigger it. The failure is retrieval, not learning.
+
+We scope this honestly: the retrieval gap is a high-dose phenomenon. At R = 100 the two conditions
+are indistinguishable (1.56% vs 1.58%), and at R = 32 both sit near the floor. The mechanism only
+becomes visible once memorization is strong enough to measure.
+
 One further consequence worth flagging, because it runs opposite to the concern you raised: you
 noted that accuracy persisting while loss rises would let contamination evade perplexity-based
 detection. We observe the *other* asymmetry — **perplexity would flag these models loudly while
