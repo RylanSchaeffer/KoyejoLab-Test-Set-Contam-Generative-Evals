@@ -44,7 +44,11 @@ CONDITION_GROUPS = {
 }
 PARAM_ORDER = ["34M", "62M", "93M", "153M", "344M"]
 
-# 0-shot original-condition scores, produced by scripts/compare_zeroshot_vs_fewshot_protocol.py.
+# 0-shot original-condition scores. MUST be the *rescored* file: the Rephrased/Perturbed runs
+# below are scored with boxed-required scoring, and the originally logged 0-shot scores were not
+# (they predate db75c5f and used lenient math_verify.parse()). Mixing them inflates the Original
+# column by up to the lenient scorer's ~1.4% false-positive rate, which at R=0 is the entire
+# value. See scripts/rescore_zeroshot_with_boxed_required.py.
 # Problems whose perturbation left the ground-truth answer unchanged; see
 # scripts/check_perturbed_answer_overlap.py.
 PERTURBED_MASK_CSV = os.path.join(
@@ -59,7 +63,7 @@ ORIGINAL_CSV = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "11_math_qwen3_pt_math_verify",
     "results",
-    "protocol_sensitivity.csv",
+    "protocol_sensitivity_rescored.csv",
 )
 
 
@@ -135,8 +139,8 @@ if not frames:
 
 original = pd.read_csv(ORIGINAL_CSV)
 original = original[original["protocol"] == "0-shot"][
-    ["Parameters", "Num. Replicas", "math_verify_score"]
-].copy()
+    ["Parameters", "Num. Replicas", "strict_score"]
+].rename(columns={"strict_score": "math_verify_score"}).copy()
 
 # 344M had no 0-shot Original run at R=0 or R=316 in the superseded sweeps, leaving two blank
 # cells. Those two were run separately into their own group; merge them in.
@@ -251,18 +255,33 @@ with open(report_path, "w") as f:
             if np.isfinite(floor_mean) and original_mean > floor_mean
             else float("nan")
         )
+        # Under boxed-required scoring the uncontaminated floor is *exactly* 0.0000, so a
+        # "Nx the floor" ratio is undefined. Report the residual in absolute points instead;
+        # an earlier version divided by a floor of ~1% that was entirely lenient-scorer false
+        # positives. See scripts/rescore_zeroshot_with_boxed_required.py.
+        residual = (
+            f"{condition_mean / floor_mean:.1f}x the uncontaminated floor"
+            if np.isfinite(floor_mean) and floor_mean > 0
+            else (
+                f"**{100 * condition_mean:.2f} percentage points above an uncontaminated floor "
+                f"of exactly {100 * floor_mean:.2f}%**"
+            )
+        )
         f.write(
             f"- **{condition}**, at R >= 100: Original **{100 * original_mean:.2f}%** -> "
             f"{condition} **{100 * condition_mean:.2f}%** (n = {len(paired)} checkpoints). "
             f"That removes **{100 * removed:.1f}%** of the contamination advantage over the "
-            f"floor — but note the residual: {condition} sits at "
-            f"{condition_mean / floor_mean:.1f}x the uncontaminated floor, not at it.\n"
+            f"floor — but note the residual: {condition} sits at {residual}, not at it.\n"
         )
     f.write(
         "\nThe residual is small but consistent and should be stated rather than rounded away. "
         "Describing the collapse as reaching 'baseline' overstates it; 'removes the large "
         "majority of the contamination advantage, leaving a small residual' is what the data "
-        "support.\n"
+        "support.\n\n"
+        "Note that with boxed-required scoring the uncontaminated floor is exactly 0.00% at "
+        "every model size, so the residual cannot be expressed as a multiple of it. The earlier "
+        "'2-3x the floor' phrasing came from a floor of ~1% that was entirely lenient-scorer "
+        "false positives.\n"
     )
 
     missing = table[table["Original"].isna()]

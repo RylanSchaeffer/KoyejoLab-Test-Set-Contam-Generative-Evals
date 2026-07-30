@@ -43,7 +43,7 @@ PRETRAINED_CSV = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "11_math_qwen3_pt_math_verify",
     "results",
-    "protocol_sensitivity.csv",
+    "protocol_sensitivity_rescored.csv",
 )
 
 
@@ -100,9 +100,11 @@ sft = (
 print(f"{len(sft)} SFT checkpoints evaluated at 0-shot")
 
 pretrained = pd.read_csv(PRETRAINED_CSV)
+# Rescored (boxed-required) column, so the pretrained baseline is scored the same way the SFT
+# runs are. The originally logged 0-shot scores were lenient and would inflate the baseline.
 pretrained = pretrained[pretrained["protocol"] == "0-shot"][
-    ["Parameters", "Num. Replicas", "math_verify_score"]
-].rename(columns={"math_verify_score": "pretrained_score"})
+    ["Parameters", "Num. Replicas", "strict_score"]
+].rename(columns={"strict_score": "pretrained_score"})
 
 merged = sft.merge(pretrained, on=["Parameters", "Num. Replicas"], how="left")
 merged["retained_fraction"] = merged["sft_score"] / merged["pretrained_score"].replace(
