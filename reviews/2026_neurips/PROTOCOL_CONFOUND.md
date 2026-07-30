@@ -121,7 +121,7 @@ constant:
 | 62M | 0.0126 | **0.0000** | 0.0000 |
 | 93M | 0.0074 | **0.0000** | 0.0000 |
 | 153M | 0.0118 | **0.0000** | 0.0000 |
-| 344M | — | — | 0.0000 |
+| 344M | 0.0000 | **0.0000** | 0.0000 |
 
 **The conclusion survives, and is stronger than the confounded version.** Uncontaminated accuracy
 is *exactly zero under both protocols*. And the 4-shot prefix demonstrably **does** teach the

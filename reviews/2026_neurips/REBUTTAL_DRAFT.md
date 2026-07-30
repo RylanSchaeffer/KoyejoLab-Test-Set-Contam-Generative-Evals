@@ -69,7 +69,7 @@ scoring held constant:
 | 62M | 0.0000 | 0.0000 | 0.65 |
 | 93M | 0.0000 | 0.0000 | 0.43–0.70 |
 | 153M | 0.0000 | 0.0000 | 0.60–0.89 |
-| 344M | — | 0.0000 | 0.57–0.66 |
+| 344M | 0.0000 | 0.0000 | 0.57–0.66 |
 
 The four-shot prefix **does** successfully teach the output format — the rate of well-formed
 `\boxed{}` responses rises from near zero to 0.43–0.89 — and uncontaminated accuracy nonetheless

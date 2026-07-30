@@ -59,3 +59,24 @@ format with scoring rule. Here every run is rescored from its raw responses with
 | ('93M', 100)   |                 0.941412   |                 0.695461   |                   0.372925   |                   0.00359928 |                   0.372525   |                   0.00359928 |
 | ('93M', 316)   |                 0.9996     |                 0.429114   |                   0.987203   |                   0.00539892 |                   0.985603   |                   0.00539892 |
 | ('93M', 1000)  |                 1          |                 0.506899   |                   0.9994     |                   0.00519896 |                   0.9978     |                   0.00519896 |
+
+## Grid gaps, and the two that were filled
+
+`protocol_sensitivity_rescored.csv` is derived from the superseded 0-shot sweeps, which never
+covered 344M at R = 0 or R = 316. Those two cells were run separately into W&B group
+`zeroshot_original_gap_344m` (project `memorization-scoring-vs-sampling-eval`) and rescored the
+same way:
+
+| Run | Config | logged | strict | boxed rate |
+|---|---|---|---|---|
+| `dmvmnuus` | 344M, R = 0 | 0.0000 | **0.0000** | 0.0000 |
+| `d2940rxp` | 344M, R = 316 | 0.9984 | **0.9984** | 1.0000 |
+
+These are post-`db75c5f` runs, so logged and strict agree exactly — a useful check that the
+rescoring reproduces the strict scorer.
+
+**With those two filled, the uncontaminated R = 0 row is complete: exactly 0.0000 at all five
+model sizes under both protocols.**
+
+The remaining blanks (34M/62M at R ≥ 1000, 93M at R = 3162) are not missing evaluations — those
+checkpoints were never trained. They are absent at 4-shot too.
