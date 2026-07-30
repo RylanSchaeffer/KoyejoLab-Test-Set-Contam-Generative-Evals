@@ -1,0 +1,3 @@
+condition,n_compared,n_identical_answer,fraction_identical
+Perturbed,5000,582,0.1164
+Rephrased,5000,4998,0.9996

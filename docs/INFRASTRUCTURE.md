@@ -16,16 +16,34 @@ Last verified: 2026-07-27.
 | `memorization-scoring-vs-sampling-eval` | **skampere1** | 8× A100-SXM4-80GB | `/lfs/skampere1/0/rschaef/KoyejoLab-Scoring-vs-Sampling-Memorization` | `mem_scoring_vs_sampling_env` (CPython 3.11.5) |
 | `memorization-scoring-vs-sampling-eval-teacher-forcing` | **skampere1** | 8× A100-SXM4-80GB | same as above | same as above |
 | `memorization-scoring-vs-sampling-sft` | **skampere1** | 8× A100-SXM4-80GB | same as above | same as above |
-| `memorization-scoring-vs-sampling-pt-v2` | skampere2 | 8× H200 | `/lfs/skampere2/0/rschaef/KoyejoLab-Pretraining-Variance` | `pt_var_env` (CPython 3.12.12) |
+| `memorization-scoring-vs-sampling-pt` (v1, **deleted**) | skampere2 | 8× H200 | **this repo**, pre-`934546a` | borrowed `pt_var_env` |
+| `memorization-scoring-vs-sampling-pt-v2` | skampere2 | 8× H200 | **this repo**, `/lfs/skampere2/0/rschaef/KoyejoLab-Memorization-Scoring-vs-Sampling` | borrowed `pt_var_env` (CPython 3.12.12) |
 | `scaling-memorization-pt` | skampere2 | 8× H200 | `/lfs/skampere2/0/rschaef/KoyejoLab-Scaling-Memorization` | `scaling_mem_env` |
 
 **For this paper's rebuttal work, the answer is `skampere1`.** All generative evaluation, teacher-forced
 evaluation, and SFT for the submitted results ran there, out of a single checkout with a single environment.
 `skampere3` shows up in shell history but no logged run for this project came from it.
 
-Note that two of the five projects were driven from **different repositories** (`KoyejoLab-Pretraining-Variance`,
-`KoyejoLab-Scaling-Memorization`) with their own environments. That is why pretraining configs and eval
-configs don't share a Python version.
+> **Corrected 2026-07-29.** An earlier version of this table attributed pretraining to the repo
+> `KoyejoLab-Pretraining-Variance`. That was a misreading of `wandb-metadata.json`: the `executable`
+> field points at `KoyejoLab-Pretraining-Variance/pt_var_env/bin/python3`, but the `program` field —
+> the code that actually ran — is
+> `/lfs/skampere2/0/rschaef/KoyejoLab-Memorization-Scoring-vs-Sampling/scripts/pretrain_language_model.py`,
+> with git remote `RylanSchaeffer/KoyejoLab-Memorization-Scoring-vs-Sampling.git`. That is **this
+> repository**, under its former name, checked out on skampere2; only the Python interpreter was
+> borrowed from the sibling project. `KoyejoLab-Pretraining-Variance` is a different experiment and
+> its pretraining script cannot even emit `eval_after/eval_benchmark_loss` (it passes a bare
+> `eval_dataset` to the Trainer). **All contamination pretraining came from this repo.**
+>
+> Read `program` and `git.remote`, not `executable`, when attributing a run.
+
+**Pretraining is versioned by commit `934546a` (2026-01-19 11:36).** Everything before it is "v1"
+(`warmup_steps: 250`, `weight_decay: 0`, Adam betas left at HuggingFace defaults) and logged to
+`...-pt`; everything after is "v2" (`adam_beta1/2`, `warmup_ratio: 0.2`, `full_determinism`,
+`weight_decay: 0.01`) and logged to `...-pt-v2`. **The published Fig. 3 runs are v1.** To reproduce
+that setup use `git show 934546a^:scripts/pretrain_language_model.py` and
+`git show 934546a^:src/globals.py`; the current script will `KeyError` on v1 sweep YAMLs because it
+requires the four v2 keys. See `reviews/2026_neurips/MISSING_PRETRAINING_DATA.md`.
 
 ## Node hardware and filesystem layout
 
@@ -99,6 +117,28 @@ source mem_scoring_vs_sampling_env/bin/activate     # uv venv, NOT conda
 The environment is a **uv venv**, not a conda env — `conda activate` will not find it. Confirmed via the
 logged interpreter path `.../mem_scoring_vs_sampling_env/bin/python`.
 
+### Gotcha: `source activate` silently does nothing when the interpreter symlink dangles
+
+On 2026-07-27 `source mem_scoring_vs_sampling_env/bin/activate` left `which python` pointing at
+miniconda, and every script failed with `ModuleNotFoundError: No module named 'editdistance'`. The venv
+was fine — its 11 GB of `site-packages` was intact — but `bin/python` was a dangling symlink into
+`/afs/.../.local/share/uv/python/cpython-3.11.5-linux-x86_64-gnu/`, which had been emptied. `activate`
+prepends a `bin/` whose `python` does not resolve, so the shell falls through to the next `PATH` entry
+and reports no error.
+
+`UV_PYTHON_INSTALL_DIR` is now `/lfs/skampere1/0/rschaef/uv-python`, so the venv was repointed there:
+
+```bash
+uv python install 3.11.5     # lands in $UV_PYTHON_INSTALL_DIR, not AFS
+ln -sf /lfs/skampere1/0/rschaef/uv-python/cpython-3.11.5-linux-x86_64-gnu/bin/python3.11 \
+       mem_scoring_vs_sampling_env/bin/python
+# and edit `home = ...` in mem_scoring_vs_sampling_env/pyvenv.cfg to match
+```
+
+Diagnose with `ls -la mem_scoring_vs_sampling_env/bin/python` — if the target does not exist, this is
+the failure. Invoking `./mem_scoring_vs_sampling_env/bin/python` by absolute path is a reliable way to
+run scripts without depending on `activate` succeeding.
+
 ## Weights & Biases projects
 
 Entity is `rylan` throughout.
@@ -110,7 +150,30 @@ Entity is `rylan` throughout.
 | `memorization-scoring-vs-sampling-sft` | SFT runs | active |
 | `memorization-scoring-vs-sampling-pt-v2` | Pretraining (v2) | active |
 | `scaling-memorization-pt` / `scaling-memorization-eval` | `scale_mem_*` sweeps (separate project) | active |
-| `memorization-scoring-vs-sampling-pt` | — | **DOES NOT EXIST.** Referenced 16× in `notebooks/10_*` and `sweeps/pt/*.yaml`; the API returns "Could not find project". Notebook 10 cannot refresh as written. |
+| `memorization-scoring-vs-sampling-pt` | — | **Does not exist under `rylan`** — but see below; it exists under `jkazdan`. Referenced 16× in `notebooks/10_*` and `sweeps/pt/*.yaml`. |
+
+### The "missing" pretraining project is a different entity — but that is not the whole story
+
+Verified 2026-07-27. The notebooks resolve project paths against `wandb.api.default_entity`
+(= `rylan`), which is why `memorization-scoring-vs-sampling-pt` looks absent:
+
+| Path | Runs | Contains notebook 11's 15 PT sweep IDs? |
+|---|---|---|
+| `rylan/memorization-scoring-vs-sampling-pt` | — | project does not exist |
+| `jkazdan/memorization-scoring-vs-sampling-pt` | **236** across 57 sweeps | **No — 0 of 15** |
+| `joshteam/memorization-scoring-vs-sampling-pt` | 0 | no |
+| `rylan/memorization-scoring-vs-sampling-pt-v2` | 68 across 6 sweeps | no — 0 of 15 |
+
+So repointing the entity alone will **not** fix notebook 11: the specific sweeps it names
+(`rkx5xfde`, `g31f7bsb`, `09c432gh`, …) are not in any project this API key can reach. Its
+pretraining configs survive only in the local cache at
+`notebooks/11_math_qwen3_pt_math_verify/data/c39ba9b590fe96b52183328d3d4c7323_runs_configs.csv`.
+Treat that cache as the last copy and do not delete it.
+
+Entities this API key can see, for future searches: teams `harvardparkesateams`, `kreiman-sdm`,
+`fiete-lab`, `projectdeus`, `joshteam`, `brando-su`, plus `rylan`, `jkazdan`, `stellaathena`.
+`tensorpool` and `koyejolab` return zero visible projects — relevant because
+`07_acknowledgements.tex` credits Table 1's compute to TensorPool.
 
 ### Gotcha: the local `wandb` API is broken under Anaconda
 

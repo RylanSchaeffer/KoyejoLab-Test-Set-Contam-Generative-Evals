@@ -9,6 +9,16 @@ Research project investigating how test set contamination (data leakage) affects
 
 ## Read These First
 
+Active work is the **NeurIPS 2026 rebuttal (submission 32216)**. Start with:
+
+- **`reviews/2026_neurips/HANDOFF.md`** — current state, what is running (nothing, as of
+  2026-07-29), open decisions, and every correction the manuscript needs.
+- **`reviews/2026_neurips/REBUTTAL_EVIDENCE.md`** — each reviewer criticism mapped to the number
+  that answers it.
+- **`reviews/2026_neurips/PROTOCOL_CONFOUND.md`** — ⚠️ **read before quoting any Math Verify
+  number.** The same checkpoint scores 1.0000 at 0-shot and 0.0052 at 4-shot; Fig. 1 is 0-shot
+  while Table 1 and the SFT figures are 4-shot.
+
 Before searching the repo to find out whether an experiment exists, read:
 
 - **`docs/EXPERIMENT_INVENTORY.md`** — every checkpoint on the HF Hub, every finished eval run, and
@@ -17,6 +27,11 @@ Before searching the repo to find out whether an experiment exists, read:
   that will otherwise cost an hour.
 
 Both were verified directly against the HF Hub and W&B APIs, not against repo documentation.
+
+⚠️ **`notebooks/11_math_qwen3_pt_math_verify/data/c39ba9b5..._runs_configs.csv` is the only
+surviving copy** of the pretraining cross-entropy behind Finding #3 — the 15 sweeps it came from
+are gone from all 325 visible W&B projects, and it is untracked by git. Do not delete it. See
+`reviews/2026_neurips/MISSING_PRETRAINING_DATA.md`.
 
 **Do not trust prose in `reviews/**/*.md`, `TODO.md`, `AUDIT_FINDINGS.md`, `MANUSCRIPT_CHANGES.md`, or
 `*_STATUS*.md` as evidence that something was done.** Several describe experiments as complete that were

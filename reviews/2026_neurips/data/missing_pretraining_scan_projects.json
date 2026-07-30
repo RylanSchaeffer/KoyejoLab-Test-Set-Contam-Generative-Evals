@@ -1,0 +1,162 @@
+[
+  {
+    "project": "rylan/pretrain-nll-ppl-avging",
+    "n_runs": 173,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/memorization-scoring-vs-sampling-pt-v2",
+    "n_runs": 68,
+    "n_pretraining": 57
+  },
+  {
+    "project": "rylan/memorization-scoring-vs-sampling-eval-teacher-forcing",
+    "n_runs": 107,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/pretrain-variance",
+    "n_runs": 423,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/scaling-memorization-eval",
+    "n_runs": 221,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/scaling-memorization-pt",
+    "n_runs": 32,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/memorization-scoring-vs-sampling-eval",
+    "n_runs": 1565,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/memorization-scoring-vs-sampling-sft",
+    "n_runs": 135,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/reward-model-overoptimization-ppo",
+    "n_runs": 5,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/reward-model-overoptimization-bon",
+    "n_runs": 2,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/reward-model-overoptimization-rm",
+    "n_runs": 14,
+    "n_pretraining": 0
+  },
+  {
+    "project": "rylan/reward-model-overoptimization-sft",
+    "n_runs": 12,
+    "n_pretraining": 0
+  },
+  {
+    "project": "harvardparkesateams/model_collapse_gpt",
+    "n_runs": 561,
+    "n_pretraining": 0
+  },
+  {
+    "project": "harvardparkesateams/super_allexperiments_5_pretrained",
+    "n_runs": 89,
+    "n_pretraining": 0
+  },
+  {
+    "project": "harvardparkesateams/matthias_super_pursuit_sac_hyperopt",
+    "n_runs": 232,
+    "n_pretraining": 0
+  },
+  {
+    "project": "joshteam/scaling-memorization-eval",
+    "n_runs": 1,
+    "n_pretraining": 0
+  },
+  {
+    "project": "joshteam/KoyejoLab-SPA-scripts_scripts",
+    "n_runs": 3,
+    "n_pretraining": 0
+  },
+  {
+    "project": "joshteam/KoyejoLab-SPA-sweeps_scripts",
+    "n_runs": 3,
+    "n_pretraining": 0
+  },
+  {
+    "project": "joshteam/KoyejoLab-SPA-scripts",
+    "n_runs": 99,
+    "n_pretraining": 0
+  },
+  {
+    "project": "joshteam/KoyejoLab-Dose-Response-Model-scripts",
+    "n_runs": 258,
+    "n_pretraining": 0
+  },
+  {
+    "project": "joshteam/memorization-scoring-vs-sampling-pt",
+    "n_runs": 0,
+    "n_pretraining": 0
+  },
+  {
+    "project": "joshteam/direct-preference-optimization",
+    "n_runs": 49,
+    "n_pretraining": 0
+  },
+  {
+    "project": "brando-su/self-opt-gen",
+    "n_runs": 0,
+    "n_pretraining": 0
+  },
+  {
+    "project": "brando-su/vb-trace-greeting-optimization",
+    "n_runs": 4,
+    "n_pretraining": 0
+  },
+  {
+    "project": "brando-su/memorization-scoring-vs-sampling",
+    "n_runs": 24,
+    "n_pretraining": 0
+  },
+  {
+    "project": "jkazdan/scaling-memorization-pt-repeated",
+    "n_runs": 16,
+    "n_pretraining": 0
+  },
+  {
+    "project": "jkazdan/scaling-memorization-pt",
+    "n_runs": 94,
+    "n_pretraining": 0
+  },
+  {
+    "project": "jkazdan/memorization-scoring-vs-sampling-eval",
+    "n_runs": 49,
+    "n_pretraining": 0
+  },
+  {
+    "project": "jkazdan/memorization-scoring-vs-sampling-sft",
+    "n_runs": 98,
+    "n_pretraining": 0
+  },
+  {
+    "project": "jkazdan/memorization-scoring-vs-sampling-pt-param-switch",
+    "n_runs": 5,
+    "n_pretraining": 3
+  },
+  {
+    "project": "jkazdan/memorization-scoring-vs-sampling-pt",
+    "n_runs": 236,
+    "n_pretraining": 110
+  },
+  {
+    "project": "stellaathena/pretrain-nll-ppl-avging",
+    "n_runs": 106,
+    "n_pretraining": 0
+  }
+]

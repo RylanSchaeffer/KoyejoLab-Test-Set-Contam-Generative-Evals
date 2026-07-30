@@ -101,9 +101,34 @@ Perturbed/rephrased coverage is **344M only** (9 replica levels each), from swee
 
 ### Evaluation protocol
 
-Current results are **4-shot with a required `\boxed{}` answer**. Earlier 0-shot sweeps exist and are
-commented out in the notebooks. Do not mix the two. Both `notebooks/11_*` (pretrained) and
-`notebooks/13_*` (SFT) use the 4-shot protocol, so they are directly comparable.
+> ⚠️ **Corrected 2026-07-27. The previous version of this section was wrong in a way that
+> invalidates cross-notebook comparisons.** It claimed notebooks 11 and 13 both use 4-shot and are
+> directly comparable. They are not. See [`reviews/2026_neurips/PROTOCOL_CONFOUND.md`](../reviews/2026_neurips/PROTOCOL_CONFOUND.md).
+
+Two protocols exist, and **the protocol changes the measured contamination effect by up to ~190x**:
+
+| Protocol | Peak Math Verify over the whole pretrained grid (greedy) |
+|---|---|
+| 0-shot | **1.0000** |
+| 4-shot | **0.0112** |
+
+Under 0-shot the prompt reproduces the opening of the memorized training document and contaminated
+models regurgitate the stored solution verbatim. The 4-shot prefix moves the prompt off that
+memorized context and the same checkpoints fall to the uncontaminated floor. Prompts are ~687 tokens
+at the median against a 2,048-token pretraining sequence length, so this is not context overflow, and
+the 4-shot prompt is the standard well-formed Minerva format. It is a real effect, not a bug.
+
+Which notebook reads which:
+
+| Notebook | Declares | Actually reads | Protocol |
+|---|---|---|---|
+| `notebooks/11_*` (pretrained) | 4-shot sweep IDs | **0-shot cache** — `refresh=False` kept the stale file | **0-shot** |
+| `notebooks/13_*` (SFT) | 4-shot sweep IDs | 4-shot | 4-shot |
+| `notebooks/15_*` (rephrase/perturb) | 4-shot sweep IDs | 4-shot | 4-shot |
+
+The notebook-11 cache is `678b1e19c88ea5fdaf60b14abccdb09e_*`, which is
+`md5("sweeps=" + ",".join(<old 0-shot list>))`. Editing the sweep list without deleting the cache or
+setting `refresh=True` silently keeps the old data — check the hash, not the source line.
 
 Per-problem `math_verify_score` values are logged to W&B run history, so **bootstrap confidence intervals
 over the 5,000 test problems require no new compute**.
