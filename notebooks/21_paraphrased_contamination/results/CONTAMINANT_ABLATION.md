@@ -14,8 +14,8 @@ Uncontaminated baseline (R = 0): **7.1437**
 
 | R | Exact | Rephrased | Perturbed | Transfer: rephrased | Transfer: perturbed |
 |---|---|---|---|---|---|
-| 32 | 2.5138 | 2.6125 | — | 0.979 | — |
-| 100 | 1.4526 | 2.0077 | — | 0.902 | — |
+| 32 | 2.5138 | 2.6125 | 3.0741 | 0.979 | 0.879 |
+| 100 | 1.4526 | 2.0077 | 3.0113 | 0.902 | 0.726 |
 | 316 | 0.5243 | 1.9573 | — | 0.784 | — |
 
 `Transfer` = (L(R=0) - L_arm) / (L(R=0) - L_exact): the share of the exact-replica loss reduction the arm achieves. 1.0 means as damaging as verbatim leakage; 0.0 means it buys nothing.
