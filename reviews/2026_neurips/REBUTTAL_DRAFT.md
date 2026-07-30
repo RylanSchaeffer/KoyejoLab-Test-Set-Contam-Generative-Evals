@@ -11,7 +11,6 @@ objection as the pivotal critique.
 **[PENDING]** marks numbers still running as of 2026-07-30 00:05:
 - contaminant ablation, sweeps `mxamktp0` (rephrased, 2 of 3 done) and `vrxwx4dz` (perturbed);
   analysis is ready at `notebooks/21_paraphrased_contamination/` — just run it.
-- 0-shot pass@k sample count.
 
 Every other claim stands without them. If a run does not land, delete the row rather than
 softening it — a table with an honest gap beats a hedge.
@@ -209,9 +208,9 @@ More substantively, we now situate both findings:
   - **Sampling, 4-shot:** 5,000 problems × 1,000 samples at τ = 1.0 = **5,000,000 samples, 0
     correct**, and not one containing a well-formed `\boxed{}` — despite four worked examples
     demonstrating the format in every prompt.
-  - **Sampling, 0-shot:** [PENDING — insert n and result] samples, **0 correct**. We ran this
-    separately because the figure above uses the 4-shot prefix and so cannot, on its own, speak
-    to 0-shot capability.
+  - **Sampling, 0-shot:** 56,825 samples over 2,273 problems at τ = 1.0, **0 correct**, and again
+    not one well-formed `\boxed{}`. We ran this separately because the figure above uses the
+    4-shot prefix and so cannot, on its own, speak to 0-shot capability.
   - **Greedy, both protocols:** exactly 0.0000 under boxed-required scoring at every model size
     (table in the general response).
 
@@ -349,8 +348,9 @@ inference is not invited.
 Your accompanying hypothesis — "maybe model/train scale is not enough to see the generalization
 from contaminated data" — is, we believe, correct, and we can now support it directly rather
 than speculatively. An uncontaminated 344M model produced **0 correct answers in 5,000,000
-samples** (5,000 problems × 1,000 samples at τ = 1.0), with not one well-formed `\boxed{}` —
-and 0 correct again in a separate 0-shot run, so this is not an artifact of the prompt format. There
+samples** (5,000 problems × 1,000 samples at τ = 1.0), with not one well-formed `\boxed{}`, and
+0 correct again in a separate **56,825-sample 0-shot** run — so this is not an artifact of the
+prompt format. There
 is no latent capability at this scale for contamination to combine with, so anything that breaks
 verbatim surface-form match removes the entire effect. We now use this to reconcile our Finding 2
 with prior work (Mehrbakhsh et al. 2024; Dekoninck et al. 2024) that finds rephrased
@@ -384,7 +384,7 @@ deliberate scale-for-control tradeoff and the scaling-law bridge, but we state t
 more prominently and commit to a second benchmark and a second model family for the
 camera-ready. We would add one observation that emerged from this rebuttal: the *reason* our
 models show no paraphrase transfer is that they have zero baseline capability (0 correct in
-5,000,000 samples at 4-shot and again at 0-shot), which makes the scale limitation a
+5,000,000 samples at 4-shot and 56,825 more at 0-shot), which makes the scale limitation a
 **substantive boundary condition** on
 Finding 2 rather than merely a caveat. We now present it that way.
 
