@@ -91,6 +91,18 @@ def parse_args() -> argparse.Namespace:
         help="Maximum tokens per completion (default: 2048)",
     )
     parser.add_argument(
+        "--num_fewshot",
+        type=int,
+        default=4,
+        choices=[0, 4],
+        help=(
+            "Prompt protocol. 4 (default) reproduces the original run. Use 0 to measure "
+            "capability under the same protocol as Fig. 1 and the teacher-forced results; a "
+            "4-shot pass@k cannot support a claim about 0-shot capability, because the prefix "
+            "changes the conditioning context rather than merely demonstrating output format."
+        ),
+    )
+    parser.add_argument(
         "--output_dir",
         type=str,
         default="results/pass_at_k",
@@ -126,7 +138,11 @@ def main():
     raw_datasets = src.data.load_dataset_hendrycks_math()
     test_dataset = raw_datasets["test"]
     doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
-    fewshot_prefix = src.data.build_fewshot_prefix()
+    fewshot_prefix = src.data.build_fewshot_prefix() if args.num_fewshot else ""
+    print(
+        f"Prompt protocol: {args.num_fewshot}-shot "
+        f"(prefix is {len(fewshot_prefix)} chars)"
+    )
     formatted_problems = [
         fewshot_prefix + doc_to_text.format(problem=q, solution="").rstrip()
         for q in test_dataset["problem"]
@@ -143,7 +159,11 @@ def main():
 
     # 3. Determine output path.
     model_short_name = args.model_name.split("/")[-1]
+    # Keep the 4-shot path exactly as it was so the existing run is not clobbered, and give
+    # 0-shot its own directory. Protocol is part of the identity of a pass@k measurement.
     base_dir = Path(args.output_dir) / model_short_name / f"temp={args.temperature}"
+    if args.num_fewshot != 4:
+        base_dir = base_dir / f"{args.num_fewshot}shot"
     # Use a shard-specific filename when processing a subset.
     if args.start_idx is not None or args.end_idx is not None:
         filename = f"samples_shard_{start_idx}_{end_idx}.jsonl"
