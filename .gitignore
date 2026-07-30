@@ -255,3 +255,7 @@ models/
 # notebooks/*/results/ and reviews/2026_neurips/data/.
 /results/
 /src/lm-eval-output/
+
+# Per-run tokenized dataset caches written by pretrain_language_model*.py
+# (HF_DATASETS_CACHE is repointed here per checkpoint; the run deletes its own on success).
+/cached_datasets/
