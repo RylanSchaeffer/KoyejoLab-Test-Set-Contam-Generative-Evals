@@ -1,6 +1,6 @@
 # Handoff — NeurIPS 2026 rebuttal, submission 32216
 
-Updated **2026-07-30 ~01:40**, overnight session. Scores: **8RFz 3** (Quality 2, Originality 2,
+Updated **2026-07-30 03:30**, end of overnight session. **All experiments complete.** Scores: **8RFz 3** (Quality 2, Originality 2,
 conf 4) · **1wx9 4** · **aPBL 3**. The AC named 8RFz's loss-vs-correctness objection the pivotal
 critique. **Discussion closes 2026-08-03.**
 
@@ -123,16 +123,27 @@ All committed. Still worth doing: W&B web UI deleted-projects view, and emailing
 
 ---
 
-## Still running as of 01:40
+## Nothing is running. All experiments finished 03:26.
 
-| Job | Where | ETA |
-|---|---|---|
-| Perturbed R=100 | GPU7, sweep `vrxwx4dz` | ~01:50 |
-| Perturbed R=316 | GPU6 | ~02:45 |
-| Perturbed accuracy evals (R=100, 316) | GPU1, auto-triggered | after each |
+### The contaminant ablation, complete
 
-When they land: run `notebooks/21_paraphrased_contamination/` and fill the two `[PENDING]` rows in
-`REBUTTAL_DRAFT.md`. Nothing else depends on them.
+Qwen3-34M, 1×OT. Uncontaminated: loss **7.1437**, accuracy **0.00%**.
+
+| R | Loss exact | Loss reph | Loss pert | Acc exact | Acc reph | Acc pert |
+|---|---|---|---|---|---|---|
+| 32 | 2.5138 | 2.6125 | 3.0741 | 0.56% | 0.24% | 1.34% |
+| 100 | 1.4526 | 2.0077 | 3.0113 | 1.70% | 1.58% | 1.16% |
+| 316 | **0.5243** | 1.9573 | 3.3705 | **7.22%** | 1.52% | 1.60% |
+
+**Only exact-replica contamination produces a dose-response in accuracy** (13× climb). Both arms
+whose problem text differs plateau at ~1.5%, inside the ±0.33 pp bootstrap half-width, with a
+verbatim solution rate of 0.000 throughout. Loss meanwhile calls the perturbed arm 57–88% as
+contaminated as the exact one — the two metrics disagree about the same models.
+
+⚠️ **Dosing caveat**, caught by the notebook's own token-budget assertion: `math_perturbed` is
+1,127,643 tokens per copy vs the original's 1,441,312 (**21.8% smaller**), so perturbed R=316 is
+exact R≈247 in contaminated tokens. The bias runs *against* the conclusion, so it is conservative;
+do not over-read the R=316 loss uptick. See `CONTAMINANT_ABLATION.md`.
 
 ---
 
