@@ -9,10 +9,18 @@ Training budget is `20 x overtrain_multiplier x num_parameters` (Chinchilla-opti
 than of a 344M budget.
 
 > ⚠️ **These percentages use the NOMINAL budget and are therefore understated (added
-> 2026-07-30).** Runs do not consume the full `20 x N` target: the corpus-trimming step keeps
-> documents while the cumulative token count stays *below* the target, so the actual budget is
-> about **75%** of nominal. Measured on the 34M `ot = 1` runs, whose
-> `train/num_input_tokens_seen` survives in the notebook-11 cache:
+> 2026-07-30; mechanism corrected same day).** Runs do not consume the full `20 x N` target —
+> the actual budget is **71.4%** of nominal, uniformly (delivered/target = 0.7136–0.7141 across
+> every model size and overtrain multiplier).
+>
+> The cause is **not** the trimming step, as an earlier version of this note said. The trim never
+> runs: the corpus document pool is sampled using the corpus's advertised mean document length
+> (1157 tokens) rather than the realised ~786 under our tokenizer, so the pool never reaches the
+> target, `np.searchsorted` returns the end of the array, and **every** sampled document is kept.
+> Full derivation and four independent verifications: **`docs/TOKEN_BUDGET_SHORTFALL.md`**.
+>
+> Measured on the 34M `ot = 1` runs, whose `train/num_input_tokens_seen` survives in the
+> notebook-11 cache:
 >
 > | R | nominal % | **actual %** |
 > |---|---|---|
@@ -23,9 +31,13 @@ than of a 344M budget.
 > | 100 | 21.16 | **27.42** |
 > | 316 | 66.86 | **74.05** |
 >
-> Multiply the table below by roughly **1.33** for actual shares. The qualitative claim is
-> unchanged — R = 1 is still at or below published real-world leakage estimates, and the top of
-> the ladder is still deliberately extreme — but quote the corrected figures.
+> **There is no single multiplier** — an earlier version of this note said "roughly 1.33", which
+> is wrong. The correction factor is `20N / measured`, which itself varies with R because the
+> contaminant is delivered in full while the corpus is short: **1.40× at R = 1 falling to 1.10× at
+> R = 316**. Recompute as `R × 1,446,312 / train/num_input_tokens_seen` rather than rescaling.
+> The qualitative claim is unchanged — R = 1 is still at or below published real-world leakage
+> estimates, and the top of the ladder is still deliberately extreme — but quote the corrected
+> figures.
 >
 > The two tables below were computed with the old 1,441,312 per-copy figure and are therefore a
 > further **0.35% relatively** low (e.g. 34M R = 316 is 67.21%, not 66.98%). Not worth regenerating,

@@ -244,6 +244,21 @@ manuscript_fdgm_icml_2026/*.synctex.gz
 manuscript_fdgm_icml_2026/*.toc
 manuscript_fdgm_icml_2026/00_main.pdf
 manuscript_fdgm_icml_2026/build_*.log
+
+# LaTeX build artifacts for the remaining manuscript directories. The neurips_2026 and
+# icml_2026 dirs were missing these patterns, so `pdflatex` output showed up as untracked.
+manuscript_neurips_2026/*.aux
+manuscript_neurips_2026/*.bbl
+manuscript_neurips_2026/*.blg
+manuscript_neurips_2026/*.out
+manuscript_neurips_2026/*.toc
+manuscript_neurips_2026/00_main.pdf
+manuscript_icml_2026/*.aux
+manuscript_icml_2026/*.bbl
+manuscript_icml_2026/*.blg
+manuscript_icml_2026/*.out
+manuscript_icml_2026/*.toc
+manuscript_icml_2026/00_main.pdf
 models/
 
 

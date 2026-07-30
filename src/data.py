@@ -95,6 +95,41 @@ DEFAULT_COMPRESSION_TYPES = {
     "token_length": Value("int32"),
 }
 
+# ---------------------------------------------------------------------------------------
+# Corpus sampling. Read `docs/TOKEN_BUDGET_SHORTFALL.md` before touching these.
+#
+# Every published pretraining run trained on ~71.4% of its intended token budget, because
+# the number of corpus documents to sample was estimated with the corpus's *advertised*
+# average document length (220e9 / 190_168_005 = 1157 tokens, measured by its authors with
+# their tokenizer and no truncation). Under our tokenizer, truncated at `max_length=2048`,
+# the realised mean is ~786 -- 47% lower. The 1.05 headroom could not absorb a 47% error, so
+# the sampled pool never reached the target; `np.searchsorted` then returned the end of the
+# array and the trim that was meant to hit the budget exactly silently kept *every*
+# document. No exception, no warning, and the log line printed tokens *requested*.
+#
+# Consequences (all verified): 14.3 tokens/parameter rather than 20, uniformly across every
+# model size and overtrain multiplier (delivered/target = 0.7136-0.7141, spread +/-0.0005);
+# and because the contaminant is delivered in full while the corpus is short, total tokens
+# *rise* with contamination dose (+27% from R=0 to R=316).
+# ---------------------------------------------------------------------------------------
+
+# Realised mean tokens per fineweb-edu-dedup document, measured under the Qwen3 tokenizer
+# with truncation at max_length=2048 (n=4,000: mean 766.5, 95% CI [748.5, 784.5], median
+# 582, 9.1% truncated). The value implied by the published run logs is 786.2. Neither is
+# anywhere near 1157. This is only a starting estimate -- correctness is enforced by the
+# assertion in `create_dataset_for_pretraining`, not by this number being right.
+CORPUS_MEAN_TOKENS_PER_DOC = 786.0
+
+# Oversampling factor applied to the estimate above. Must be large enough to absorb the
+# variance of the realised mean; 1.05 was not, which is how the bug went unnoticed.
+CORPUS_SAMPLING_HEADROOM = 1.25
+
+# Set PRETRAIN_LEGACY_TOKEN_BUDGET=1 to reproduce the published runs bit for bit, i.e. to
+# restore the 1157-token estimate, the 1.05 headroom, and the silent under-delivery. This
+# exists so the published results stay reproducible; do not use it for new experiments.
+_LEGACY_AVG_TOKENS_PER_DOC = 220e9 / 190168005  # ~1157; wrong, kept for reproducibility
+_LEGACY_SAMPLING_HEADROOM = 1.05
+
 
 class StringHandlingDataCollator:
     """Wrapper for HF data collators that handles string columns.
@@ -136,8 +171,16 @@ def create_dataset_for_pretraining(
     4. Combines with documents from the pretraining corpus (fineweb-edu-dedup)
     5. Shuffles the combined dataset
 
-    The total training tokens per epoch is fixed; more benchmark replicas means
-    fewer corpus tokens, keeping compute constant across contamination levels.
+    The intent is that total training tokens per epoch is fixed -- more benchmark replicas
+    means fewer corpus tokens, keeping compute constant across contamination levels.
+
+    ⚠️ This did NOT hold for the published runs. The corpus sampling under-delivered by a
+    uniform ~28.6% while the contaminant was delivered in full, so total tokens *rose* with
+    contamination dose (+27% from R=0 to R=316) and every model saw ~14.3 tokens/parameter
+    rather than the nominal 20. The cause and the fix are documented at the module level
+    (see CORPUS_MEAN_TOKENS_PER_DOC) and in `docs/TOKEN_BUDGET_SHORTFALL.md`. The assertion
+    added below makes the failure loud; it is now true for new runs, and remains false for
+    anything trained before 2026-07-30 or run with PRETRAIN_LEGACY_TOKEN_BUDGET=1.
 
     Args:
         data_config: Configuration dict containing:
@@ -234,11 +277,7 @@ def create_dataset_for_pretraining(
             remove_columns=False,
         )["eval"]
         contaminant_dataset = contaminant_dataset.remove_columns(
-            [
-                col
-                for col in contaminant_dataset.column_names
-                if col not in cols_to_keep
-            ]
+            [col for col in contaminant_dataset.column_names if col not in cols_to_keep]
         )
         print(
             f"Contaminant ({contaminant_name}) differs from benchmark "
@@ -330,13 +369,26 @@ def create_dataset_for_pretraining(
             print("Split corpus into train and test")
             corpus_train_dataset = corpus_split_dataset["train"]
             corpus_eval_dataset = corpus_split_dataset["test"]
-            avg_tokens_per_doc = 220e9 / 190168005  # ~1157 tokens per doc
         else:
             raise ValueError
 
-        # Round up a bit to ensure we have more than we want.
+        # See the module-level comment on CORPUS_MEAN_TOKENS_PER_DOC. This is only an
+        # estimate of how many documents to pull; the assertion below is what guarantees
+        # the budget is actually met.
+        legacy_budget = os.environ.get("PRETRAIN_LEGACY_TOKEN_BUDGET") == "1"
+        if legacy_budget:
+            avg_tokens_per_doc = _LEGACY_AVG_TOKENS_PER_DOC
+            sampling_headroom = _LEGACY_SAMPLING_HEADROOM
+            print(
+                "WARNING: PRETRAIN_LEGACY_TOKEN_BUDGET=1 -- reproducing the published runs' "
+                "token shortfall (~71.4% of the nominal budget). Do not use for new work."
+            )
+        else:
+            avg_tokens_per_doc = CORPUS_MEAN_TOKENS_PER_DOC
+            sampling_headroom = CORPUS_SAMPLING_HEADROOM
+
         estimated_docs_needed = int(
-            1.05 * corpus_tokens_needed_per_epoch / avg_tokens_per_doc
+            sampling_headroom * corpus_tokens_needed_per_epoch / avg_tokens_per_doc
         )
 
         # Subsample the appropriate number of documents and tokenize.
@@ -359,11 +411,46 @@ def create_dataset_for_pretraining(
         # so we keep documents where cumsum < target (i.e., up to but not including
         # the first index where cumsum >= target).
         cumulative_lengths = np.cumsum(corpus_train_dataset_subset["token_length"])
+
+        # THE GUARD THAT WAS MISSING. If the sampled pool does not reach the target, the
+        # searchsorted below returns len(cumulative_lengths), the `select` keeps *every*
+        # document, and the run silently trains on less data than intended -- which is
+        # exactly what happened to every published run. Fail loudly instead.
+        pool_tokens = int(cumulative_lengths[-1]) if len(cumulative_lengths) else 0
+        if pool_tokens < corpus_tokens_needed_per_epoch and not legacy_budget:
+            raise ValueError(
+                f"Sampled corpus pool holds {pool_tokens:,} tokens but "
+                f"{corpus_tokens_needed_per_epoch:,} are needed "
+                f"({100 * pool_tokens / corpus_tokens_needed_per_epoch:.1f}% of target). "
+                f"The per-document estimate (CORPUS_MEAN_TOKENS_PER_DOC="
+                f"{avg_tokens_per_doc:.1f}) is too high, or CORPUS_SAMPLING_HEADROOM="
+                f"{sampling_headroom} is too small. Raise the headroom and re-run. "
+                f"See docs/TOKEN_BUDGET_SHORTFALL.md."
+            )
+
         idx_to_keep = np.searchsorted(
             cumulative_lengths, corpus_tokens_needed_per_epoch
         )
         corpus_train_dataset_subset = corpus_train_dataset_subset.select(
             range(idx_to_keep)
+        )
+
+        # Report tokens *delivered*, not tokens requested. The original log line printed
+        # only the request, which is why the shortfall was invisible for the whole project.
+        delivered_corpus_tokens = (
+            int(cumulative_lengths[idx_to_keep - 1]) if idx_to_keep > 0 else 0
+        )
+        total_delivered = delivered_corpus_tokens + int(
+            replicated_benchmark_test_split_num_tokens
+        )
+        print(
+            f"Corpus tokens delivered: {delivered_corpus_tokens:,} of "
+            f"{corpus_tokens_needed_per_epoch:,} requested "
+            f"({100 * delivered_corpus_tokens / max(1, corpus_tokens_needed_per_epoch):.2f}%)\n"
+            f"Total training tokens this epoch: {total_delivered:,} of "
+            f"{num_training_tokens_per_epoch:,} targeted "
+            f"({100 * total_delivered / max(1, num_training_tokens_per_epoch):.2f}%); "
+            f"kept {idx_to_keep:,} of {len(cumulative_lengths):,} sampled corpus documents."
         )
 
         # Create the dataset we will train on.
