@@ -12,12 +12,12 @@ original run stays reproducible; 0-shot output goes to its own directory.
 
 | | 4-shot (original) | **0-shot (new)** |
 |---|---|---|
-| Samples | 5,000,000 | **56,825** |
-| Problems | 5,000 | 2,273 |
+| Samples | 5,000,000 | **62,500** |
+| Problems | 5,000 | 2,500 (pass@25 each) |
 | Temperature | 1.0 | 1.0 |
 | Correct | **0** | **0** |
 | Containing a well-formed `\boxed{}` | **0** | **0** |
-| Lenient upper bound (gold answer string appears anywhere) | 21.7% | 19.2% |
+| Lenient upper bound (gold answer string appears anywhere) | 21.7% | 19.1% |
 
 The lenient row is deliberately over-generous — it counts a sample whenever the gold answer string
 occurs anywhere in the response, ignoring formatting and context, so a response containing "2" is
@@ -30,5 +30,5 @@ and there is no latent competence for contamination to combine with — which is
 our Finding 2 with the prior work (Mehrbakhsh et al. 2024; Dekoninck et al. 2024) that finds
 rephrased contamination *does* transfer in already-capable models.
 
-Sample counts are as of 2026-07-30 01:15; one shard of the sharded run was still generating and
-the totals will grow. The `\boxed{}` count will not.
+Both shards complete: 2,500 problems x 25 samples. **pass@25 = 0 on every one of the 2,500
+problems.** Sharding covers problem indices 0-2,500 of the 5,000-problem test set.

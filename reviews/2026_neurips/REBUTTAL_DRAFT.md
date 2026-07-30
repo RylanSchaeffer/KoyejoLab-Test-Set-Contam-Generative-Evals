@@ -243,9 +243,9 @@ More substantively, we now situate both findings:
   - **Sampling, 4-shot:** 5,000 problems × 1,000 samples at τ = 1.0 = **5,000,000 samples, 0
     correct**, and not one containing a well-formed `\boxed{}` — despite four worked examples
     demonstrating the format in every prompt.
-  - **Sampling, 0-shot:** 56,825 samples over 2,273 problems at τ = 1.0, **0 correct**, and again
-    not one well-formed `\boxed{}`. We ran this separately because the figure above uses the
-    4-shot prefix and so cannot, on its own, speak to 0-shot capability.
+  - **Sampling, 0-shot:** 62,500 samples over 2,500 problems at τ = 1.0 — **pass@25 = 0 on every
+    problem**, and again not one well-formed `\boxed{}`. We ran this separately because the figure
+    above uses the 4-shot prefix and so cannot, on its own, speak to 0-shot capability.
   - **Greedy, both protocols:** exactly 0.0000 under boxed-required scoring at every model size
     (table in the general response).
 
@@ -384,7 +384,7 @@ Your accompanying hypothesis — "maybe model/train scale is not enough to see t
 from contaminated data" — is, we believe, correct, and we can now support it directly rather
 than speculatively. An uncontaminated 344M model produced **0 correct answers in 5,000,000
 samples** (5,000 problems × 1,000 samples at τ = 1.0), with not one well-formed `\boxed{}`, and
-0 correct again in a separate **56,825-sample 0-shot** run — so this is not an artifact of the
+0 correct again in a separate **62,500-sample 0-shot** run (pass@25 = 0 on all 2,500 problems) — so this is not an artifact of the
 prompt format. There
 is no latent capability at this scale for contamination to combine with, so anything that breaks
 verbatim surface-form match removes the entire effect. We now use this to reconcile our Finding 2
@@ -419,7 +419,7 @@ deliberate scale-for-control tradeoff and the scaling-law bridge, but we state t
 more prominently and commit to a second benchmark and a second model family for the
 camera-ready. We would add one observation that emerged from this rebuttal: the *reason* our
 models show no paraphrase transfer is that they have zero baseline capability (0 correct in
-5,000,000 samples at 4-shot and 56,825 more at 0-shot), which makes the scale limitation a
+5,000,000 samples at 4-shot and 62,500 more at 0-shot), which makes the scale limitation a
 **substantive boundary condition** on
 Finding 2 rather than merely a caveat. We now present it that way.
 
