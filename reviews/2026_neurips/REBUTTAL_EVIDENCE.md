@@ -66,7 +66,7 @@ Two things to carry into the text:
 
 1. **Perturbed excludes 582 problems (11.64%) whose perturbation leaves the ground-truth answer
    unchanged.** Those score a memorizing model correct by construction. Including them inflates
-   Perturbed to 4.78% and inverts the expected ordering. A reviewer checking the dataset will
+   Perturbed to 4.84% and inverts the expected ordering (above Rephrased's 2.78%). A reviewer checking the dataset will
    find this, so state it.
 2. **Do not say performance "collapses to baseline."** Under matched strict scoring the
    uncontaminated floor is exactly 0.00%, and rephrased/perturbed sit 1.9-2.8 percentage points

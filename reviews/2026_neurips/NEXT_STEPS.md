@@ -86,7 +86,7 @@ changes character entirely. Apply the same check to whatever task 1 produces.
 ## Zero-GPU tasks — parallelizable
 
 4. **Fold the SFT Math Verify result into the paper.** Post-SFT accuracy is flat ~1–2% across all
-   contamination levels vs. ~100% at R ≥ 316 pretrained — a ~60× collapse that also rules out the
+   contamination levels vs. ~100% at R ≥ 316 pretrained — a ~60× collapse [⚠️ SUPERSEDED 2026-07-30: artifact of a protocol mismatch; matched at 0-shot it is 70.89% → 3.00%] that also rules out the
    stealth-contamination corollary. Answers 8RFz Q1 (SFT half). Figures already exist.
 5. **Put pass@k in the paper.** Zero-capability baseline; reframes "small models" from weakness to
    design feature.

@@ -278,7 +278,7 @@ Two disclosures that go with these numbers:
 
 1. The perturbed figure **excludes 582 problems (11.64%)** whose numerical perturbation leaves
    the ground-truth answer unchanged. Those score a memorizing model correct by construction.
-   Including them inflates Perturbed to 4.78% and inverts the expected ordering relative to
+   Including them inflates Perturbed to 4.84% and inverts the expected ordering relative to
    Rephrased. We now report the exclusion and both numbers.
 2. We no longer write that performance "collapses to baseline." Under boxed-required scoring
    the uncontaminated floor is **exactly 0.00%** at every model size, and the modified conditions
@@ -465,8 +465,8 @@ think is exactly the kind of thing your question was aimed at: **11.64% of pertu
 (582 of 5,000) have a numerical perturbation that leaves the ground-truth answer unchanged.**
 Those problems score a memorizing model correct by construction and therefore cannot support a
 memorization-versus-generalization claim. We exclude them, report the exclusion, and note that
-including them inflates the perturbed score from 1.89% to 4.78% and inverts the ordering against
-rephrased.
+including them inflates the perturbed score from 1.91% to 4.84% and inverts the ordering against
+rephrased (2.78%).
 
 **Q3 — "Does the irreducible error come from fitting an asymptotic scaling law? It's a strong
 claim ... may depend on assumptions of the functional form and extrapolation."**

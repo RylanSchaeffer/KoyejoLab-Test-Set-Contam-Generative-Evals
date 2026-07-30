@@ -20,7 +20,7 @@ pivotal critique, and it is not in the paper.**
   result was never folded in.
 - The result is *stronger* than the loss story: post-SFT Math Verify is **flat at ~1–2% across every
   contamination level**, versus pretrained models reaching **~100% at R ≥ 316** (τ=0, same 4-shot
-  boxed-required protocol, `notebooks/11_*`). SFT collapses the contamination advantage ~60× in accuracy.
+  boxed-required protocol, `notebooks/11_*`). SFT collapses the contamination advantage ~60× in accuracy.  <!-- ⚠️ SUPERSEDED 2026-07-30: the ~60× is an artifact of comparing 0-shot pretrained against 4-shot SFT. Matched at 0-shot it is 70.89% → 3.00%. See HANDOFF.md. -->
 - This also **kills 8RFz's darker corollary** ("accuracy persists while loss rises → stealth contamination
   that evades perplexity detection"). It doesn't persist. That is very good news.
 
