@@ -1,3 +1,17 @@
+"""SFT Math Verify results — ⚠️ 4-SHOT, SUPERSEDED by notebooks/19_*.
+
+This notebook reads 4-shot sweeps. The manuscript's Fig. 1 and every teacher-forced result are
+0-shot, so any comparison between this notebook and those is a comparison of protocols, not of
+training stages — that mismatch is what produced the bogus "~60x SFT collapse".
+
+At 4-shot no configuration in the grid exceeds ~1.1% Math Verify, so there is essentially nothing
+to measure here. `notebooks/19_math_qwen3_sft_math_verify_zeroshot/` is the 0-shot replacement
+(39/39 checkpoints): 70.89% -> 3.00%, median retained fraction 0.028.
+
+Kept for provenance and for the matched-protocol format check in
+`results/FORMAT_SANITY_CHECK.md`. Do not quote its accuracy numbers in the paper.
+See reviews/2026_neurips/PROTOCOL_CONFOUND.md.
+"""
 import ast
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LogNorm, SymLogNorm

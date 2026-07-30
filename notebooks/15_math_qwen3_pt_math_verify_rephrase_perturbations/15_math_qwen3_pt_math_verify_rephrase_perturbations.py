@@ -1,3 +1,17 @@
+"""Rephrase/perturbation results — ⚠️ 4-SHOT, SUPERSEDED by notebooks/18_*.
+
+This notebook reads 4-shot sweeps, under which Original, Rephrased and Perturbed are
+indistinguishable at every contamination level (all ~0.5-1.1% at 344M) because the 4-shot prefix
+destroys the memorization signal before the modification can be tested. There is no effect left
+to measure, so it cannot support Finding 2.
+
+`notebooks/18_math_qwen3_pt_rephrase_perturb_zeroshot/` is the 0-shot replacement (39+39
+checkpoints, 5 sizes): Original 72.18% -> Rephrased 2.78% -> Perturbed 1.91%, against an
+uncontaminated floor of exactly 0.00%.
+
+Kept for provenance. Do not promote its figure into the paper.
+See reviews/2026_neurips/PROTOCOL_CONFOUND.md.
+"""
 import ast
 from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
