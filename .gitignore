@@ -259,3 +259,9 @@ models/
 # Per-run tokenized dataset caches written by pretrain_language_model*.py
 # (HF_DATASETS_CACHE is repointed here per checkpoint; the run deletes its own on success).
 /cached_datasets/
+
+# Raw per-problem generations from contaminant evals (5,000 rows x many checkpoints).
+# Summaries and derived tables are committed; the generations are reproducible.
+results/poscontrol_*/*.jsonl
+results/contaminant_eval*/*.jsonl
+results/pass_at_k/**/*.jsonl
