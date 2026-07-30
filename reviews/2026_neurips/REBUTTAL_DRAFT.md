@@ -28,7 +28,7 @@ stealth-contamination scenario 8RFz raises — accuracy persisting while loss ri
 contamination harder to detect but no less inflationary — does **not** occur in our setting. The
 new measurement is also sharper than our original claim, and it obliges us to weaken that claim:
 dilution is **threshold-dependent**. For 93M over ot 1→16, the contamination advantage retained
-is **0.019 at R = 100 but 0.995 at R = 1000**. Below the memorization threshold, overtraining
+is **0.0188 at R = 100 but 0.9966 at R = 1000**. Below the memorization threshold, overtraining
 suppresses contamination by more than an order of magnitude; above it, 16× more fresh data does
 essentially nothing. We were wrong to state "overtraining dilutes contamination" without
 qualification — it reads as a mitigation, and it fails precisely in the heavy-leakage regime
@@ -135,10 +135,10 @@ retained is:
 
 | Configuration | Advantage retained after 16× overtraining |
 |---|---|
-| 93M, R = 100 | **0.019** |
-| 93M, R = 1000 | **0.995** |
+| 93M, R = 100 | **0.0188** |
+| 93M, R = 1000 | **0.9966** |
 
-Same model, same multiplier range, ~50× difference. The mechanism is dilution of the
+Same model, same multiplier range, ~53× difference. The mechanism is dilution of the
 contaminated *token fraction*, which is why it stops working once that fraction stays high. Our
 original phrasing — "the performance boost from contamination diminishes when overtraining with
 fresh data" — is therefore misleading as an unqualified statement, and we have replaced it with

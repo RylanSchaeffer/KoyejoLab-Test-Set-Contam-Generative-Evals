@@ -132,18 +132,26 @@ avg_scores_df = (
     )
 )
 # The ot=1 anchor is essential — "overtraining dilutes contamination" is a statement about the
-# trend starting at compute-optimal — but those runs predate this group and live in the 0-shot
-# sweeps summarized by scripts/compare_zeroshot_vs_fewshot_protocol.py. Same protocol (0-shot
-# greedy) and same scoring, so they merge directly.
+# trend starting at compute-optimal — but those runs predate this group and live in the older
+# 0-shot sweeps.
+#
+# MUST be the *rescored* file. An earlier version of this comment claimed "same protocol and same
+# scoring, so they merge directly"; the protocol matches but the scoring did not. The old 0-shot
+# sweeps predate db75c5f and were scored leniently (~1.4% false positives), while this group is
+# boxed-required. Since the retained fraction is score(ot=16) / score(ot=1), a leniently inflated
+# denominator understates retention and therefore overstates dilution — and dilution is the
+# AC-flagged claim. See scripts/rescore_zeroshot_with_boxed_required.py.
 PROTOCOL_CSV = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "11_math_qwen3_pt_math_verify",
     "results",
-    "protocol_sensitivity.csv",
+    "protocol_sensitivity_rescored.csv",
 )
 if os.path.isfile(PROTOCOL_CSV):
     anchor_df = pd.read_csv(PROTOCOL_CSV)
     anchor_df = anchor_df[anchor_df["protocol"] == "0-shot"].copy()
+    # Use the strict (boxed-required) column, matching how this group was scored.
+    anchor_df["math_verify_score"] = anchor_df["strict_score"]
     anchor_df = anchor_df.rename(
         columns={"Num. Replicas": "Num. MATH Test Set Replicas"}
     )
@@ -353,6 +361,25 @@ with open(summary_path, "w") as f:
         "CONTAMINATED_TOKEN_FRACTION.md`), so it only helps when it pushes that fraction back "
         "below threshold.\n\n"
     )
+    # Computed, not hardcoded: an earlier version quoted stale values after the anchor column
+    # was corrected from lenient to strict scoring.
+    def _pair(params, reps):
+        row = retention[
+            (retention["Parameters"] == params) & (retention["Num. Replicas"] == reps)
+        ]
+        return None if row.empty else row.iloc[0]
+
+    _lo, _hi = _pair("93M", 100), _pair("93M", 1000)
+    if _lo is not None and _hi is not None and _lo["retained_fraction"] > 0:
+        _headline = (
+            f"at 93M over ot {int(_lo['ot_low'])}x-{int(_lo['ot_high'])}x, R=100 retains "
+            f"{_lo['retained_fraction']:.4f} while R=1000 retains {_hi['retained_fraction']:.4f} "
+            f"— same range, a ~{_hi['retained_fraction'] / _lo['retained_fraction']:.0f}x "
+            f"difference in how much overtraining helps."
+        )
+    else:
+        _headline = "see the table below."
+
     f.write("## Retained performance, lowest vs highest overtrain multiplier\n\n")
     f.write(
         "Restricted to conditions scoring above 5% at their lowest multiplier — elsewhere "
@@ -361,9 +388,7 @@ with open(summary_path, "w") as f:
         "replica ladders are ragged (a configuration only exists where the replicas fit inside "
         "the token budget), so conditions span different multiplier ranges and their retained "
         "fractions are not all measured over the same interval. The cleanest like-for-like "
-        "comparison is within a single model size over the full 1x-16x span: at 93M, R=100 "
-        "retains 0.019 while R=1000 retains 0.995 — same range, a ~50x difference in how much "
-        "overtraining helps.\n\n"
+        "comparison is within a single model size over the full 1x-16x span: " + _headline + "\n\n"
     )
     f.write(retention.round(4).to_markdown(index=False))
     f.write("\n\n## Full grid\n\n")

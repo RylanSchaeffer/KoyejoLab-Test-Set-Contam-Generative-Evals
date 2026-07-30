@@ -32,10 +32,10 @@ The result is sharper than the paper's current claim: **dilution is threshold-de
 
 | | Retained after overtraining |
 |---|---|
-| 93M, R=100, ot 1→16 | **0.019** |
-| 93M, R=1000, ot 1→16 | **0.995** |
+| 93M, R=100, ot 1→16 | **0.0188** |
+| 93M, R=1000, ot 1→16 | **0.9966** |
 
-Same model, same multiplier range, ~50x difference. Below the memorization threshold
+Same model, same multiplier range, ~53x difference. Below the memorization threshold
 overtraining suppresses contamination by more than an order of magnitude; above it, 16x more
 training does essentially nothing. Mechanism is dilution of the contaminated *token fraction*,
 which is why it stops working once that fraction stays high.
