@@ -145,8 +145,10 @@ fresh data" — is therefore misleading as an unqualified statement, and we have
 the threshold formulation. We think this is a more useful finding than the one we submitted: it
 says overtraining is not a mitigation for the leakage regimes practitioners should worry about.
 
-For Finding 5, at matched 0-shot protocol, SFT takes mean Math Verify from **72.31% to 3.00%**
-(median retained 0.028).
+For Finding 5, at matched 0-shot protocol and matched scoring, SFT takes mean Math Verify from
+**70.89% to 3.00%** across the 13 conditions that had something to lose (≥ 5% before SFT), with a
+median retained fraction of **0.028** (range 0.001–0.302). The range spans more than two orders of
+magnitude, so we quote it rather than a single multiplier.
 
 **W2 / Q2 — the temperature confound.**
 
@@ -228,11 +230,11 @@ verified them before submission.
 We have re-measured the table from scratch across 39 checkpoints × 2 modified datasets at 0-shot,
 averaged over the 13 contaminated checkpoints with R ≥ 100:
 
-| Condition | Math Verify | Advantage removed | vs uncontaminated floor |
+| Condition | Math Verify | Advantage removed | Residual above floor |
 |---|---|---|---|
-| Original | 70.19% | — | — |
-| Rephrased | 2.74% | 97.3% | 3.1× |
-| Perturbed | 1.89% | 98.6% | 2.1× |
+| Original | 72.18% | — | — |
+| Rephrased | 2.78% | 96.1% | +2.78 pp |
+| Perturbed | 1.91% | 97.4% | +1.91 pp |
 
 Two disclosures that go with these numbers:
 
@@ -240,9 +242,11 @@ Two disclosures that go with these numbers:
    the ground-truth answer unchanged. Those score a memorizing model correct by construction.
    Including them inflates Perturbed to 4.78% and inverts the expected ordering relative to
    Rephrased. We now report the exclusion and both numbers.
-2. We no longer write that performance "collapses to baseline." It lands at **2–3× the
-   uncontaminated floor**, not at it. The supportable claim is that modification removes the
-   large majority of the contamination advantage while leaving a small residual.
+2. We no longer write that performance "collapses to baseline." Under boxed-required scoring
+   the uncontaminated floor is **exactly 0.00%** at every model size, and the modified conditions
+   sit **1.9–2.8 percentage points above it**. The supportable claim is that modification removes
+   the large majority of the contamination advantage while leaving a small but consistent
+   residual.
 
 The re-measurement also extends the table to model sizes the submitted version asserted but did
 not show, and gives it provenance we can point at.

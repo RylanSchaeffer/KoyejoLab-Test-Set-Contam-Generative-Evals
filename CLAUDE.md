@@ -11,8 +11,9 @@ Research project investigating how test set contamination (data leakage) affects
 
 Active work is the **NeurIPS 2026 rebuttal (submission 32216)**. Start with:
 
-- **`reviews/2026_neurips/HANDOFF.md`** — current state, what is running (nothing, as of
-  2026-07-29), open decisions, and every correction the manuscript needs.
+- **`reviews/2026_neurips/HANDOFF.md`** — current state, open decisions, and every correction the
+  manuscript needs.
+- **`reviews/2026_neurips/REBUTTAL_DRAFT.md`** — paste-ready per-reviewer responses.
 - **`reviews/2026_neurips/REBUTTAL_EVIDENCE.md`** — each reviewer criticism mapped to the number
   that answers it.
 - **`reviews/2026_neurips/PROTOCOL_CONFOUND.md`** — ⚠️ **read before quoting any Math Verify
@@ -25,13 +26,39 @@ Before searching the repo to find out whether an experiment exists, read:
   explicitly what has *not* been run. Regenerate with `python scripts/audit_inventory.py`.
 - **`docs/INFRASTRUCTURE.md`** — cluster node, environment path, W&B project map, and the API gotchas
   that will otherwise cost an hour.
+- **`docs/NOTEBOOK_DATA_SOURCES.md`** — per notebook: the W&B project, the sweeps it *declares*, and
+  the sweeps whose md5 actually explains the cache on disk. Regenerate with
+  `scripts/scratch/audit_notebook_wandb_sources.py`.
 
-Both were verified directly against the HF Hub and W&B APIs, not against repo documentation.
+All were verified directly against the HF Hub and W&B APIs, not against repo documentation.
 
-⚠️ **`notebooks/11_math_qwen3_pt_math_verify/data/c39ba9b5..._runs_configs.csv` is the only
-surviving copy** of the pretraining cross-entropy behind Finding #3 — the 15 sweeps it came from
-are gone from all 325 visible W&B projects, and it is untracked by git. Do not delete it. See
+### Two traps that have already produced wrong numbers
+
+1. **A notebook can serve a cache it does not declare.**
+   `src.analyze.download_wandb_project_runs_configs` hashes the sweep list into the cache
+   filename and, with `refresh=False`, never re-downloads. Editing the sweep list without
+   deleting the cache silently keeps the old data. This is why Fig. 1 is 0-shot. Check
+   `docs/NOTEBOOK_DATA_SOURCES.md` before trusting any notebook's protocol.
+
+2. **0-shot and 4-shot sweeps are not scored the same way.** Commit `db75c5f` (2026-03-29)
+   changed the prompt *and* the scorer together (lenient `math_verify.parse()`, ~1.4% false
+   positives → boxed-required). Comparing logged scores across that boundary confounds the two.
+   Use `notebooks/11_*/results/protocol_sensitivity_rescored.csv` (`strict_score`), produced by
+   `scripts/rescore_zeroshot_with_boxed_required.py`, which rescores raw W&B responses with one
+   scorer and needs no GPU. **Never quote the 0-shot column of `protocol_sensitivity.csv`.**
+   Rescoring must run in a *process* pool — `math_verify.verify()` uses a signal-based timeout
+   that raises outside the main thread.
+
+⚠️ **The pretraining cross-entropy behind Finding #3 exists only in local caches.** The 15 sweeps
+it came from are gone: 0 of 218 run IDs found across 305 projects in 7 entities (searched by
+exact run ID with a validated matcher). Copies live in `notebooks/{10,11,20}_*/data/
+c39ba9b5..._runs_configs.csv`, and `notebooks/04_*/data/43bce56c...csv` is the sole copy of a
+41-configuration subset-fraction arm. All are committed now — keep it that way. See
 `reviews/2026_neurips/MISSING_PRETRAINING_DATA.md`.
+
+⚠️ **Do not `push_to_hub` without setting `HF_TOKEN` first.** `HF_HOME` points at a shared cache
+whose world-readable token file belongs to another user, so uploads land in *their* namespace.
+See `reviews/2026_neurips/HF_TOKEN_INCIDENT.md`.
 
 **Do not trust prose in `reviews/**/*.md`, `TODO.md`, `AUDIT_FINDINGS.md`, `MANUSCRIPT_CHANGES.md`, or
 `*_STATUS*.md` as evidence that something was done.** Several describe experiments as complete that were

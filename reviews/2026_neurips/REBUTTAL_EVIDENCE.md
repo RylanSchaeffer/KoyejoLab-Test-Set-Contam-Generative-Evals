@@ -50,11 +50,17 @@ mitigation, and it is false in the regime that matters most (heavy leakage).
 
 Measured at 0-shot, where the gains exist. Averaged over 13 contaminated checkpoints (R >= 100):
 
-| Condition | Score | Advantage removed | vs uncontaminated floor |
+| Condition | Score | Advantage removed | Residual above floor |
 |---|---|---|---|
-| Original | 70.19% | — | — |
-| Rephrased | 2.74% | 97.3% | 3.1x |
-| Perturbed | 1.89% | 98.6% | 2.1x |
+| Original | 72.18% | — | — |
+| Rephrased | 2.78% | 96.1% | +2.78 pp |
+| Perturbed | 1.91% | 97.4% | +1.91 pp |
+
+⚠️ Updated 2026-07-29. The earlier version of this table paired a *leniently* scored Original
+column against strictly scored Rephrased/Perturbed columns. Both are now boxed-required scored.
+The uncontaminated floor is **exactly 0.00%** at every size, so the residual is quoted in
+percentage points; the old "2-3x the floor" phrasing divided by a floor that was entirely
+lenient-scorer false positives.
 
 Two things to carry into the text:
 
@@ -62,9 +68,10 @@ Two things to carry into the text:
    unchanged.** Those score a memorizing model correct by construction. Including them inflates
    Perturbed to 4.78% and inverts the expected ordering. A reviewer checking the dataset will
    find this, so state it.
-2. **Do not say performance "collapses to baseline."** It lands at 2-3x the uncontaminated
-   floor. "Removes the large majority of the contamination advantage, leaving a small residual"
-   is what the data support.
+2. **Do not say performance "collapses to baseline."** Under matched strict scoring the
+   uncontaminated floor is exactly 0.00%, and rephrased/perturbed sit 1.9-2.8 percentage points
+   above it. "Removes the large majority of the contamination advantage, leaving a small
+   residual" is what the data support.
 
 Table 1's printed values (0.00-0.04%) do not reproduce — they predate the current datasets and
 correspond to no run in this W&B account. Replace them with these.
