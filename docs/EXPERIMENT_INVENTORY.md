@@ -5,6 +5,10 @@
 Verified 2026-07-27 directly against the HuggingFace Hub API and the W&B API. Not derived from any
 other document in this repo. Re-verify with `scripts/audit_inventory.py`.
 
+> **Updated 2026-07-30.** Several "not run" entries below have since been run. See
+> [What has been run since](#what-has-been-run-since-2026-07-27) at the bottom before trusting any
+> gap listed here.
+
 ---
 
 ## TL;DR
@@ -19,10 +23,10 @@ other document in this repo. Re-verify with `scripts/audit_inventory.py`.
 | Finished generative eval runs | **1,270** |
 | ...against overtrained checkpoints | **0** |
 
-The last row is the important one. Every finished generative evaluation is against an `ot=1`
-(compute-optimal) or `ot=1_sft` checkpoint. **Finding #4 (overtraining dilutes contamination) has never
-been measured in accuracy space** — only in cross-entropy. The checkpoints to fix that already exist, so
-it is an inference-only job.
+The last row was the important one, and it has since been closed: **all 137 overtrained checkpoints
+were evaluated in Math Verify space on 2026-07-29** (notebook 17). Finding #4 no longer rests on
+cross-entropy alone. Accuracy tracks loss, and the finding sharpens to a threshold effect — at 93M
+over ot 1×–16×, R=100 retains 0.0188 of its advantage while R=1000 retains 0.9966.
 
 ---
 
@@ -174,3 +178,26 @@ temperature; looping temperatures inside a single load would cut a 3-temperature
   templates exist in `src/data.py`; budget debugging time.
 - **`_sft` suffix parsing.** Model IDs put `_sft` after the `ot` field, so a naive
   `ot_([\d.]+)$` regex silently drops all SFT models. Capture the suffix.
+
+
+---
+
+## What has been run since 2026-07-27
+
+| Study | Scale | Where | Outcome |
+|---|---|---|---|
+| Finding #4 in accuracy space | 137/137 overtrained checkpoints | `notebooks/17_*` | Accuracy tracks loss; dilution is threshold-dependent (93M: 0.0188 at R=100 vs 0.9966 at R=1000 over ot 1×–16×) |
+| Table 1 at 0-shot | 39 + 39 checkpoints, 5 sizes | `notebooks/18_*` | Original 72.18% → Rephrased 2.78% → Perturbed 1.91%; uncontaminated floor exactly 0.00% |
+| Finding #5 at 0-shot | 39/39 SFT checkpoints | `notebooks/19_*` | 70.89% → 3.00%, median retained 0.028 |
+| Protocol rescore | all 76 protocol runs | `scripts/rescore_zeroshot_with_boxed_required.py` | Both protocols under one scorer; R=0 is exactly 0.0000 everywhere |
+| Temperature rescore | 369/370 temperature runs | `scripts/rescore_temperature_response.py` | Advantage retained at τ=1.0 is 9.6%, not the 25% previously reported |
+| **Contaminant ablation** | 34M × R ∈ {32,100,316} × 2 arms | sweeps `mxamktp0`, `vrxwx4dz` | Rephrased (solution-verbatim) transfer 0.979 / 0.902 / 0.784; perturbed arm running |
+| 0-shot pass@k | uncontaminated 344M | `results/pass_at_k/.../0shot/` | 0 well-formed `\boxed{}` in >30,000 samples so far |
+
+**Still not run**, and worth stating plainly:
+
+- A second benchmark (GSM8K) contamination sweep. `notebooks/00_gsm8k_platinum/` is the starting point.
+- A second model family (Llama/Gemma-style).
+- Multiple seeds at any configuration. All error bars to date are test-set bootstrap, not seed variance.
+- A contaminant arm using **disjoint** math problems, which is what would separate domain adaptation
+  from item-level leakage in the ablation above.
