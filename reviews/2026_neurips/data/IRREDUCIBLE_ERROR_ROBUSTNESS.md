@@ -29,7 +29,7 @@ checkable one.
 - E(0) lower end of the interval: **3.5359**
 - Contaminated runs (R >= 1) whose *measured* loss falls below that lower bound: **33 of 35** (94.3%)
 
-The claim survives: a majority of contaminated runs beat even the conservative end of the uncontaminated asymptote's interval, so it does not rest on the point estimate.
+The claim survives: 94.3% of contaminated runs beat even the conservative end of the uncontaminated asymptote's interval, so it does not rest on the point estimate.
 
 ## Caveats — read before quoting an interval
 
