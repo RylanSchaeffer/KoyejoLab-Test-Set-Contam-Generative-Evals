@@ -11,8 +11,12 @@ Research project investigating how test set contamination (data leakage) affects
 
 Active work is the **NeurIPS 2026 rebuttal (submission 32216)**. Start with:
 
-- **`reviews/2026_neurips/HANDOFF.md`** — current state, open decisions, and every correction the
-  manuscript needs.
+- **`reviews/2026_neurips/SESSION_HANDOFF_2026-07-30.md`** — ⭐ **start here.** What to do, in
+  order, plus the environment gotchas and the judgement calls open to revision.
+- **`reviews/2026_neurips/VERIFICATION_HANDOFF.md`** — what is least verified, ranked, with the
+  method to falsify each claim. Check `reviews/2026_neurips/verification/` for agent reports.
+- **`reviews/2026_neurips/HANDOFF.md`** — state at the end of the 2026-07-30 overnight run, and
+  every correction the manuscript needs.
 - **`reviews/2026_neurips/REBUTTAL_DRAFT.md`** — paste-ready per-reviewer responses.
 - **`reviews/2026_neurips/REBUTTAL_EVIDENCE.md`** — each reviewer criticism mapped to the number
   that answers it.
