@@ -326,7 +326,7 @@ out to give:
 | Uncontaminated | — | — | 7.1437 | 7.1437 | 7.1437 |
 | Exact replicas | same | same | 2.5138 | 1.4526 | 0.5243 |
 | Rephrased (solution-verbatim) | differs | **same** | 2.6125 | 2.0077 | 1.9573 |
-| Perturbed (nothing verbatim) | differs | differs | [PENDING] | [PENDING] | [PENDING] |
+| Perturbed (nothing verbatim) | differs | differs | 3.0741 | 3.0113 | [PENDING] |
 
 Two things follow from the rows we have:
 
@@ -344,8 +344,22 @@ Two things follow from the rows we have:
    our exact-versus-rephrased contrast reaches the same conclusion from the opposite direction. We
    now cite them for it (see also our response to 8RFz on related work).
 
-The perturbed arm — where nothing is leaked verbatim — is the one that speaks directly to
-realistic leakage, and we report it above.
+3. **The perturbed arm saturates, which lets us bound the confound rather than just flag it.**
+   Perturbed loss barely moves from R = 32 to R = 100 (3.0741 → 3.0113) while exact keeps falling
+   (2.5138 → 1.4526). That is the signature of domain adaptation: once the model has learned MATH
+   style and problem templates from 32 replicas, more replicas of *different* items add almost
+   nothing, whereas item-level leakage keeps paying. The perturbed plateau (≈ 3.0 nats) therefore
+   estimates how much of the loss reduction is available from genre and template learning alone;
+   the exact arm's further descent to 0.5243 is what requires verbatim solution text.
+
+**And the accuracy numbers say something the loss numbers do not.** At R = 32 the perturbed model
+reaches **1.34%** Math Verify against the exact model's 0.56% — with a `\boxed{}` rate of 0.63
+versus 0.15 and a verbatim solution rate of **0.000**. Nothing is regurgitated; the model has
+learned the genre from 5,000 distinct near-miss problems. That is weak *generalization*, which is
+the opposite of what the exact arm is doing at the same dose. Loss says the perturbed model is
+88% as contaminated as the exact one; accuracy says it is doing something qualitatively different.
+This is the clearest argument we can offer for why contamination work should report accuracy and
+not loss alone.
 
 **These two results combine into a single mechanism**, which we think is the most useful thing to
 come out of this rebuttal. The ablation says contaminated models memorize the *solution string*
