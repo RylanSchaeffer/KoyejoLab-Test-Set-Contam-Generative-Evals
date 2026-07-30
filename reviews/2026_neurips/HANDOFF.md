@@ -1,140 +1,159 @@
 # Handoff — NeurIPS 2026 rebuttal, submission 32216
 
-Updated **2026-07-30, overnight session**. Scores: **8RFz 3** (Quality 2, Originality 2, conf 4) ·
-**1wx9 4** · **aPBL 3**. The AC named 8RFz's loss-vs-correctness objection as the pivotal
+Updated **2026-07-30 ~01:40**, overnight session. Scores: **8RFz 3** (Quality 2, Originality 2,
+conf 4) · **1wx9 4** · **aPBL 3**. The AC named 8RFz's loss-vs-correctness objection the pivotal
 critique. **Discussion closes 2026-08-03.**
 
 ## Read in this order
 
 1. **[`REBUTTAL_DRAFT.md`](REBUTTAL_DRAFT.md)** — paste-ready per-reviewer responses. Start here.
-2. **[`REBUTTAL_EVIDENCE.md`](REBUTTAL_EVIDENCE.md)** — each criticism mapped to its number.
-3. **[`PROTOCOL_CONFOUND.md`](PROTOCOL_CONFOUND.md)** — read before quoting any Math Verify number.
-4. **[`MISSING_PRETRAINING_DATA.md`](MISSING_PRETRAINING_DATA.md)** — the data-loss investigation.
-5. **[`HF_TOKEN_INCIDENT.md`](HF_TOKEN_INCIDENT.md)** — credential problem found while launching.
-
-Environment: `./mem_scoring_vs_sampling_env/bin/python` (absolute path).
-
----
-
-## ⚠️ Two things needing a human
-
-1. **`git push` is blocked** by the sandbox permission classifier. Everything is committed to
-   branch `rebuttal/neurips-2026-protocol-and-evidence` (14 commits) but **nothing is pushed**.
-   Run `git push -u origin rebuttal/neurips-2026-protocol-and-evidence` yourself.
-2. **The HF token on this node is not yours.** `HF_HOME=/lfs/skampere1/0/shared_hf_cache` holds a
-   world-readable (`-rw-rw-rw-`) token belonging to **`ruili0`** (Rui Li), write-scoped. Any
-   `push_to_hub()` here lands in their namespace. Nothing of ours leaked — `ruili0` owns 0 `mem_*`
-   models, `RylanSchaeffer` owns 196 — because the push is gated behind `PRETRAIN_SKIP_HUB_PUSH=1`.
-   **Export your own `HF_TOKEN` before any upload**, and tell Rui/brando9 to rotate that token.
+2. **[`RETRIEVAL_KEY_RESULT.md`](RETRIEVAL_KEY_RESULT.md)** — the strongest new result.
+3. **[`CONTAMINANT_ABLATION.md`](CONTAMINANT_ABLATION.md)** — what the contaminant arms actually leak.
+4. **[`PROTOCOL_CONFOUND.md`](PROTOCOL_CONFOUND.md)** — read before quoting any Math Verify number.
+5. **[`REBUTTAL_EVIDENCE.md`](REBUTTAL_EVIDENCE.md)** — criticism → number map.
+6. **[`MISSING_PRETRAINING_DATA.md`](MISSING_PRETRAINING_DATA.md)** · **[`HF_TOKEN_INCIDENT.md`](HF_TOKEN_INCIDENT.md)**
 
 ---
 
-## What changed tonight, and why it matters
+## ⚠️ Three things needing you
 
-### The protocol question is settled — 0-shot, on the merits
-
-The 4-shot switch was commit `db75c5f` (2026-03-29), self-initiated during the ICML rebuttal, on
-the theory that 0-shot conflates format knowledge with reasoning because uncontaminated models
-never see `\boxed{}`.
-
-Testing that required removing **a second confound I introduced while investigating**: the 0-shot
-and 4-shot sweeps sit on opposite sides of that same commit, which *also* tightened scoring
-(lenient `math_verify.parse()`, ~1.4% false positives → boxed-required). Comparing logged scores
-compared prompt *and* scorer. All 76 runs are now rescored from raw W&B responses with one scorer
-(`scripts/rescore_zeroshot_with_boxed_required.py`, no GPU).
-
-| Model | R=0 0-shot logged | R=0 0-shot **strict** | R=0 4-shot strict |
-|---|---|---|---|
-| 34M | 0.0038 | **0.0000** | 0.0000 |
-| 62M | 0.0126 | **0.0000** | 0.0000 |
-| 93M | 0.0074 | **0.0000** | 0.0000 |
-| 153M | 0.0118 | **0.0000** | 0.0000 |
-| 344M | 0.0000 | **0.0000** | 0.0000 |
-
-The conclusion held and got stronger. 4-shot **does** teach the format (boxed rate 0 → 0.43–0.89)
-and buys **exactly zero** accuracy. The premise is refuted on its own terms. And at 0-shot the
-boxed rate rises with dose (153M: 0 → 0.009 → 0.047 → 0.72 → 0.98 → 1.0), so the contaminated
-model learns the format from the injected solutions themselves.
-
-Headline contrast under matched scoring: **153M R=316 → 0.9984 (0-shot) vs 0.0078 (4-shot)**.
-Ratios run 3×–192×.
-
-### The same confound was inside the Table 1 replacement
-
-Notebooks 18 and 19 took their Original/pretrained baseline from the *lenient* CSV while their
-treatment columns were strict. Both now read `protocol_sensitivity_rescored.csv`. Regenerated:
-
-- **Table 1** (R ≥ 100, n=14): Original **72.18%** → Rephrased **2.78%** (96.1% removed) →
-  Perturbed **1.91%** (97.4%).
-- **SFT** (13 conditions ≥5% pre-SFT): **70.89% → 3.00%**, median retained 0.028 (0.001–0.302).
-
-One claim died: the uncontaminated floor is now *exactly 0.00%*, so "rephrased/perturbed land at
-2–3× the floor" is undefined — it divided by a floor that was pure artifact. Report the residual
-in percentage points (+2.78 pp, +1.91 pp).
-
-### The lost W&B data — re-investigated properly
-
-Searched by **exact run ID** with a **validated matcher** (positive control 1 hit, fabricated ID 0
-hits) rather than by configuration. **0 of 218 run IDs across 305 projects in 7 entities, 0
-unreadable.** Identity confirmed correct (`rylan`, rylanschaeffer@gmail.com). The absence is
-targeted: `-eval` (1,565 runs), `-sft` (135) and `-eval-teacher-forcing` (107) all resolve;
-`-pt` alone does not. A rename or move is ruled out; who removed it is not established.
-
-Good news: **more survives locally than documented.** The cache exists in notebooks 10, 11 *and*
-20, and `notebooks/04_*/data/43bce56c...csv` is the sole copy of a 41-configuration
-subset-fraction arm. All committed.
-
-Still worth doing: check the W&B web UI for deleted projects (not exposed by the API) and email
-W&B support — the runs are only ~6 months old.
+1. **`git push` is blocked** by the sandbox permission classifier. ~30 commits sit on branch
+   `rebuttal/neurips-2026-protocol-and-evidence`, unpushed. Run:
+   `git push -u origin rebuttal/neurips-2026-protocol-and-evidence`
+2. **The HF token on this node is `ruili0`'s**, not yours, world-readable, write-scoped. Nothing
+   of ours leaked (gated behind `PRETRAIN_SKIP_HUB_PUSH=1`; `ruili0` owns 0 `mem_*` models,
+   `RylanSchaeffer` owns 196). **Export your own `HF_TOKEN` before any upload**, and tell
+   Rui/brando9 to rotate theirs.
+3. **The paraphrased/perturbed checkpoints are local only** — `models/pt_language_model/*_cont_*`
+   — because of (2). Push them to `RylanSchaeffer/` when convenient.
 
 ---
 
-## Experiments run tonight
+## The single most important new result
 
-| Job | Where | Status |
+**Memorization without retrieval — loss and accuracy come apart.** Full detail in
+[`RETRIEVAL_KEY_RESULT.md`](RETRIEVAL_KEY_RESULT.md).
+
+Models pretrained on *rephrased problems with verbatim original solutions*, evaluated 0-shot on
+the **original** problems (Qwen3-34M, uncontaminated = loss 7.1437 / accuracy 0.00%):
+
+| R | Loss, exact | Loss, rephrased | Acc, exact | **Acc, rephrased** | Verbatim solution rate |
+|---|---|---|---|---|---|
+| 32 | 2.5138 | 2.6125 | 0.56% | 0.24% | 0.000 |
+| 100 | 1.4526 | 2.0077 | 1.70% | 1.58% | 0.000 |
+| 316 | 0.5243 | 1.9573 | 7.22% | **1.52%** | **0.000** |
+
+At R=316 the rephrased model's loss is 78% of the way from clean to fully-contaminated — heavily
+contaminated by any loss measure — yet it scores 1.52% and reproduces the gold solution **0 times
+in 5,000**. It holds the answer and cannot retrieve it.
+
+**Mechanism: memorization is of the solution text; retrieval is keyed on the problem text.**
+Rephrasing at training time stores the solution without the key; rephrasing at evaluation time
+(Table 1) withholds the key from a model that has one. This unifies Finding 2 with the ablation.
+
+**Why it wins the rebuttal:** it demonstrates 8RFz's W1 — the AC's pivotal critique — on our own
+data. Conceding by showing beats arguing. And it inverts their detection worry: perplexity would
+flag these models loudly while benchmark scores are barely inflated, a false-positive mode for
+loss-based detection and probably the commoner real-world case.
+
+---
+
+## What changed tonight
+
+### Protocol: 0-shot, settled on the merits
+
+Testing the 4-shot rationale required removing **a scoring confound I introduced while
+investigating**: the 0-shot and 4-shot sweeps straddle `db75c5f`, which changed the *scorer*
+(lenient → boxed-required) as well as the prompt. All 76 runs rescored from raw W&B responses,
+one scorer, no GPU.
+
+R=0 is **exactly 0.0000 under both protocols at all five sizes.** 4-shot demonstrably teaches the
+format (boxed rate 0 → 0.43–0.89) and buys **zero** accuracy. At 0-shot the boxed rate rises with
+dose — the contaminated model learns the format from the injected solutions.
+
+**The same confound was in three more places**, all now fixed:
+- Table 1 replacement (nb18) and SFT re-run (nb19) — lenient baseline vs strict treatments.
+- **Finding #4 (nb17)** — the AC's pivotal claim. A lenient `ot=1` denominator inflated apparent
+  dilution. Corrected it holds: 93M retains **0.0188** at R=100 vs **0.9966** at R=1000 (~53×).
+- Temperature response — the matched-difference does *not* cancel the artifact. Retention at
+  τ=1.0 is **9.6%**, not the 25% previously reported.
+
+### Corrected headline numbers
+
+| Quantity | Old | **Corrected** |
 |---|---|---|
-| Rescore of all 76 protocol runs | CPU | **done** |
-| Paraphrased contamination, 34M, R=32/100/316 | sweep `mxamktp0`, GPUs 0/1/7 | see below |
-| 0-shot pass@k, uncontaminated 344M | GPUs 6 (+0/1/7 as they free) | running |
+| Table 1 (R≥100, n=14) | 70.19% → 2.74% / 1.89% | **72.18% → 2.78% / 1.91%** |
+| Uncontaminated floor | ~1% | **exactly 0.00%** |
+| SFT (13 conditions) | 72.31% → 3.00% | **70.89% → 3.00%**, median retained 0.028 |
+| Finding #4 retention | 0.019 / 0.995 | **0.0188 / 0.9966** |
+| Temperature at τ=1.0 | 25% | **9.6%** |
+| Notebook 16 | 14/17, −4.72 nats | **17/17, −2.18 nats** |
+| 0-shot pass@k | (didn't exist; 4-shot only) | **pass@25 = 0 on all 2,500 problems** |
 
-**Paraphrased contamination.** Run from `scripts/pretrain_language_model_v1.py`, which reproduces
-the published pre-`934546a` optimizer config, so the **published exact-replica runs are the
-control and did not need retraining**. Verified `gradient_accumulation_steps == 9`, matching all
-12 published 34M ot=1 runs. Train loss fell monotonically and ordered correctly by dose
-(R=32 → 5.28, R=100 → 4.52, R=316 → 2.74 at last check), and benchmark loss is dropping from
-11.938. Analysis is pre-written at `notebooks/21_paraphrased_contamination/`; run it once the
-sweep finishes.
+"Rephrased/perturbed land at 2–3× the floor" is **dead** — the floor is exactly 0.00%, so quote
+the residual in points (+2.78 pp, +1.91 pp).
 
-Control (published, 34M ot=1): R=0 **7.1437**, R=32 **2.5138**, R=100 **1.4526**, R=316 **0.5243**.
+### The contaminant ablation
 
-**0-shot pass@k.** The existing "0 correct in 5,000,000 samples" used the **4-shot** prefix and
-cannot support a 0-shot capability claim — the rebuttal leans on this in three places. Added
-`--num_fewshot {0,4}` and re-ran at 0-shot. First 5,900 samples: **0 containing `\boxed{}`**.
-Sharded 4 × 1250 problems × 25 samples.
+`math_rephrased` rephrases the problem but keeps the solution (**99.8% byte-identical**), so that
+arm is *solution-verbatim* leakage, not paraphrase. Reporting it as paraphrase transfer would have
+been wrong and trivially checkable. `math_perturbed` differs on both sides (0.1% identical).
+
+| Arm | Problem | Solution | Loss transfer (R=32/100/316) |
+|---|---|---|---|
+| Exact | same | same | 1.000 |
+| Rephrased | differs | same | 0.979 / 0.902 / 0.784 |
+| Perturbed | differs | differs | 0.879 / *running* / *running* |
+
+**Read loss transfer with care**: both modified corpora are MATH-domain text, so much of the
+perturbed arm's 0.879 is domain adaptation, not leakage. Accuracy is the honest metric — perturbed
+R=32 reaches 1.34% with boxed rate 0.63 and verbatim rate 0.000, i.e. weak *generalization*, not
+memorization. A fourth arm with **disjoint** math problems would separate these; not run.
+
+### The lost W&B data
+
+Re-searched by **exact run ID** with a **validated matcher** (positive control 1 hit, fabricated
+ID 0 hits). **0 of 218 run IDs across 305 projects in 7 entities.** Identity confirmed correct.
+Absence is targeted: `-eval` (1,565), `-sft` (135), `-eval-teacher-forcing` (107) all resolve;
+`-pt` alone does not. Rename/move ruled out; who removed it is not established.
+
+More survives locally than documented: the cache exists in notebooks **10, 11 and 20**, and
+`notebooks/04_*/data/43bce56c...csv` is the sole copy of a 41-configuration subset-fraction arm.
+All committed. Still worth doing: W&B web UI deleted-projects view, and emailing W&B support.
 
 ---
 
-## Corrections the manuscript still needs
+## Still running as of 01:40
 
-1. **Fig. 1 must be labelled 0-shot.**
-2. The **"~60× SFT collapse"** in `REBUTTAL_PLAN.md` P0.1 is an artifact. Correct: 70.89% → 3.00%.
-3. **Notebook 16's "14/17 conditions, up to −4.72 nats"** (`04_further_training.tex:64`) predates
-   the token-weighting fix. Corrected: **17/17 conditions, max −2.18 nats.**
-4. **Table 1's printed values (0.00–0.04%) do not reproduce.** Replace with the 0-shot re-run.
-5. **11.64% of perturbed problems keep the original answer** — excluded; including them gives
-   4.78% and inverts the ordering.
-6. **"Collapses to baseline" overstates it** — residual is +1.9 to +2.8 pp over a 0.00% floor.
-7. **SFT format confound is scale-dependent** — report `sft_score_given_boxed` alongside.
-8. **Notebook 11's `Num. Tokens = 20 × Num. Parameters`** omits the overtrain multiplier.
+| Job | Where | ETA |
+|---|---|---|
+| Perturbed R=100 | GPU7, sweep `vrxwx4dz` | ~01:50 |
+| Perturbed R=316 | GPU6 | ~02:45 |
+| Perturbed accuracy evals (R=100, 316) | GPU1, auto-triggered | after each |
+
+When they land: run `notebooks/21_paraphrased_contamination/` and fill the two `[PENDING]` rows in
+`REBUTTAL_DRAFT.md`. Nothing else depends on them.
+
+---
+
+## Manuscript corrections still needed
+
+1. Label Fig. 1 **0-shot**.
+2. Drop the "~60× SFT collapse" (artifact) → **70.89% → 3.00%**.
+3. `04_further_training.tex:64` "14/17, −4.72 nats" → **17/17, −2.18 nats**.
+4. Table 1's printed 0.00–0.04% do not reproduce → use the 0-shot re-run.
+5. State the **11.64%** perturbed answer-overlap exclusion.
+6. Drop "collapses to baseline" → residual in percentage points.
+7. SFT format confound is scale-dependent → report `sft_score_given_boxed`.
+8. Notebook 11's `Num. Tokens = 20 × Num. Parameters` omits the overtrain multiplier.
 
 ## What is left
 
-- **Post the rebuttal.** Draft is complete except the paraphrased and 0-shot-pass@k placeholders.
+- **Post the rebuttal.** Draft complete but for the two perturbed rows.
 - **`\citep` the five new bib keys** — `palavalli2024taxonomy`, `mehrbakhsh2024confounders`,
-  `dekoninck2024evading`, `dekoninck2024constat`, `godey2025gaperon`. They are in
-  `references_rylan.bib` (verified against the ACL Anthology and arXiv) but **not yet cited**, and
-  an uncited entry never appears in the bibliography. Note 8RFz wrongly listed **Jiang et al.
-  2024 as uncited** — it is cited three times, including a full appendix paragraph; the draft
+  `dekoninck2024evading`, `dekoninck2024constat`, `godey2025gaperon`. In the `.bib` (verified
+  against ACL Anthology and arXiv) but **not yet cited**, and uncited entries never render.
+  8RFz wrongly listed **Jiang et al. 2024 as uncited** — it is cited three times; the draft
   corrects this politely.
-- **Manuscript `.tex` edits** — deliberately not started; Rylan asked to hold.
+- **Manuscript `.tex` edits** — deliberately not started, per your instruction to hold.
 - **P3.2** SFT hyperparameters appendix; **P3.3** rephrase/perturbation validation appendix.
