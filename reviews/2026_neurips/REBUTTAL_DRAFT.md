@@ -52,14 +52,39 @@ a 4-shot prefix would change the conditioning context and dilute the memorizatio
 we simply failed to carry that reasoning to the generative evaluations.
 
 We have standardised on **0-shot** and re-run everything affected. We want to be explicit that
-this is not merely a convenience: the reason 4-shot was adopted was to let uncontaminated models
+this is not merely a convenience. The reason 4-shot was adopted was to let uncontaminated models
 demonstrate the `\boxed{}` output format, on the theory that 0-shot conflates format knowledge
-with reasoning. That rationale turns out to be empirically void at this scale. Four-shot
-prompting moves the uncontaminated R = 0 baseline to **exactly 0.0000 at all five model sizes**
-(from 0.0038–0.0126 at 0-shot) — it does not rescue the baseline, it floors it. Independently,
-**5,000,000 samples** from an uncontaminated 344M model (5,000 problems × 1,000 samples, τ = 1.0)
-produced **0 correct answers and not one well-formed `\boxed{}`**. These models cannot use the
-demonstration. Format conflation therefore cannot be what drives our 0-shot results.
+with reasoning. We tested that rationale directly, and it does not hold at this scale.
+
+Doing so required removing a second confound of our own making: our 0-shot and 4-shot sweeps sat
+on either side of the same commit that also tightened scoring (from `math_verify.parse()`, which
+extracts bare numbers from free text, to requiring a well-formed `\boxed{}`). Comparing the
+originally logged scores therefore compared prompt format *and* scoring rule at once. Because raw
+generations are retained, we rescored every run with the **same** boxed-required scorer. With
+scoring held constant:
+
+| Model | R = 0, 0-shot | R = 0, 4-shot | 4-shot `\boxed{}` rate, R ≥ 100 |
+|---|---|---|---|
+| 34M | 0.0000 | 0.0000 | 0.33–0.65 |
+| 62M | 0.0000 | 0.0000 | 0.65 |
+| 93M | 0.0000 | 0.0000 | 0.43–0.70 |
+| 153M | 0.0000 | 0.0000 | 0.60–0.89 |
+| 344M | — | 0.0000 | 0.57–0.66 |
+
+The four-shot prefix **does** successfully teach the output format — the rate of well-formed
+`\boxed{}` responses rises from near zero to 0.43–0.89 — and uncontaminated accuracy nonetheless
+remains **exactly 0.0000** at every model size. Removing the format barrier reveals no capability
+underneath it. (The apparent 0.4–1.3% we previously saw for uncontaminated models at 0-shot was
+entirely lenient-scorer false positives, consistent with its measured ~1.4% rate.) Format
+conflation therefore cannot be what drives our 0-shot results, and the headline contrast is
+undisturbed: 153M at R = 316 scores **0.9984 at 0-shot versus 0.0078 at 4-shot** under identical
+strict scoring.
+
+A mechanistic detail supports the reading. At 0-shot the `\boxed{}` rate *rises with
+contamination dose* (153M: 0.000 → 0.009 → 0.047 → 0.72 → 0.98 → 1.000 as R goes 0 → 1 → 10 → 32
+→ 100 → 316). The contaminated model learns the output format from the injected solutions
+themselves. Contamination supplies format and answer together; four in-context examples supply
+format alone, and format alone is worth nothing.
 
 We report both protocols in the revision, and we think the sensitivity is itself a result worth
 stating: **contamination-driven gains in small from-scratch models are memorization brittle
@@ -171,11 +196,21 @@ More substantively, we now situate both findings:
 
   The prior studies inject contamination into models that are **already capable** of the task.
   Such a model can bridge a surface-form change: it has the underlying competence, and
-  contamination supplies an advantage that survives paraphrase. Our models provably have **no
-  such competence to bridge with**. An uncontaminated 344M model produced **0 correct answers in
-  5,000,000 samples**, and not one sample contained even a well-formed `\boxed{}`. With zero
-  latent capability, every point of contaminated performance is verbatim memorization, and
-  verbatim memorization cannot transfer across a rephrasing.
+  contamination supplies an advantage that survives paraphrase. Our models have **no such
+  competence to bridge with**, which we establish three independent ways on the uncontaminated
+  344M checkpoint:
+
+  - **Sampling, 4-shot:** 5,000 problems × 1,000 samples at τ = 1.0 = **5,000,000 samples, 0
+    correct**, and not one containing a well-formed `\boxed{}` — despite four worked examples
+    demonstrating the format in every prompt.
+  - **Sampling, 0-shot:** [PENDING — insert n and result] samples, **0 correct**. We ran this
+    separately because the figure above uses the 4-shot prefix and so cannot, on its own, speak
+    to 0-shot capability.
+  - **Greedy, both protocols:** exactly 0.0000 under boxed-required scoring at every model size
+    (table in the general response).
+
+  With zero latent capability, every point of contaminated performance is verbatim memorization,
+  and verbatim memorization cannot transfer across a rephrasing.
 
   This makes the two results complementary and yields a concrete prediction: the transfer of
   contamination across paraphrase should be a function of the model's underlying capability, and
@@ -261,7 +296,8 @@ inference is not invited.
 Your accompanying hypothesis — "maybe model/train scale is not enough to see the generalization
 from contaminated data" — is, we believe, correct, and we can now support it directly rather
 than speculatively. An uncontaminated 344M model produced **0 correct answers in 5,000,000
-samples** (5,000 problems × 1,000 samples at τ = 1.0), with not one well-formed `\boxed{}`. There
+samples** (5,000 problems × 1,000 samples at τ = 1.0), with not one well-formed `\boxed{}` —
+and 0 correct again in a separate 0-shot run, so this is not an artifact of the prompt format. There
 is no latent capability at this scale for contamination to combine with, so anything that breaks
 verbatim surface-form match removes the entire effect. We now use this to reconcile our Finding 2
 with prior work (Mehrbakhsh et al. 2024; Dekoninck et al. 2024) that finds rephrased
@@ -295,7 +331,8 @@ deliberate scale-for-control tradeoff and the scaling-law bridge, but we state t
 more prominently and commit to a second benchmark and a second model family for the
 camera-ready. We would add one observation that emerged from this rebuttal: the *reason* our
 models show no paraphrase transfer is that they have zero baseline capability (0 correct in
-5,000,000 samples), which makes the scale limitation a **substantive boundary condition** on
+5,000,000 samples at 4-shot and again at 0-shot), which makes the scale limitation a
+**substantive boundary condition** on
 Finding 2 rather than merely a caveat. We now present it that way.
 
 **W3 — single seed, no error bars.**

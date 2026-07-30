@@ -2,7 +2,8 @@
 
 **Status: blocking. Read before writing any rebuttal text that quotes a Math Verify number.**
 
-Verified 2026-07-27 on skampere1 directly against the W&B API and the cached notebook data.
+Verified 2026-07-27 on skampere1 against the W&B API and cached notebook data; the
+baseline-fairness section was corrected 2026-07-29 after rescoring removed a scoring confound.
 Everything below is reproducible with the scripts named at the end.
 
 ---
@@ -36,21 +37,30 @@ Meanwhile `notebooks/13_*` (SFT) and `notebooks/15_*` (rephrased/perturbed) genu
 
 ## What is actually true, per protocol
 
-Greedy decoding, pretrained (`ot=1`) checkpoints, same boxed-required scoring in both columns:
+Greedy decoding, pretrained (`ot=1`) checkpoints. **Both columns rescored from raw generations
+with the same boxed-required scorer** — the originally logged values were not comparable, see the
+correction below.
 
-| Model | Replicas | 0-shot | 4-shot |
-|---|---|---|---|
-| 34M | 316 | 0.0732 | 0.0060 |
-| 62M | 316 | 0.7990 | 0.0060 |
-| 93M | 316 | 0.9872 | — |
-| 93M | 1000 | 0.9994 | — |
-| 153M | 316 | 1.0000 | — |
-| 153M | 1000 | 1.0000 | — |
-| 344M | 100 | 0.9912 | 0.0074 |
-| 344M | 1000 | 1.0000 | 0.0104 |
-| 344M | 3162 | 1.0000 | 0.0052 |
+| Model | Replicas | 0-shot (strict) | 4-shot (strict) | ratio |
+|---|---|---|---|---|
+| 34M | 100 | 0.0170 | 0.0050 | 3× |
+| 34M | 316 | 0.0722 | 0.0060 | 12× |
+| 62M | 100 | 0.0730 | 0.0062 | 12× |
+| 62M | 316 | 0.7978 | 0.0060 | 133× |
+| 93M | 100 | 0.3725 | 0.0036 | 104× |
+| 93M | 316 | 0.9856 | 0.0054 | 183× |
+| 93M | 1000 | 0.9978 | 0.0052 | 192× |
+| 153M | 100 | 0.8074 | 0.0112 | 72× |
+| 153M | 316 | 0.9984 | 0.0078 | 128× |
+| 153M | 1000 | 0.9984 | 0.0088 | 113× |
+| 344M | 32 | 0.1256 | 0.0058 | 22× |
+| 344M | 100 | 0.9896 | 0.0074 | 134× |
+| 344M | 1000 | 0.9984 | 0.0104 | 96× |
+| 344M | 3162 | 0.9984 | 0.0052 | 192× |
 
-Full grid: `notebooks/11_math_qwen3_pt_math_verify/results/PROTOCOL_SENSITIVITY.md`.
+Full rescored grid: `notebooks/11_*/results/PROTOCOL_SENSITIVITY_RESCORED.md` (all 76 runs).
+The original logged-score grid is kept at `PROTOCOL_SENSITIVITY.md` for provenance, but the
+0-shot column there is lenient-scored and should not be quoted.
 
 Under 4-shot, **no** configuration anywhere in the grid exceeds ~1.1% Math Verify — not at
 3,162 replicas, not at 344M. The contamination effect the paper reports exists only at 0-shot.
@@ -92,19 +102,49 @@ Two premises behind the switch are measurably false:
 models were *pretrained* at `max_length=2048` (recorded in every run's `trainer_config`). The
 prefix is therefore ~1/3 of the trained sequence length. No overflow, but not negligible.
 
-**2. The baseline fairness it was designed to buy does not exist.** 4-shot was meant to lift the
-uncontaminated baseline off zero. It moved it to *exact* zero at every model size:
+**2. The baseline fairness it was designed to buy does not exist.**
 
-| Model | R=0 @ 0-shot | R=0 @ 4-shot |
-|---|---|---|
-| 34M | 0.0038 | **0.0000** |
-| 62M | 0.0126 | **0.0000** |
-| 93M | 0.0074 | **0.0000** |
-| 153M | 0.0118 | **0.0000** |
-| 344M | — | **0.0000** |
+⚠️ **This sub-claim was initially argued from confounded numbers. Corrected below 2026-07-29.**
+The first version of this section compared the scores each run *logged*. But the 0-shot sweeps
+predate `db75c5f` and used the lenient scorer, while the 4-shot sweeps used boxed-required
+scoring — so that comparison varied the prompt *and* the scoring rule together. A 0-shot R=0
+reading of 0.0038–0.0126 is exactly what the lenient scorer's measured ~1.4% false-positive rate
+produces, so it could not be attributed to prompt format.
 
-Corroborated by the pass@k run: 5,000,000 samples from an uncontaminated 344M produced **0
-correct and not one well-formed `\boxed{}`**. These models cannot use the demonstration.
+Raw generations are in W&B history, so all 76 runs were rescored with the **same** boxed-required
+scorer (`scripts/rescore_zeroshot_with_boxed_required.py`, no GPU required). With scoring held
+constant:
+
+| Model | R=0 @ 0-shot logged | R=0 @ 0-shot **strict** | R=0 @ 4-shot strict |
+|---|---|---|---|
+| 34M | 0.0038 | **0.0000** | 0.0000 |
+| 62M | 0.0126 | **0.0000** | 0.0000 |
+| 93M | 0.0074 | **0.0000** | 0.0000 |
+| 153M | 0.0118 | **0.0000** | 0.0000 |
+| 344M | — | — | 0.0000 |
+
+**The conclusion survives, and is stronger than the confounded version.** Uncontaminated accuracy
+is *exactly zero under both protocols*. And the 4-shot prefix demonstrably **does** teach the
+format — the well-formed `\boxed{}` rate rises from ~0 to 0.43–0.89 — while accuracy stays at
+exactly 0.0000. So the format barrier was real and removing it revealed no capability behind it.
+That refutes the March rationale on its own terms rather than by denying the premise.
+
+The headline contrast is untouched by the rescoring: 153M R=316 scores **0.9984 (0-shot strict)
+vs 0.0078 (4-shot strict)**; 9 high-scoring 0-shot runs differ from their logged values by at
+most 0.0016, confirming that verbatim regurgitation passes strict scoring.
+
+**Mechanism, visible in the boxed rate.** At 0-shot the `\boxed{}` rate rises monotonically with
+contamination dose (153M: 0.000 → 0.009 → 0.018 → 0.047 → 0.72 → 0.98 → 1.000 for
+R = 0, 1, 3, 10, 32, 100, 316). The contaminated model learns the output format *from the
+injected solutions*. Contamination supplies format and answer together; four in-context examples
+supply format alone, which is worth nothing.
+
+Corroborated by pass@k on the uncontaminated 344M: 5,000,000 samples at **4-shot** produced 0
+correct and not one well-formed `\boxed{}`. ⚠️ Note that run used the 4-shot prefix, so it cannot
+by itself support a 0-shot capability claim; a separate 0-shot pass@k is being run for that
+(`results/pass_at_k/.../0shot/`).
+
+Full rescored grid: `notebooks/11_*/results/PROTOCOL_SENSITIVITY_RESCORED.md`.
 
 **Consequence for the framing decision.** Format conflation cannot be what drives the 0-shot
 contamination effect, because demonstrating the format leaves the uncontaminated baseline at hard
