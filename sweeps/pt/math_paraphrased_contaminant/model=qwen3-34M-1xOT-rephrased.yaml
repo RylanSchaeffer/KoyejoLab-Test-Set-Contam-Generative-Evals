@@ -1,0 +1,111 @@
+# Paraphrased contamination during pretraining — reviewers 1wx9 Q1, aPBL Q1, AC bullet 1.
+#
+# Injects RylanSchaeffer/math_rephrased (same problems, different wording) into the pretraining
+# corpus while `eval_benchmark_loss` is still measured on the ORIGINAL MATH test set. That
+# separation is the experiment: does contamination with paraphrases transfer to the benchmark
+# the paraphrases were derived from?
+#
+# Expected outcome at this scale: little transfer, which (a) answers 1wx9's W2 directly,
+# (b) sharpens the memorization story, and (c) is consistent with pass@k = 0 — these models have
+# no latent capability to bridge a surface-form change.
+#
+# Checkpoints get a `_cont_math_rephrased` suffix so they cannot overwrite the exact-replica
+# models of the same size and replica count.
+#
+# Project is deliberately new: `memorization-scoring-vs-sampling-pt` does not exist under
+# `rylan`, and the 15 sweeps the notebooks reference are gone from every visible project. Do not
+# reuse that name and add to the confusion.
+command:
+  - ${env}
+  - torchrun
+  - --standalone
+  - --nproc_per_node=1
+  - ${program}
+  - ${args}
+program: scripts/pretrain_language_model.py
+entity: rylan
+project: memorization-scoring-vs-sampling-pt-paraphrased
+method: grid
+parameters:
+  data_config:
+    parameters:
+      corpus:
+        values: ["fineweb-edu-dedup"]
+      benchmark:
+        values: [ "EleutherAI/minerva_math" ]
+      contaminant:
+        values: [ "RylanSchaeffer/math_rephrased" ]
+      benchmark_shuffle_seed:
+        values: [ 0 ]
+      benchmark_subset_fraction:
+        values: [ 1.0 ]
+      num_benchmark_replicas_per_epoch:
+        values: [ 32, 100, 316 ]
+      shuffle_seed:
+        values: [0]
+  model_config:
+    parameters:
+      attn_implementation:
+        values: [ "flash_attention_2" ]
+      model_name:
+        values: [ "Qwen3/Qwen3-34M" ]
+      torch_dtype:
+        values: [ "bfloat16" ]
+  trainer_config:
+    parameters:
+      data_seed:
+        values: [ 0 ]
+      dataloader_drop_last:
+        values: [ True ]
+      dataloader_num_workers:
+        values: [ 16 ]
+      dataloader_prefetch_factor:
+        values: [ 8 ]
+      eval_on_start:
+        values: [ True ]
+      eval_strategy:
+        values: [ steps ]
+      eval_steps:
+        values: [ 5000 ]
+      gradient_checkpointing:
+        values: [ False ]
+      hub_strategy:
+        values: ["end"]
+      base_learning_rate:
+        values: [ 0.000001 ]
+      logging_steps:
+        values: [ 10 ]
+      lr_scheduler_type:
+        values: [ "cosine" ]
+      max_grad_norm:
+        values: [ 1.0 ]
+      max_length:
+        values: [ 2048 ]
+      max_steps:
+        values: [ -1 ]
+      num_train_epochs:
+        values: [ 1 ]
+      optim:
+        values: [ "adamw_torch_fused" ]
+      overtrain_multiplier:
+        values: [ 1.0 ]
+      per_device_eval_batch_size:
+        values: [ 42 ]
+      per_device_train_batch_size:
+        values: [ 42 ]
+      remove_unused_columns:
+        values: [ True ]
+      report_to:
+        values: ["wandb"]
+      save_strategy:
+        values: [ "no" ]
+      save_total_limit:
+        values: [ 1 ]
+      torch_compile:
+        values: [ True ]
+      warmup_steps:
+        values: [ 250 ]
+      weight_decay:
+        values: [ 0.0 ]
+  seed:
+    values: [0]

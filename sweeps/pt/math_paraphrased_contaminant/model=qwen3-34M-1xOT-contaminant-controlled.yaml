@@ -1,0 +1,142 @@
+# Paraphrased vs exact contamination during pretraining, with an internal control.
+# Reviewers 1wx9 Q1, aPBL Q1, AC bullet 1.
+#
+# WHY BOTH ARMS ARE TRAINED HERE rather than comparing against the published exact-replica
+# losses.
+#
+# Observed facts:
+#   - `scripts/pretrain_language_model.py` in THIS repo reads trainer_config keys
+#     `adam_beta1`, `adam_beta2`, `warmup_ratio`, `full_determinism`, and data_config key
+#     `train_test_split_seed`.
+#   - The published runs' recorded configs (read from notebook 11's cache, sweep g31f7bsb)
+#     contain exactly the 27 trainer_config keys in `sweeps/pt/math_82gb_1xOT/*.yaml` and none
+#     of those four.
+#   - Running this repo's script with this repo's sweep YAML therefore KeyErrors immediately.
+#
+# The likeliest explanation is NOT that this script was edited after the fact.
+# `docs/INFRASTRUCTURE.md` records that pretraining ran on **skampere2** from a **different
+# repository**, `/lfs/skampere2/0/rschaef/KoyejoLab-Pretraining-Variance`, under `pt_var_env`
+# (CPython 3.12.12). So this repo's pretraining path plausibly never produced the published runs
+# at all, and its sweep YAMLs were written for that other codebase's expectations.
+#
+# ==> Before trusting these runs for anything comparative, check that other repo. If its script
+#     is what produced Fig. 3, the paraphrased experiment should ideally run from there instead,
+#     so the contaminant is the only thing that differs from the published setup.
+#
+# Either way, the exact-replica control arm here makes the paraphrased-vs-exact contrast
+# internally valid: both arms share one script, one environment, one set of hyperparameters.
+# These losses should NOT be compared against Fig. 3.
+#
+# The four previously-unset keys are set to HuggingFace TrainingArguments defaults
+# (adam_beta2=0.999, full_determinism=False) on the assumption the other codebase left them
+# unset too, with warmup_ratio=0.0316 approximating the recorded 250 warmup steps at this token
+# budget (~7,900 steps for 34M at 1xOT, batch 42 x 2048). That assumption is UNVERIFIED.
+#
+# Checkpoints from the paraphrased arm get a `_cont_math_rephrased` suffix so they cannot
+# overwrite the published exact-replica models.
+command:
+  - ${env}
+  - torchrun
+  - --standalone
+  - --nproc_per_node=1
+  - ${program}
+  - ${args}
+program: scripts/pretrain_language_model.py
+entity: rylan
+project: memorization-scoring-vs-sampling-pt-paraphrased
+method: grid
+parameters:
+  data_config:
+    parameters:
+      corpus:
+        values: ["fineweb-edu-dedup"]
+      benchmark:
+        values: [ "EleutherAI/minerva_math" ]
+      # The control arm and the treatment arm. `minerva_math` == benchmark, so it reproduces the
+      # exact-replica path and gets no name suffix.
+      contaminant:
+        values: [ "EleutherAI/minerva_math", "RylanSchaeffer/math_rephrased" ]
+      benchmark_shuffle_seed:
+        values: [ 0 ]
+      benchmark_subset_fraction:
+        values: [ 1.0 ]
+      num_benchmark_replicas_per_epoch:
+        values: [ 32, 100, 316 ]
+      shuffle_seed:
+        values: [0]
+  model_config:
+    parameters:
+      attn_implementation:
+        values: [ "flash_attention_2" ]
+      model_name:
+        values: [ "Qwen3/Qwen3-34M" ]
+      torch_dtype:
+        values: [ "bfloat16" ]
+  trainer_config:
+    parameters:
+      # --- keys the current script requires but the published runs never recorded ---
+      adam_beta1:
+        values: [ 0.9 ]
+      adam_beta2:
+        values: [ 0.999 ]
+      full_determinism:
+        values: [ False ]
+      warmup_ratio:
+        values: [ 0.0316 ]
+      # --- everything below matches the published runs' recorded values ---
+      base_learning_rate:
+        values: [ 0.000001 ]
+      data_seed:
+        values: [ 0 ]
+      dataloader_drop_last:
+        values: [ True ]
+      dataloader_num_workers:
+        values: [ 8 ]
+      dataloader_prefetch_factor:
+        values: [ 4 ]
+      eval_on_start:
+        values: [ True ]
+      eval_strategy:
+        values: [ steps ]
+      eval_steps:
+        values: [ 2000 ]
+      gradient_checkpointing:
+        values: [ False ]
+      hub_strategy:
+        values: ["end"]
+      logging_steps:
+        values: [ 10 ]
+      lr_scheduler_type:
+        values: [ "cosine" ]
+      max_grad_norm:
+        values: [ 1.0 ]
+      max_length:
+        values: [ 2048 ]
+      max_steps:
+        values: [ -1 ]
+      num_train_epochs:
+        values: [ 1 ]
+      optim:
+        values: [ "adamw_torch_fused" ]
+      overtrain_multiplier:
+        values: [ 1.0 ]
+      per_device_eval_batch_size:
+        values: [ 42 ]
+      per_device_train_batch_size:
+        values: [ 42 ]
+      remove_unused_columns:
+        values: [ True ]
+      report_to:
+        values: ["wandb"]
+      save_strategy:
+        values: [ "no" ]
+      save_total_limit:
+        values: [ 1 ]
+      torch_compile:
+        values: [ True ]
+      warmup_steps:
+        values: [ 250 ]
+      weight_decay:
+        values: [ 0.0 ]
+  seed:
+    values: [0]

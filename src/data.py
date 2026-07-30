@@ -203,7 +203,7 @@ def create_dataset_for_pretraining(
     )
     corpus_eval_dataset_cache_dir = os.path.join(hf_cache_root, "corpus_eval_tokenized")
 
-    # Load the benchmark.
+    # Load the benchmark — this is what `eval_benchmark_loss` is measured on.
     benchmark_test_split_dataset = create_dataset_for_supervised_finetuning(
         dataset_name=data_config["benchmark"],
         tokenizer=tokenizer,
@@ -219,6 +219,34 @@ def create_dataset_for_pretraining(
         ]
     )
 
+    # What gets *injected* is normally the same data the loss is measured on. To test whether
+    # contamination with paraphrases transfers to the original benchmark, the two must be
+    # separable: inject `contaminant` (e.g. RylanSchaeffer/math_rephrased) while still
+    # measuring loss on `benchmark` (the original test set). Omitting `contaminant` reproduces
+    # the original exact-replica behaviour bit for bit.
+    contaminant_name = data_config.get("contaminant") or data_config["benchmark"]
+    if contaminant_name == data_config["benchmark"]:
+        contaminant_dataset = benchmark_test_split_dataset
+    else:
+        contaminant_dataset = create_dataset_for_supervised_finetuning(
+            dataset_name=contaminant_name,
+            tokenizer=tokenizer,
+            remove_columns=False,
+        )["eval"]
+        contaminant_dataset = contaminant_dataset.remove_columns(
+            [
+                col
+                for col in contaminant_dataset.column_names
+                if col not in cols_to_keep
+            ]
+        )
+        print(
+            f"Contaminant ({contaminant_name}) differs from benchmark "
+            f"({data_config['benchmark']}): injecting {len(contaminant_dataset)} "
+            f"contaminant examples, measuring loss on "
+            f"{len(benchmark_test_split_dataset)} benchmark examples."
+        )
+
     # Subsample then shuffle the benchmark as specified.
     num_benchmark_samples_to_subsample = int(
         data_config["benchmark_subset_fraction"] * len(benchmark_test_split_dataset)
@@ -231,20 +259,27 @@ def create_dataset_for_pretraining(
     benchmark_test_split_dataset = benchmark_test_split_dataset.shuffle(
         seed=data_config["benchmark_shuffle_seed"]
     ).select(range(num_benchmark_samples_to_subsample))
+    # Subsample the contaminant identically. The rephrased/perturbed sets are index-aligned
+    # with the original, so the same seed and count select the *corresponding* problems —
+    # which is what makes "did contamination with paraphrase i help on original i?" answerable.
+    if contaminant_dataset is not benchmark_test_split_dataset:
+        contaminant_dataset = contaminant_dataset.shuffle(
+            seed=data_config["benchmark_shuffle_seed"]
+        ).select(range(num_benchmark_samples_to_subsample))
+    else:
+        contaminant_dataset = benchmark_test_split_dataset
 
-    # Replicate the benchmark.
+    # Replicate the contaminant — this is what actually enters the training corpus.
     if data_config["num_benchmark_replicas_per_epoch"] > 0:
         replicated_benchmark_test_split_dataset = concatenate_datasets(
             [
-                benchmark_test_split_dataset
+                contaminant_dataset
                 for _ in range(data_config["num_benchmark_replicas_per_epoch"])
             ]
         )
     elif data_config["num_benchmark_replicas_per_epoch"] == 0:
         # Select none of the rows to create an empty dataset.
-        replicated_benchmark_test_split_dataset = benchmark_test_split_dataset.select(
-            range(0)
-        )
+        replicated_benchmark_test_split_dataset = contaminant_dataset.select(range(0))
     else:
         raise ValueError(
             f"Invalid num_benchmark_replicas_per_epoch ({data_config['num_benchmark_replicas_per_epoch']})"
@@ -447,6 +482,26 @@ def create_dataset_for_supervised_finetuning(
         raw_datasets = load_dataset_gsm8k_platinum()
         preprocess_fn = preprocess_madrylab_gsm8k_platinum_for_sft
         doc_to_text = GSM8K_PLATINUM_DOC_TO_TEXT
+    elif dataset_name in {
+        "RylanSchaeffer/math_rephrased",
+        "RylanSchaeffer/math_perturbed",
+    }:
+        # Both carry `problem` and `solution` columns, so the MATH preprocessing applies
+        # unchanged. Wiring these in is what makes rephrased/perturbed MATH usable as a
+        # *pretraining contaminant* rather than only as an evaluation set — the experiment
+        # reviewers 1wx9 and aPBL and the AC all asked for.
+        if dataset_name == "RylanSchaeffer/math_rephrased":
+            raw_datasets = load_dataset_math_rephrased()
+        else:
+            raw_datasets = load_dataset_math_perturbed()
+        preprocess_fn = preprocess_eleutherai_hendrycks_math_for_sft
+        doc_to_text = MINERVA_MATH_DOC_TO_TEXT
+        # These ship a `test` split only. Alias it so `split_to_train_on="train"` does not
+        # KeyError; there is no separate train split to confuse it with.
+        if "train" not in raw_datasets:
+            raw_datasets = DatasetDict(
+                {"test": raw_datasets["test"], "train": raw_datasets["test"]}
+            )
     else:
         raise NotImplementedError(f"Unsupported dataset: {dataset_name}")
 

@@ -387,6 +387,14 @@ def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> st
         wandb_config["data_config"]["benchmark_subset_fraction"], 4
     )
     pted_model_hf_name = f"mem_{init_model_name}_{benchmark}_rep_{num_benchmark_replicas_per_epoch}_sbst_{benchmark_subset_fraction:.4f}_epch_{num_train_epochs}_ot_{overtrain_multiplier}"
+    # The name is derived from `benchmark`, which stays "minerva_math" even when a *different*
+    # dataset is injected as the contaminant. Without this suffix a paraphrased-contamination
+    # run would produce the identical name to its exact-replica counterpart and overwrite that
+    # published checkpoint on the Hub. Only appended when the two differ, so every existing
+    # checkpoint name is unchanged.
+    contaminant = wandb_config["data_config"].get("contaminant")
+    if contaminant and contaminant != wandb_config["data_config"]["benchmark"]:
+        pted_model_hf_name += f"_cont_{contaminant.split('/')[-1]}"
     if len(pted_model_hf_name) > 94:
         raise ValueError(f"pted_model_hf_name is too long: {pted_model_hf_name}")
     return pted_model_hf_name
