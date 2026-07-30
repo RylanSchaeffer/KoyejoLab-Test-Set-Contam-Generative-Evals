@@ -1,0 +1,376 @@
+# Rebuttal draft — NeurIPS 2026 submission 32216
+
+Drafted 2026-07-29. Paste-ready per-reviewer comments. Scores: **8RFz 3** (Quality 2,
+Originality 2, conf 4) · **1wx9 4** · **aPBL 3**. The AC named 8RFz's loss-vs-correctness
+objection as the pivotal critique.
+
+**Every number below is 0-shot greedy unless explicitly labelled otherwise.** Read
+[`PROTOCOL_CONFOUND.md`](PROTOCOL_CONFOUND.md) before editing any figure. Sources are in
+[`REBUTTAL_EVIDENCE.md`](REBUTTAL_EVIDENCE.md).
+
+Two placeholders marked **[PENDING]** are the paraphrased-contamination runs, launched
+2026-07-29 22:13 as sweep `mxamktp0` (34M, R = 32/100/316, ~3 h). If they do not land in time,
+delete those paragraphs — every other claim stands without them.
+
+---
+
+## General response (post once, addressed to all reviewers and the AC)
+
+We thank all three reviewers and the AC. The AC identified 8RFz's loss-vs-correctness objection
+as the one critique that questions whether our evidence supports our claims. We agree that was
+the right thing to single out, and we have answered it with new measurements rather than
+argument: **we evaluated all 137 overtraining checkpoints and all 39 SFT checkpoints in Math
+Verify (accuracy) space**, which is the metric the objection asks for. We summarise below, and
+in doing so we correct two things in our own submission that we found while doing this work.
+
+**1. Findings 4 and 5 now rest on accuracy, not loss.** Accuracy tracks loss, so the
+stealth-contamination scenario 8RFz raises — accuracy persisting while loss rises, making
+contamination harder to detect but no less inflationary — does **not** occur in our setting. The
+new measurement is also sharper than our original claim, and it obliges us to weaken that claim:
+dilution is **threshold-dependent**. For 93M over ot 1→16, the contamination advantage retained
+is **0.019 at R = 100 but 0.995 at R = 1000**. Below the memorization threshold, overtraining
+suppresses contamination by more than an order of magnitude; above it, 16× more fresh data does
+essentially nothing. We were wrong to state "overtraining dilutes contamination" without
+qualification — it reads as a mitigation, and it fails precisely in the heavy-leakage regime
+that matters most. The revision states the threshold behaviour instead.
+
+**2. A correction we owe the reviewers: an evaluation-protocol inconsistency in our own paper.**
+While re-running these evaluations we discovered that our generative evaluations were not run
+under a single protocol. Figure 1 and every teacher-forced result are **0-shot**; Table 1 and
+the SFT figures are **4-shot** (the EleutherAI `minerva_math` default, which we adopted partway
+through the project). This matters enormously at our scale: the same checkpoint
+(344M, R = 3162, greedy, identical scoring code) scores **1.0000 at 0-shot and 0.0052 at
+4-shot**.
+
+The cause is mechanistic, not a bug. At 0-shot the prompt reproduces the opening of the
+memorized training document and the model emits the stored solution verbatim. At 4-shot, four
+unrelated worked examples precede the problem, the prompt no longer matches any memorized
+context, and the model produces fluent but unrelated text. Prompts are ~687 tokens at the median
+against a 2,048-token pretraining sequence length, so this is not context overflow. We had in
+fact already recognised this mechanism for teacher forcing — our code carries a note that "adding
+a 4-shot prefix would change the conditioning context and dilute the memorization signal" — and
+we simply failed to carry that reasoning to the generative evaluations.
+
+We have standardised on **0-shot** and re-run everything affected. We want to be explicit that
+this is not merely a convenience: the reason 4-shot was adopted was to let uncontaminated models
+demonstrate the `\boxed{}` output format, on the theory that 0-shot conflates format knowledge
+with reasoning. That rationale turns out to be empirically void at this scale. Four-shot
+prompting moves the uncontaminated R = 0 baseline to **exactly 0.0000 at all five model sizes**
+(from 0.0038–0.0126 at 0-shot) — it does not rescue the baseline, it floors it. Independently,
+**5,000,000 samples** from an uncontaminated 344M model (5,000 problems × 1,000 samples, τ = 1.0)
+produced **0 correct answers and not one well-formed `\boxed{}`**. These models cannot use the
+demonstration. Format conflation therefore cannot be what drives our 0-shot results.
+
+We report both protocols in the revision, and we think the sensitivity is itself a result worth
+stating: **contamination-driven gains in small from-scratch models are memorization brittle
+enough that four in-context examples erase them** (96–192× reduction at high contamination),
+while cross-entropy stays low under both. That is a stronger and more precise version of our
+Finding 2 than the original rephrase/perturbation table, and it speaks directly to the
+loss-versus-correctness distinction the AC highlighted.
+
+**3. Uncertainty quantification** (aPBL W3, AC bullet 3). We add 95% percentile bootstrap
+intervals over the 5,000 test problems (10,000 resamples) for every Math Verify number; median
+half-width is **0.33 percentage points** against effects spanning ~1% to 100%. We state plainly
+in the paper that this is test-set sampling error and **not** multi-seed variance, and we commit
+to multiple seeds at pivotal configurations for the camera-ready.
+
+**4. Related-work framing** (8RFz W3, AC bullet 5). We accept this criticism in full. We remove
+the "first targeted examination" phrasing, add the missing references, and — most importantly —
+situate our Findings 1 and 2 against the work they respectively replicate and appear to
+contradict. Details in our response to 8RFz.
+
+**5. Realistic leakage** (1wx9 W1/Q1, aPBL Q1, AC bullet 1). We have run the experiment: injecting
+**paraphrased** MATH into pretraining while measuring loss on the original test set. Details in
+our response to 1wx9.
+
+We are grateful for reviews that were specific enough to be actionable. Every criticism above
+that we could address with data, we did.
+
+---
+
+## Response to Reviewer 8RFz
+
+Thank you — your W1 identified the weakest link in the paper, and the AC was right to elevate
+it. We have addressed it with new measurements, and it changed one of our conclusions.
+
+**W1 / Q1 — "Do Findings 4 and 5 also hold for Math Verify score?"**
+
+Yes, and we now measure it directly rather than inferring it from Figure 11's correlation. We
+evaluated **all 137 overtraining checkpoints** and **all 39 SFT checkpoints** in Math Verify
+space.
+
+You raised the sharper possibility that accuracy might persist while loss rises — which would
+make contamination *harder* to detect by perplexity while still inflating scores, and would make
+"dilution" the wrong word entirely. We looked for exactly that and **it does not occur**:
+accuracy tracks loss across the grid.
+
+But the accuracy-space measurement does force us to weaken Finding 4. Dilution is
+**threshold-dependent**. For 93M over ot 1→16, the fraction of the contamination advantage
+retained is:
+
+| Configuration | Advantage retained after 16× overtraining |
+|---|---|
+| 93M, R = 100 | **0.019** |
+| 93M, R = 1000 | **0.995** |
+
+Same model, same multiplier range, ~50× difference. The mechanism is dilution of the
+contaminated *token fraction*, which is why it stops working once that fraction stays high. Our
+original phrasing — "the performance boost from contamination diminishes when overtraining with
+fresh data" — is therefore misleading as an unqualified statement, and we have replaced it with
+the threshold formulation. We think this is a more useful finding than the one we submitted: it
+says overtraining is not a mitigation for the leakage regimes practitioners should worry about.
+
+For Finding 5, at matched 0-shot protocol, SFT takes mean Math Verify from **72.31% to 3.00%**
+(median retained 0.028).
+
+**W2 / Q2 — the temperature confound.**
+
+You are right that Finding 6 as written does not separate "temperature reduces contamination
+effects specifically" from "temperature degrades generation generally." The clean control is the
+contamination *advantage* at **matched** temperature — score(R) − score(R = 0) with both terms at
+the same τ — so any uniform degradation cancels:
+
+| τ | 0 (greedy) | 0.56 | 0.75 | 0.94 | 1.0 | 1.29 |
+|---|---|---|---|---|---|---|
+| Fraction of greedy advantage retained | 100% | 90% | 72% | 39% | **25%** | 0.4% |
+
+So the effect is contamination-specific up to about τ = 1: at the model's own distribution — not
+a hot setting — 75% of the advantage is already gone, while general degradation has been
+controlled for. Above τ ≈ 1.3 we agree the two explanations are no longer separable and
+everything is degrading; we now restrict the claim to τ ≤ 1 and say so explicitly.
+
+**W3 / Q3 — related work, and the conflict with prior rephrasing results.**
+
+We accept this criticism without reservation; it is the fairest hit in the review. We remove the
+"first targeted examination of contamination in generative tasks" claim, and we add Palavalli et
+al. (2024), Jiang et al. (2024), Mehrbakhsh et al. (2024), both Dekoninck et al. (2024), and
+Godey et al. (2025), none of which we cited.
+
+More substantively, we now situate both findings:
+
+- **Finding 1 replicates** the repeat-count effect reported by Jiang et al. (2024) and Dekoninck
+  et al. (2024), and we say so rather than presenting it as new.
+- **Finding 2 appears to conflict** with Mehrbakhsh et al. (2024) and Dekoninck et al. (2024),
+  who find that rephrased contamination *does* produce contamination effects on mathematical
+  generative evaluations. We do not think this is a contradiction; we think it is a regime
+  boundary, and we can now support that with a measurement rather than a hypothesis.
+
+  The prior studies inject contamination into models that are **already capable** of the task.
+  Such a model can bridge a surface-form change: it has the underlying competence, and
+  contamination supplies an advantage that survives paraphrase. Our models provably have **no
+  such competence to bridge with**. An uncontaminated 344M model produced **0 correct answers in
+  5,000,000 samples**, and not one sample contained even a well-formed `\boxed{}`. With zero
+  latent capability, every point of contaminated performance is verbatim memorization, and
+  verbatim memorization cannot transfer across a rephrasing.
+
+  This makes the two results complementary and yields a concrete prediction: the transfer of
+  contamination across paraphrase should be a function of the model's underlying capability, and
+  should switch on somewhere between our scale and theirs. We state this as the reconciliation
+  and flag it as the natural next experiment.
+
+**Q4 — "How are the values in Table 1 calculated?"**
+
+This question caused us to audit Table 1, and we owe you a direct answer: **the printed values
+(0.00%–0.04%) do not reproduce**, and we are replacing them. They were produced on separate
+infrastructure by a co-author (credited in the acknowledgements) and predate our current
+rephrased/perturbed datasets; they correspond to no run we can now point at. We should have
+verified them before submission.
+
+We have re-measured the table from scratch across 39 checkpoints × 2 modified datasets at 0-shot,
+averaged over the 13 contaminated checkpoints with R ≥ 100:
+
+| Condition | Math Verify | Advantage removed | vs uncontaminated floor |
+|---|---|---|---|
+| Original | 70.19% | — | — |
+| Rephrased | 2.74% | 97.3% | 3.1× |
+| Perturbed | 1.89% | 98.6% | 2.1× |
+
+Two disclosures that go with these numbers:
+
+1. The perturbed figure **excludes 582 problems (11.64%)** whose numerical perturbation leaves
+   the ground-truth answer unchanged. Those score a memorizing model correct by construction.
+   Including them inflates Perturbed to 4.78% and inverts the expected ordering relative to
+   Rephrased. We now report the exclusion and both numbers.
+2. We no longer write that performance "collapses to baseline." It lands at **2–3× the
+   uncontaminated floor**, not at it. The supportable claim is that modification removes the
+   large majority of the contamination advantage while leaving a small residual.
+
+The re-measurement also extends the table to model sizes the submitted version asserted but did
+not show, and gives it provenance we can point at.
+
+We hope the accuracy-space evidence for Findings 4–5, the temperature control, and the
+related-work reframing address the concerns behind Quality = 2 and Originality = 2.
+
+---
+
+## Response to Reviewer 1wx9
+
+Thank you — we appreciate the assessment of the controlled design, and your W1/Q1 prompted the
+main new experiment in this response.
+
+**W1 / Q1 — paraphrased rather than exact contamination in pretraining.**
+
+We agree this is the most important missing condition, and we ran it. We modified our pretraining
+pipeline so that *what is injected* can differ from *what loss is measured on*, then pretrained
+34M models with **paraphrased** MATH replicas (R = 32, 100, 316) injected into the corpus while
+measuring loss and accuracy on the **original** test set.
+
+To make this comparable to our published results rather than merely internally consistent, we
+reconstructed the exact pretraining configuration behind Figure 3 — the paraphrased runs differ
+from the published exact-replica runs in one variable only, the identity of the injected text —
+so the exact-replica arm at the same three doses serves directly as the control without
+retraining.
+
+**[PENDING — insert result.]** Expected shape, to be replaced by measured values: paraphrased
+contamination transfers little to the original test set at this scale. Whichever way it lands,
+we report it: if transfer is negligible, it empirically answers your W2 and sharpens the
+memorization account; if transfer is substantial, it bounds how far the exact-replica results
+generalise and we will say so.
+
+On the design question behind the criticism: we chose exact replicas as a causal testbed — the
+same control-for-realism tradeoff we articulate against Bordt et al. — and we now frame the
+result as what it is, an **upper bound** on contamination effects whose *lifecycle dynamics*
+(pretraining → overtraining → SFT → inference) are what the paper characterises. We agree that
+partial, translated, and discussion-embedded leakage remain untested, and we now list them
+explicitly as scope limits rather than leaving them implicit.
+
+**W2 — "if we have a rephrased test set contamination in training, the evaluation on test set is
+similar to an uncontaminated model. Which is quite surprising."**
+
+Thank you for this — it identified a genuine ambiguity in our presentation. Table 1 does **not**
+test that direction. It tests **exact** contamination in training with **modified** evaluation
+(rephrased/perturbed test sets). The symmetric direction you describe — rephrased contamination
+in training, original test set at evaluation — is exactly the experiment above, and it was
+untested in the submission. We have clarified the direction in the caption and text so the
+inference is not invited.
+
+Your accompanying hypothesis — "maybe model/train scale is not enough to see the generalization
+from contaminated data" — is, we believe, correct, and we can now support it directly rather
+than speculatively. An uncontaminated 344M model produced **0 correct answers in 5,000,000
+samples** (5,000 problems × 1,000 samples at τ = 1.0), with not one well-formed `\boxed{}`. There
+is no latent capability at this scale for contamination to combine with, so anything that breaks
+verbatim surface-form match removes the entire effect. We now use this to reconcile our Finding 2
+with prior work (Mehrbakhsh et al. 2024; Dekoninck et al. 2024) that finds rephrased
+contamination *does* transfer — in already-capable models, which is a different regime rather
+than a contradictory result.
+
+**W3 — small models, single benchmark, single mixture.**
+
+Conceded; all three reviewers raised it and we do not contest it. We keep the scale-for-control
+argument but state the limitation more prominently, and we commit to a second benchmark and a
+second model family for the camera-ready.
+
+**W4 — exact leakage makes loss/perplexity results less surprising.**
+
+Agreed for the loss results specifically, and we now say so. We would note that the
+*irreducible-error* result is not in that category — the surprise there is not that loss drops
+but that a **single** replica pushes measured loss below the extrapolated uncontaminated
+asymptote — and neither are the inference-time regimes, which concern how memorized content is
+*emitted* rather than how well it is stored.
+
+---
+
+## Response to Reviewer aPBL
+
+Thank you for the careful reading, particularly Q2 and Q3, which caught real gaps.
+
+**W1 / W2 — small models, single dataset.**
+
+Conceded without argument; raised independently by all three reviewers. We retain the
+deliberate scale-for-control tradeoff and the scaling-law bridge, but we state the limitation
+more prominently and commit to a second benchmark and a second model family for the
+camera-ready. We would add one observation that emerged from this rebuttal: the *reason* our
+models show no paraphrase transfer is that they have zero baseline capability (0 correct in
+5,000,000 samples), which makes the scale limitation a **substantive boundary condition** on
+Finding 2 rather than merely a caveat. We now present it that way.
+
+**W3 — single seed, no error bars.**
+
+Added. We report 95% percentile bootstrap intervals over the 5,000 test problems (10,000
+resamples) for every Math Verify number; the median half-width is **0.33 percentage points**
+against effects spanning ~1% to 100%. We state explicitly in the paper that this quantifies
+**test-set sampling error and not seed-to-seed variance**, since presenting it as the latter
+would be worse than reporting nothing, and we commit to multiple seeds at pivotal configurations
+(the R ≈ 10–100 transition, where variance should matter most) for the camera-ready.
+
+**W4 — missing SFT hyperparameters.**
+
+You are right, they were absent. We add an appendix with the full SFT configuration
+(optimizer, learning-rate schedule, batch size, sequence length, epochs, and the train/test split
+handling), matching the detail already given for pretraining.
+
+**Q1 — "multiple replicates seems somewhat contrived."**
+
+A fair challenge, and quantifying it helped us. Expressed as the fraction of the training token
+budget occupied by contaminated text:
+
+- At **R = 1**, the test set is **0.02%–0.21%** of the budget depending on model size — at or
+  below published real-world leakage estimates. We measure effects at this dose.
+- At the **top of our ladder** it reaches **67%–92%**, which is deliberately extreme.
+
+So the ladder is best described as a **dose-response curve spanning from below-realistic to
+saturating**, and we now describe it that way rather than implying every dose is realistic. The
+paraphrased-contamination experiment above addresses the complementary question of realistic
+leakage *mode* rather than dose.
+
+**Q2 — how were the rephrasings/perturbations validated, and are difficulty/length distributions
+matched?**
+
+We under-documented this. We add an appendix covering the generation procedure and validation,
+including a manual spot-check protocol over sampled problems (answer-`\boxed{}` consistency,
+faithfulness of rephrasing, solution-problem consistency) and the length/difficulty-level
+distributions against the original test set.
+
+That appendix also reports a validation issue we found while preparing this response, which we
+think is exactly the kind of thing your question was aimed at: **11.64% of perturbed problems
+(582 of 5,000) have a numerical perturbation that leaves the ground-truth answer unchanged.**
+Those problems score a memorizing model correct by construction and therefore cannot support a
+memorization-versus-generalization claim. We exclude them, report the exclusion, and note that
+including them inflates the perturbed score from 1.89% to 4.78% and inverts the ordering against
+rephrased.
+
+**Q3 — "Does the irreducible error come from fitting an asymptotic scaling law? It's a strong
+claim ... may depend on assumptions of the functional form and extrapolation."**
+
+This is the right question to ask, and the answer is that the claim's logical structure makes it
+more robust than it may appear. The contaminated losses are **measured**, not fitted. Only the
+uncontaminated asymptote E(0) is extrapolated. So the claim requires only a *conservative lower
+bound* on E(0) that still exceeds the measured contaminated losses — not a correct functional
+form.
+
+We now report that bound. Refitting with bootstrap resampling gives E(0) = **3.5942**, 95%
+interval **[3.5359, 3.6639]** (the point estimate reproduces the manuscript's 3.594, which
+validates the refit). **33 of 35 contaminated runs (94.3%) have measured loss below the lower
+end of that interval.**
+
+Three honest caveats we state alongside it: the intervals are optimistically narrow, because each
+resample is refit by local optimization seeded at the full-data solution rather than by repeating
+the full grid search; the R = 32 fit returns a degenerate asymptote (the optimizer drives e₀
+toward −∞, meaning the data admit no identifiable asymptote) and is flagged unreliable; and the
+R = 1000 fit rests on 3 points with only 79/300 resamples converging, also flagged. We quote the
+conclusion, not the interval widths.
+
+**Q4 — cross-domain contamination.**
+
+A good suggestion and we agree it is the natural extension. The design we would use: pretrain
+with MATH contamination as here, then evaluate on held-out mathematical tasks that share
+competence but not items (GSM8K, a subset of MMLU mathematics, and a code benchmark requiring
+arithmetic reasoning), measuring whether the contamination advantage transfers across *domain*
+even when it does not transfer across *surface form*. Our pass@k result predicts it will not at
+this scale — there is no capability for it to transfer through — which makes it a clean test of
+the capability-boundary hypothesis above once run at larger scale. We add this to future work
+with the design specified rather than gestured at.
+
+---
+
+## Checklist before posting
+
+- [ ] Replace both **[PENDING]** blocks with measured paraphrased-contamination results, or
+      delete them.
+- [ ] Confirm OpenReview per-comment character limits; the general response may need trimming
+      or splitting.
+- [ ] Do not use the "~60× SFT collapse" figure anywhere — it is an artifact of comparing 0-shot
+      pretrained against 4-shot SFT. Matched at 4-shot it is 0.40% vs 0.20%.
+- [ ] Verify the final citation list resolves: Palavalli 2024, Jiang 2024, Mehrbakhsh 2024,
+      Dekoninck 2024 (×2), Godey 2025 — **none are currently in `references_rylan.bib`**.
+- [ ] Cross-check every number here against `REBUTTAL_EVIDENCE.md` one final time.
