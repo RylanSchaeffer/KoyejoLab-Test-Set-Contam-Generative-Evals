@@ -555,8 +555,10 @@ with the design specified rather than gestured at.
 
 ## Checklist before posting
 
-- [ ] Replace both **[PENDING]** blocks with measured paraphrased-contamination results, or
-      delete them.
+- [ ] One **[PENDING]** cell remains: perturbed R=316 (training finishes ~03:25). Run
+      `notebooks/21_paraphrased_contamination/` and
+      `logs/eval_perturbed_as_ready.sh` output, then fill it. If it did not land, delete the
+      cell — a table with an honest gap beats a hedge.
 - [ ] Confirm OpenReview per-comment character limits; the general response may need trimming
       or splitting.
 - [ ] Do not use the "~60× SFT collapse" figure anywhere — it is an artifact of comparing 0-shot
@@ -568,3 +570,21 @@ with the design specified rather than gestured at.
 - [ ] Actually `\citep` the five new keys in the related-work rewrite — added to the bib is not
       the same as cited, and an uncited entry will not appear in the bibliography.
 - [ ] Cross-check every number here against `REBUTTAL_EVIDENCE.md` one final time.
+
+### Numbers that changed overnight — do not paste from an older draft
+
+| Quantity | Superseded | **Use** |
+|---|---|---|
+| Table 1 (R≥100) | 70.19 → 2.74 / 1.89% | **72.18 → 2.78 / 1.91%** |
+| Uncontaminated floor | ~1% | **exactly 0.00%** |
+| SFT | 72.31 → 3.00% | **70.89 → 3.00%** |
+| Finding #4 retention | 0.019 / 0.995 | **0.0188 / 0.9966** (~53×) |
+| Temperature at τ=1.0 | 25% | **9.6%** |
+| Notebook 16 | 14/17, −4.72 nats | **17/17, −2.18 nats** |
+| Answer-overlap inflation | 4.78% | **4.84%** |
+| Contaminated fraction at R=1 | 0.02–0.21% | **0.03–0.30%** (of tokens actually trained) |
+| pass@k | 4-shot only | **0-shot pass@25 = 0 on all 2,500 problems** |
+
+Every one of these moved because the 0-shot and 4-shot sweeps were scored differently and several
+analyses mixed them. `notebooks/11_*/results/protocol_sensitivity_rescored.csv` (`strict_score`)
+is the authoritative source; never quote the 0-shot column of `protocol_sensitivity.csv`.
