@@ -59,6 +59,9 @@ ARM_BY_CONTAMINANT = {
     "RylanSchaeffer/math_perturbed": "perturbed",
 }
 LOSS = "eval_after/eval_benchmark_loss"
+# CLAUDE.md documents `src.plot.default_figsize`, but that attribute does not exist in src/plot.py.
+# Using the documented value directly rather than adding a module global other notebooks ignore.
+DEFAULT_FIGSIZE = (10.67, 8)
 os.makedirs(RESULTS, exist_ok=True)
 
 
@@ -79,8 +82,12 @@ def published_exact_replica() -> pd.DataFrame:
             and dc.get("benchmark_subset_fraction") == 1
             and pd.notna(r.get(LOSS))
         ):
-            rows.append({"R": dc["num_benchmark_replicas_per_epoch"], "exact": r[LOSS]})
-    return pd.DataFrame(rows).groupby("R", as_index=False)["exact"].mean()
+            rows.append({
+                "R": dc["num_benchmark_replicas_per_epoch"],
+                "exact": r[LOSS],
+                "exact_tokens": r.get("train/num_input_tokens_seen"),
+            })
+    return pd.DataFrame(rows).groupby("R", as_index=False)[["exact", "exact_tokens"]].mean()
 
 
 def paraphrased_runs() -> pd.DataFrame:
@@ -102,9 +109,10 @@ def paraphrased_runs() -> pd.DataFrame:
                 "contaminant": dc.get("contaminant"),
                 "arm": ARM_BY_CONTAMINANT.get(dc.get("contaminant"), "unknown"),
                 "loss": loss,
-                "grad_accum": run.config.get("trainer_config", {}).get(
-                    "gradient_accumulation_steps"
-                ),
+                # Top level, not under trainer_config: HF's wandb integration flattens
+                # TrainingArguments into run.config alongside our own nested config dicts.
+                "grad_accum": run.config.get("gradient_accumulation_steps"),
+                "tokens": run.summary.get("train/num_input_tokens_seen"),
             }
         )
     return pd.DataFrame(rows)
@@ -124,6 +132,18 @@ def main() -> None:
             f"these are NOT comparable to the published exact-replica losses:\n{bad}\n"
         )
 
+    # Second faithfulness check, independent of grad_accum: the number of training tokens each
+    # run actually consumed should match the published run at the same dose. The pipeline
+    # undershoots the nominal 20*N target (a property of the original corpus-trimming code), so
+    # matching the *published* count is the real test, not matching the target.
+    tok = runs.merge(exact[["R", "exact_tokens"]], on="R", how="left")
+    tok["token_delta"] = (tok["tokens"] - tok["exact_tokens"]) / tok["exact_tokens"]
+    for _, t in tok.dropna(subset=["token_delta"]).iterrows():
+        flag = "" if abs(t["token_delta"]) < 0.02 else "   <-- >2% OFF, investigate"
+        print(f"  token check {t['arm']:>9} R={int(t['R']):<5d} "
+              f"mine={t['tokens']:,.0f} published={t['exact_tokens']:,.0f} "
+              f"delta={t['token_delta']:+.2%}{flag}")
+
     floor = float(exact.loc[exact.R == 0, "exact"].iloc[0])
     df = runs.merge(exact, on="R", how="left").sort_values(["arm", "R"])
     df["uncontaminated"] = floor
@@ -138,7 +158,7 @@ def main() -> None:
     wide = wide.join(exact.set_index("R")["exact"]).sort_index()
 
     plt.close()
-    plt.figure(figsize=src.plot.default_figsize)
+    plt.figure(figsize=DEFAULT_FIGSIZE)
     ax = plt.gca()
     ax.axhline(floor, color="0.4", linestyle=":", label="Uncontaminated ($R=0$)")
     ax.plot(wide.index, wide["exact"], marker="o", label="Exact replicas (problem $=$, solution $=$)")
@@ -147,6 +167,10 @@ def main() -> None:
     ax.plot(wide.index, wide["perturbed"], marker="^",
             label=r"Perturbed (problem $\neq$, solution $\neq$)")
     ax.set_xscale("log")
+    # Only three doses, so label them explicitly; the default log locator shows just 10^2.
+    ax.set_xticks(list(wide.index))
+    ax.set_xticklabels([str(int(r)) for r in wide.index])
+    ax.minorticks_off()
     ax.set(xlabel="Num. MATH Test Set Replicas",
            ylabel="Benchmark Cross-Entropy (original test set)")
     ax.legend(loc="upper right")

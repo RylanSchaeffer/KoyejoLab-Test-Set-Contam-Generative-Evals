@@ -70,15 +70,23 @@ against the Hub, W&B, or the `.tex` sources before relying on any such claim.
 - Cluster: evals/SFT ran on **skampere1** (8× A100-80GB), out of
   `/lfs/skampere1/0/rschaef/KoyejoLab-Scoring-vs-Sampling-Memorization`, env
   `mem_scoring_vs_sampling_env` — a **uv venv, not conda** (`source .../bin/activate`).
-- The W&B project `memorization-scoring-vs-sampling-pt` **does not exist** despite 16 references in the
-  repo; pretraining lives in `memorization-scoring-vs-sampling-pt-v2`.
+- The W&B project `memorization-scoring-vs-sampling-pt` **no longer resolves** despite 16 references
+  in the repo. It did exist — the published Fig. 3 runs are in it — and was lost around 2026-01-19.
+  `...-pt-v2` is *not* the same experiment: it is a later optimizer configuration introduced by
+  commit `934546a`. Do not substitute one for the other. See `MISSING_PRETRAINING_DATA.md`.
 - Locally, `import wandb` needs `PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python`, and this wandb version
   has no `run.metadata` — download `wandb-metadata.json` from run files instead.
-- Current eval protocol is **4-shot with a required `\boxed{}` answer**. Older 0-shot sweep IDs are
-  commented out in the notebooks; never mix the two.
+- Eval protocol is **0-shot with a required `\boxed{}` answer** (standardised 2026-07-30). 4-shot
+  was adopted in `db75c5f` on the theory that it would let uncontaminated models demonstrate the
+  format; measurement showed it teaches the format (boxed rate 0 → 0.43-0.89) and buys exactly
+  0.0000 accuracy, while destroying the memorization signal. Notebooks 13 and 15 are the remaining
+  4-shot analyses and are superseded by 18 and 19. Never mix protocols in one comparison.
 - Checkpoint names put `_sft` *after* the `ot` field, and numeric fields have inconsistent decimal
   formatting (`ot_2` vs `ot_2.000`, `sbst_0.010` vs `sbst_0.0100`). Parse as float; capture the suffix.
-- Per-problem `math_verify_score` is in W&B run history, so bootstrap CIs need no GPU.
+- Per-problem `math_verify_score` **and the raw `response`/`solution` text** are in W&B run history,
+  so bootstrap CIs and full rescoring need no GPU.
+- HF's wandb integration flattens `TrainingArguments` to the *top level* of `run.config`, alongside
+  our nested `trainer_config`. `gradient_accumulation_steps` lives at the top level, not inside it.
 
 ## Environment Setup
 
@@ -206,7 +214,7 @@ All plots must follow these conventions (defined in `src/plot.py`):
 - LaTeX rendering enabled with Computer Modern serif font
 - Font size: 23
 - Grid alpha: 0.5, showing both major and minor gridlines
-- Default figure size: `src.plot.default_figsize` (10.67 × 8 inches)
+- Default figure size: 10.67 × 8 inches (set explicitly per figure; there is no `src.plot.default_figsize` despite earlier docs claiming one)
 
 **Plot construction pattern**:
 ```python

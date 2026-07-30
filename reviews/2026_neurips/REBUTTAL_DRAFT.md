@@ -291,16 +291,20 @@ out to give:
 |---|---|---|---|---|---|
 | Uncontaminated | — | — | 7.1437 | 7.1437 | 7.1437 |
 | Exact replicas | same | same | 2.5138 | 1.4526 | 0.5243 |
-| Rephrased (solution-verbatim) | differs | **same** | 2.6125 | 2.0077 | [PENDING] |
+| Rephrased (solution-verbatim) | differs | **same** | 2.6125 | 2.0077 | 1.9573 |
 | Perturbed (nothing verbatim) | differs | differs | [PENDING] | [PENDING] | [PENDING] |
 
 Two things follow from the rows we have:
 
-1. **The problem text contributes remarkably little.** Replacing every problem statement while
-   keeping the solutions recovers **97.9%** of the exact-replica loss reduction at R = 32 and
-   **90.2%** at R = 100. What is being memorized is overwhelmingly the solution text, not the
-   problem–solution association. The gap widens with dose, which is consistent with exact replicas
-   additionally learning the mapping.
+1. **The problem text contributes little at low dose, and increasingly more at high dose.**
+   Replacing every problem statement while keeping the solutions recovers **97.9%** of the
+   exact-replica loss reduction at R = 32, **90.2%** at R = 100, and **78.4%** at R = 316. At light
+   contamination almost the entire effect is carried by the solution text alone. As dose rises,
+   exact replicas pull away — consistent with them additionally learning the problem→solution
+   *association*, which is what lets the model retrieve the right memorized solution rather than
+   merely having memorized solutions in general. Notably the rephrased arm nearly saturates
+   (2.0077 → 1.9573 from R = 100 to R = 316) while the exact arm keeps improving
+   (1.4526 → 0.5243).
 2. **This replicates a distinction from prior work we had failed to cite.** Jiang et al. (2024)
    separate "text-only" from "ground-truth" contamination and find the latter far more damaging;
    our exact-versus-rephrased contrast reaches the same conclusion from the opposite direction. We
