@@ -83,6 +83,13 @@ conflation therefore cannot be what drives our 0-shot results, and the headline 
 undisturbed: 153M at R = 316 scores **0.9984 at 0-shot versus 0.0078 at 4-shot** under identical
 strict scoring.
 
+**One consequence for Figure 1 itself.** Rescoring moves the uncontaminated and low-dose points
+from 0.38–1.26% to **exactly 0.00%**, while leaving the high-contamination saturation untouched
+(those points shift by less than 0.2 pp). The corrected figure therefore makes a cleaner version
+of our own claim: the baseline is not a small positive number that contamination lifts, it is
+exactly zero, and *every* point of measured performance on this benchmark is contamination-derived.
+We regenerate Fig. 1 accordingly.
+
 A mechanistic detail supports the reading. At 0-shot the `\boxed{}` rate *rises with
 contamination dose* (153M: 0.000 → 0.009 → 0.047 → 0.72 → 0.98 → 1.000 as R goes 0 → 1 → 10 → 32
 → 100 → 316). The contaminated model learns the output format from the injected solutions
