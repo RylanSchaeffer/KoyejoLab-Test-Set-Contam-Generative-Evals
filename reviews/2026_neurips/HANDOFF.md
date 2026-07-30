@@ -17,7 +17,7 @@ critique. **Discussion closes 2026-08-03.**
 
 ## ⚠️ Three things needing you
 
-1. **`git push` is blocked** by the sandbox permission classifier. ~30 commits sit on branch
+1. **`git push` is blocked** by the sandbox permission classifier. **53 commits** sit on branch
    `rebuttal/neurips-2026-protocol-and-evidence`, unpushed. Run:
    `git push -u origin rebuttal/neurips-2026-protocol-and-evidence`
 2. **The HF token on this node is `ruili0`'s**, not yours, world-readable, write-scoped. Nothing
@@ -103,12 +103,12 @@ been wrong and trivially checkable. `math_perturbed` differs on both sides (0.1%
 |---|---|---|---|
 | Exact | same | same | 1.000 |
 | Rephrased | differs | same | 0.979 / 0.902 / 0.784 |
-| Perturbed | differs | differs | 0.879 / *running* / *running* |
+| Perturbed | differs | differs | 0.879 / 0.726 / 0.570 |
 
 **Read loss transfer with care**: both modified corpora are MATH-domain text, so much of the
-perturbed arm's 0.879 is domain adaptation, not leakage. Accuracy is the honest metric — perturbed
-R=32 reaches 1.34% with boxed rate 0.63 and verbatim rate 0.000, i.e. weak *generalization*, not
-memorization. A fourth arm with **disjoint** math problems would separate these; not run.
+perturbed arm's transfer is domain adaptation, not leakage. Accuracy is the honest metric — see
+the complete table below. A fourth arm with **disjoint** math problems would separate these; not
+run.
 
 ### The lost W&B data
 
