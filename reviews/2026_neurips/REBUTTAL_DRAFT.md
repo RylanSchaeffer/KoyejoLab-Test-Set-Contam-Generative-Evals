@@ -141,10 +141,24 @@ everything is degrading; we now restrict the claim to τ ≤ 1 and say so explic
 
 **W3 / Q3 — related work, and the conflict with prior rephrasing results.**
 
-We accept this criticism without reservation; it is the fairest hit in the review. We remove the
-"first targeted examination of contamination in generative tasks" claim, and we add Palavalli et
-al. (2024), Jiang et al. (2024), Mehrbakhsh et al. (2024), both Dekoninck et al. (2024), and
-Godey et al. (2025), none of which we cited.
+We largely accept this criticism; the framing complaint is fair and we remove the "first targeted
+examination of contamination in generative tasks" claim. We have added **Palavalli et al. (2024)**,
+**Mehrbakhsh et al. (2024)**, **Dekoninck et al. (2024a, "Evading Data Contamination Detection for
+Language Models is (too) Easy")**, **Dekoninck et al. (2024b, "ConStat")**, and **Godey et al.
+(2025, "Gaperon")**.
+
+One respectful correction: **Jiang et al. (2024) is already cited** in the submission — in the
+introduction's list of controlled contamination studies, again in the introduction's discussion of
+which benchmarks prior work used, and at paragraph length in the appendix related work, where we
+describe their text-only versus ground-truth contamination conditions and their finding that
+n-gram detection can be bypassed by paraphrasing or partial leaks. We mention this only because it
+bears on the Originality assessment; the substantive point about *situating* our findings against
+that literature stands, and we have acted on it.
+
+We also thank you for Godey et al. (2025) in particular, which we had missed and which is closely
+related: their "late deliberate contamination" — continued training on mixtures containing test
+sets — is the large-scale analogue of our overtraining and SFT conditions, and we now discuss it
+alongside Finding 4.
 
 More substantively, we now situate both findings:
 
@@ -371,6 +385,10 @@ with the design specified rather than gestured at.
       or splitting.
 - [ ] Do not use the "~60× SFT collapse" figure anywhere — it is an artifact of comparing 0-shot
       pretrained against 4-shot SFT. Matched at 4-shot it is 0.40% vs 0.20%.
-- [ ] Verify the final citation list resolves: Palavalli 2024, Jiang 2024, Mehrbakhsh 2024,
-      Dekoninck 2024 (×2), Godey 2025 — **none are currently in `references_rylan.bib`**.
+- [x] Citations added to `references_rylan.bib` and metadata verified against the ACL Anthology
+      and arXiv: `palavalli2024taxonomy`, `mehrbakhsh2024confounders`, `dekoninck2024evading`
+      (2402.02823), `dekoninck2024constat` (2405.16281), `godey2025gaperon` (2510.25771). Bib
+      validates at 151 entries, no duplicate keys. Jiang 2024 was already present *and cited*.
+- [ ] Actually `\citep` the five new keys in the related-work rewrite — added to the bib is not
+      the same as cited, and an uncited entry will not appear in the bibliography.
 - [ ] Cross-check every number here against `REBUTTAL_EVIDENCE.md` one final time.

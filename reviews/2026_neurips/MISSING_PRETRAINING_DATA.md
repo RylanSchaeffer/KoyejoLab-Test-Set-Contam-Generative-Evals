@@ -5,6 +5,47 @@ Investigated 2026-07-29. Everything below is measured, not inferred, unless labe
 
 ---
 
+> ## 2026-07-29 re-investigation — searched by run ID, with a validated matcher
+>
+> The search below was redone after Rylan objected that he never deletes W&B data. The earlier
+> pass matched runs by *configuration*, which cannot distinguish "the runs are gone" from "my
+> matcher is wrong". This pass searches by **exact W&B run ID**, which the cache records.
+>
+> **Identity confirmed correct.** `wandb.Api().viewer` → username `rylan`, entity `rylan`,
+> email `rylanschaeffer@gmail.com`. The earlier search was not done from a wrong account.
+> (Separately, the *HuggingFace* token on this node did belong to another user — see
+> `HF_TOKEN_INCIDENT.md`. That was real, and is unrelated to W&B.)
+>
+> **Matcher validated before trusting it.** Against a known-good run in `-pt-v2`:
+> `filters={"name": {"$in": ["alo8g5k2"]}}` → 1 hit; `displayName` filter → 1 hit;
+> `api.run(...)` → resolves; a fabricated ID → 0 hits. The filter does what it claims.
+>
+> **Result: 0 of 218 run IDs found across 305 projects in 7 entities, 0 projects unreadable.**
+> (`brando-su` 24, `fiete-lab` 4, `harvardparkesateams` 185, `joshteam` 46, `kreiman-sdm` 5,
+> `projectdeus` 3, `rylan` 38.) None of the 15 sweep IDs resolve under `rylan/...-pt`,
+> `rylan/...-pt-v2`, or `jkazdan/...-pt`.
+>
+> **The absence is targeted, which is the most telling fact.** Under entity `rylan`, the sibling
+> projects all resolve — `...-eval` (1,565 runs), `...-sft` (135), `...-eval-teacher-forcing`
+> (107) — while `...-pt` alone returns "Could not find project". Note `api.project()` returns a
+> *lazy* object and is **not** proof of existence; only `api.runs()` is.
+>
+> `jkazdan/memorization-scoring-vs-sampling-pt` (236 runs) was re-checked by ID rather than by
+> config: 0/15 sweeps present, and only 7 of 177 `hub_model_id`s overlap. It is a different
+> experiment, confirming the earlier conclusion by a better method.
+>
+> **This does not prove Rylan deleted anything.** It proves the project is not reachable from
+> this API key. Consistent explanations include deletion by someone or something else, or the
+> project living under an entity this key cannot see (e.g. a team since left). What it rules out
+> is a rename or a move to any visible project.
+>
+> **Next actions, in order:** (1) check the W&B web UI for `rylan`, including deleted/archived
+> projects, which the public API does not expose; (2) email W&B support — deleted projects are
+> often restorable within a retention window, and the runs are ~6 months old; (3) ask Joshua
+> Kazdan and Stella Biderman whether the project was ever under their account or a shared team.
+>
+> Reproduce: `scripts/scratch/hunt_lost_pretraining_runs.py` → `data/lost_run_hunt.json`.
+
 ## What is missing
 
 `notebooks/11_*` and `notebooks/20_*` both merge pretraining cross-entropy
