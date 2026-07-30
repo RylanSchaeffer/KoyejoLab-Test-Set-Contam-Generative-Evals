@@ -2,6 +2,15 @@
 
 95% percentile bootstrap over the 5001 MATH test problems, 10,000 resamples, greedy decoding, **0-shot** (the protocol behind the manuscript's Finding #1 figure).
 
+> **Scoring caveat (added 2026-07-30).** These intervals are computed from the scores the 0-shot
+> sweeps *logged*, which used the lenient scorer (~1.4% false positives) rather than the
+> boxed-required scorer used everywhere else — see `PROTOCOL_SENSITIVITY_RESCORED.md`. That shifts
+> the *point estimates* at near-zero conditions (a lenient 0.4-1.3% is truly 0.00%) but barely
+> moves the *half-widths*, which is what this file is quoted for: a binomial half-width over 5,001
+> problems is insensitive to a shift of that size except at the extremes. The claim the rebuttal
+> makes from this file — that effect sizes dwarf test-set sampling error — is unaffected. Do not
+> quote the per-condition point estimates from here; use the rescored grid.
+
 ## What this does and does not cover
 
 These intervals quantify **sampling error over the test set** — how much the score would
