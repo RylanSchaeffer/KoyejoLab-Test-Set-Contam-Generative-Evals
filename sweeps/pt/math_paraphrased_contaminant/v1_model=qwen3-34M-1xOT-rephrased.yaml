@@ -1,0 +1,136 @@
+# Paraphrased contamination at the published (v1) pretraining configuration.
+#
+# Reviewers 1wx9 (Q1, W2), aPBL (Q1) and the AC (bullet 1) all ask whether exact-replica
+# contamination tells us anything about realistic leakage. This injects
+# RylanSchaeffer/math_rephrased into the corpus while still measuring
+# `eval_after/eval_benchmark_loss` on the original EleutherAI/minerva_math test set, so the
+# question "does contamination with paraphrase i lower loss on original i?" is directly answerable.
+#
+# WHY THERE IS NO CONTROL ARM HERE
+# --------------------------------
+# There is no need to retrain one. Every trainer_config and data_config value below was read
+# straight out of the published runs' recorded configs
+# (`notebooks/11_*/data/c39ba9b590fe96b52183328d3d4c7323_runs_configs.csv`) and is unanimous
+# across all 12 surviving Qwen3-34M / ot=1 runs -- no value was guessed. The exact-replica arm at
+# R = 32, 100, 316 therefore already exists, and its `eval_after/eval_benchmark_loss` is in that
+# same cache. Compare against it directly.
+#
+# This is what `scripts/pretrain_language_model_v1.py` buys: the published optimizer setup, so the
+# contaminant is the only variable. Running the v2 script instead (`adam_beta1`, `warmup_ratio`,
+# `weight_decay: 0.01`) would force retraining the control too.
+#
+# NOTE the difference from the earlier `model=qwen3-34M-1xOT-contaminant-controlled.yaml`, which
+# targets the v2 script: that file sets both `warmup_ratio: 0.0316` and `warmup_steps: 250`, but
+# the v2 script reads `warmup_ratio` and has `warmup_steps` commented out, so it silently does not
+# reproduce the published 250-step warmup. It also uses `logging_steps: 10` where the published
+# runs used 1. Prefer this file.
+#
+# Checkpoints land as
+#   mem_Qwen3-34M_minerva_math_rep_<R>_sbst_1.0000_epch_1_ot_1_cont_math_rephrased
+# The `_cont_` suffix is what keeps these from overwriting the published exact-replica models on
+# the Hub, which they would otherwise collide with exactly.
+command:
+  - ${env}
+  - torchrun
+  - --standalone
+  - --nproc_per_node=1
+  - ${program}
+  - ${args}
+program: scripts/pretrain_language_model_v1.py
+entity: rylan
+project: memorization-scoring-vs-sampling-pt-paraphrased
+method: grid
+parameters:
+  data_config:
+    parameters:
+      corpus:
+        values: ["fineweb-edu-dedup"]
+      # Loss is measured on the ORIGINAL test set.
+      benchmark:
+        values: ["EleutherAI/minerva_math"]
+      # What actually gets replicated into the corpus.
+      contaminant:
+        values: ["RylanSchaeffer/math_rephrased"]
+      benchmark_shuffle_seed:
+        values: [0]
+      benchmark_subset_fraction:
+        values: [1.0]
+      # Matches published exact-replica runs at the same three doses.
+      num_benchmark_replicas_per_epoch:
+        values: [32, 100, 316]
+      shuffle_seed:
+        values: [0]
+      # Not present in the published runs' recorded config, and deliberately so: their
+      # `src/data.py` hardcoded `seed=0` for the corpus train/test split. Commit 2a83ebb
+      # parameterised it without changing behaviour, and the current `src/data.py` -- which this
+      # run needs, because that is where contaminant/benchmark separation lives -- reads the key.
+      # Setting it to 0 reproduces the published split exactly.
+      train_test_split_seed:
+        values: [0]
+  model_config:
+    parameters:
+      attn_implementation:
+        values: ["flash_attention_2"]
+      model_name:
+        values: ["Qwen3/Qwen3-34M"]
+      torch_dtype:
+        values: ["bfloat16"]
+  # Every value below is the unanimous recorded value across all 12 published Qwen3-34M ot=1 runs.
+  trainer_config:
+    parameters:
+      base_learning_rate:
+        values: [0.000001]
+      data_seed:
+        values: [0]
+      dataloader_drop_last:
+        values: [True]
+      dataloader_num_workers:
+        values: [8]
+      dataloader_prefetch_factor:
+        values: [4]
+      eval_on_start:
+        values: [True]
+      eval_steps:
+        values: [2000]
+      eval_strategy:
+        values: ["steps"]
+      gradient_checkpointing:
+        values: [False]
+      hub_strategy:
+        values: ["end"]
+      logging_steps:
+        values: [1]
+      lr_scheduler_type:
+        values: ["cosine"]
+      max_grad_norm:
+        values: [1]
+      max_length:
+        values: [2048]
+      max_steps:
+        values: [-1]
+      num_train_epochs:
+        values: [1]
+      optim:
+        values: ["adamw_torch_fused"]
+      overtrain_multiplier:
+        values: [1]
+      per_device_eval_batch_size:
+        values: [42]
+      per_device_train_batch_size:
+        values: [42]
+      remove_unused_columns:
+        values: [True]
+      report_to:
+        values: ["wandb"]
+      save_strategy:
+        values: ["no"]
+      save_total_limit:
+        values: [1]
+      torch_compile:
+        values: [True]
+      warmup_steps:
+        values: [250]
+      weight_decay:
+        values: [0]
+  seed:
+    values: [0]

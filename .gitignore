@@ -246,3 +246,12 @@ manuscript_fdgm_icml_2026/00_main.pdf
 manuscript_fdgm_icml_2026/build_*.log
 models/
 
+
+# Third-party clones checked out in-tree by the setup in CLAUDE.md, not our code.
+/flash-attention/
+/lm-evaluation-harness/
+
+# Raw harness output and scratch result dumps; the curated versions live in
+# notebooks/*/results/ and reviews/2026_neurips/data/.
+/results/
+/src/lm-eval-output/
