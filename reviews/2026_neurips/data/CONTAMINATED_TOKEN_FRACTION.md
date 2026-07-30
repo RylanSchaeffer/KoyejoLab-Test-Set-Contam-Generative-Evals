@@ -1,6 +1,9 @@
 # Contaminated Fraction of the Pretraining Budget
 
-One copy of the MATH test set, tokenized as injected, is **1,441,312 tokens**.
+One copy of the MATH test set, tokenized as injected, is **1,446,312 tokens** (corrected
+2026-07-30: the previously printed 1,441,312 omitted the per-document EOS token that
+`create_dataset_for_pretraining` injects; verified against the training runs' own logged
+contaminant token counts).
 Training budget is `20 x overtrain_multiplier x num_parameters` (Chinchilla-optimal at
 `ot = 1`), so the same replica count occupies a very different share of a 34M budget
 than of a 344M budget.
@@ -15,14 +18,18 @@ than of a 344M budget.
 > |---|---|---|
 > | 1 | 0.21 | **0.30** |
 > | 3 | 0.64 | **0.89** |
-> | 10 | 2.12 | **2.94** |
-> | 32 | 6.77 | **9.24** |
-> | 100 | 21.16 | **27.33** |
-> | 316 | 66.86 | **73.80** |
+> | 10 | 2.12 | **2.95** |
+> | 32 | 6.77 | **9.27** |
+> | 100 | 21.16 | **27.42** |
+> | 316 | 66.86 | **74.05** |
 >
 > Multiply the table below by roughly **1.33** for actual shares. The qualitative claim is
 > unchanged — R = 1 is still at or below published real-world leakage estimates, and the top of
 > the ladder is still deliberately extreme — but quote the corrected figures.
+>
+> The two tables below were computed with the old 1,441,312 per-copy figure and are therefore a
+> further **0.35% relatively** low (e.g. 34M R = 316 is 67.21%, not 66.98%). Not worth regenerating,
+> but do not quote them to four significant figures.
 
 Only configurations that exist as checkpoints on the Hub are shown. Combinations that
 would exceed the token budget were rejected at dataset-construction time and were never

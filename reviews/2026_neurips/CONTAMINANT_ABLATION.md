@@ -89,15 +89,18 @@ solution text. The confound can be bounded from the data rather than merely ackn
 
 ## ⚠️ Replicas are not an equal dose across arms
 
-One copy of each contaminant, tokenized exactly as injected:
+One copy of each contaminant, tokenized exactly as injected (values corrected 2026-07-30 — the
+figures first printed here were each 5,000 tokens low because they omitted the per-document EOS;
+these ones divide exactly into the runs' own logged contaminant token counts, see
+`verification/PERTURBED_INJECTION_VERIFICATION.md`):
 
 | Contaminant | Tokens per copy | vs original |
 |---|---|---|
-| `EleutherAI/minerva_math` (original) | 1,441,312 | 100.0% |
-| `RylanSchaeffer/math_rephrased` | 1,387,475 | 96.3% |
-| `RylanSchaeffer/math_perturbed` | **1,127,643** | **78.2%** |
+| `EleutherAI/minerva_math` (original) | 1,446,312 | 100.0% |
+| `RylanSchaeffer/math_rephrased` | 1,392,475 | 96.3% |
+| `RylanSchaeffer/math_perturbed` | **1,132,643** | **78.3%** |
 
-`math_perturbed` is **21.8% smaller in tokens**, so at fixed R the perturbed arm injects
+`math_perturbed` is **21.7% smaller in tokens**, so at fixed R the perturbed arm injects
 proportionally less contaminated text. In contaminated tokens, perturbed R = 316 corresponds to
 exact R ≈ 247.
 

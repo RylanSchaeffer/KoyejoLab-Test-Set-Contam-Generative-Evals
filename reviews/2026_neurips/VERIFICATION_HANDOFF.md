@@ -52,6 +52,13 @@ perturbed items are what entered the corpus.*
 If this is wrong, the entire perturbed arm (and the "only verbatim leakage has a dose-response"
 conclusion) is invalid.
 
+**RESOLVED 2026-07-30 — CONFIRMED.** `verification/PERTURBED_INJECTION_VERIFICATION.md`. Rebuilt
+the dataset and matched every document by exact token-id equality: train split = 10,000 perturbed
+items (2 replicas x 5,000), 0 original-only; benchmark split = 5,000 original items, 0
+perturbed-only, in the same order as the exact-replica control. Independently corroborated by the
+three finished runs' own logs, whose contaminant token counts are exact multiples of
+`math_perturbed`'s size. One number was wrong (per-copy tokens, §4 there) and is fixed.
+
 ### 1.3 Notebooks 17, 18, 19 after the baseline column was swapped
 
 All three had their baseline column changed from `math_verify_score` (lenient) to `strict_score`
@@ -101,10 +108,12 @@ Claim to falsify: *uncontaminated R=0 is exactly 0.0000 under both protocols at 
 Two automated guards passed: `gradient_accumulation_steps == 9` (matching all 12 published 34M
 ot=1 runs) and training tokens within 0.03–0.81% of published for the rephrased arm.
 
-**But** the perturbed arm at R=316 is **−4.56%** on tokens, and `math_perturbed` is 21.8% smaller
+**But** the perturbed arm at R=316 is **−4.56%** on tokens, and `math_perturbed` is 21.7% smaller
 per copy, so replicas are not an equal dose across arms.
 
-**Check:** confirm the token-size measurement (1,127,643 vs 1,441,312 per copy) and decide whether
+**Check:** confirm the token-size measurement (1,132,643 vs 1,446,312 per copy; the figures
+originally published here omitted the per-document EOS and were each 5,000 low --- see
+`verification/PERTURBED_INJECTION_VERIFICATION.md`) and decide whether
 the cross-arm comparison should be re-expressed in contaminated tokens rather than replicas.
 
 Claim to falsify: *the paraphrased runs differ from the published exact-replica runs in exactly one
