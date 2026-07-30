@@ -25,7 +25,8 @@ CORRECTED 2026-07-30 after adversarial verification
 The first version of this script had two silent regressions relative to
 `scripts/analyze_temperature_response.py`, which it was meant only to rescore:
 
-1. **344M vanished.** 344M has no finished 0-shot R=0 run (all ten failed), so
+1. **344M vanished.** 344M has no finished 0-shot R=0 run *in these sweeps* (the ten of
+   2025-09-25 all failed; see the note below), so
    `base.get(("344M", t))` returned NaN, every 344M advantage was NaN, and
    `groupby(...).mean()` silently skipped them. The table collapsed from 13 contributing
    conditions to 9, dropping the largest and most contaminated model. The older script
@@ -43,6 +44,8 @@ Usage:
       ./mem_scoring_vs_sampling_env/bin/python scripts/rescore_temperature_response.py
     # rebuild only the table from the already-rescored per-run CSV:
     ... scripts/rescore_temperature_response.py --from-csv
+
+NOTE (2026-07-30): 344M R=0 is absent from THESE sweeps (the ten runs of 2025-09-25 all failed). Finished 344M R=0 0-shot runs do exist in sweeps woygzpil (2025-12-19) and oj6o8idv (2025-12-31) and score 0.000-0.140% strict -- on the floor, like the R=1 stand-in, so this fallback is validated and moves nothing. See reviews/2026_neurips/data/LENIENT_SCORER_AUDIT.md.
 """
 
 import argparse
@@ -61,8 +64,15 @@ from src.scoring import extract_boxed_answer, score_response  # noqa: E402
 ENTITY, PROJECT = "rylan", "memorization-scoring-vs-sampling-eval"
 # The 0-shot sweeps, i.e. the protocol behind the manuscript's temperature figure.
 ZERO_SHOT_SWEEPS = [
-    "6y9dy2ow", "lnrpy3ed", "5oo55o9s", "10q465ij",
-    "q5uoy1eu", "f5djvfth", "vnz1h147", "xkzfmbhk", "39rugx2e",
+    "6y9dy2ow",
+    "lnrpy3ed",
+    "5oo55o9s",
+    "10q465ij",
+    "q5uoy1eu",
+    "f5djvfth",
+    "vnz1h147",
+    "xkzfmbhk",
+    "39rugx2e",
 ]
 OUT_DIR = "notebooks/11_math_qwen3_pt_math_verify/results"
 OUT_CSV = os.path.join(OUT_DIR, "temperature_response_rescored.csv")
@@ -85,12 +95,19 @@ def rescore(job: dict) -> dict:
                 st += int(bool(score_response(parse(sol), resp)))
             except Exception:
                 exc += 1
-    out = dict(job, n=n, n_exc=exc,
-               logged=(lg / n if n else float("nan")),
-               strict=(st / n if n else float("nan")))
-    print(f"  {job['Parameters']:>5} R={job['R']:<5d} T={job['T']:<8} "
-          f"logged={out['logged']:.4f} strict={out['strict']:.4f}"
-          + (f"  !! {exc} exceptions" if exc else ""), flush=True)
+    out = dict(
+        job,
+        n=n,
+        n_exc=exc,
+        logged=(lg / n if n else float("nan")),
+        strict=(st / n if n else float("nan")),
+    )
+    print(
+        f"  {job['Parameters']:>5} R={job['R']:<5d} T={job['T']:<8} "
+        f"logged={out['logged']:.4f} strict={out['strict']:.4f}"
+        + (f"  !! {exc} exceptions" if exc else ""),
+        flush=True,
+    )
     return out
 
 
@@ -115,7 +132,9 @@ def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     df["advantage"] = df["strict"] - df["baseline"]
 
     greedy = df[df["T"] == 0.0].set_index(["Parameters", "R"])["strict"]
-    df["greedy_strict"] = [greedy.get((p, r), float("nan")) for p, r in zip(df.Parameters, df.R)]
+    df["greedy_strict"] = [
+        greedy.get((p, r), float("nan")) for p, r in zip(df.Parameters, df.R)
+    ]
 
     real = df[(df.R > 0) & (df.greedy_strict >= 0.05)].copy()
     # A fallback reference cannot be its own contrast.
@@ -133,17 +152,31 @@ def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     ]
     real["ratio"] = real["advantage"] / real["greedy_advantage"]
 
-    table = real.groupby("T").agg(
-        advantage=("advantage", "mean"),
-        mean_of_ratios=("ratio", "mean"),
-        n_conditions=("ratio", "count"),
-    ).reset_index().sort_values("T")
+    table = (
+        real.groupby("T")
+        .agg(
+            advantage=("advantage", "mean"),
+            mean_of_ratios=("ratio", "mean"),
+            n_conditions=("ratio", "count"),
+        )
+        .reset_index()
+        .sort_values("T")
+    )
     greedy_mean = float(table.loc[table["T"] == 0.0, "advantage"].iloc[0])
     table["fraction_of_greedy_advantage"] = table["advantage"] / greedy_mean
-    table = table[["T", "advantage", "fraction_of_greedy_advantage",
-                   "mean_of_ratios", "n_conditions"]]
+    table = table[
+        [
+            "T",
+            "advantage",
+            "fraction_of_greedy_advantage",
+            "mean_of_ratios",
+            "n_conditions",
+        ]
+    ]
     conditions = (
-        real[real["T"] == 0.0].groupby("Parameters")["R"].apply(lambda s: sorted(set(s)))
+        real[real["T"] == 0.0]
+        .groupby("Parameters")["R"]
+        .apply(lambda s: sorted(set(s)))
     )
     return table, {"reference": reference, "conditions": conditions}
 
@@ -151,7 +184,9 @@ def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 def write_report(df: pd.DataFrame) -> None:
     table, meta = build_table(df)
     reference = meta["reference"]
-    fallbacks = ", ".join(f"{k} -> R={v}" for k, v in sorted(reference.items()) if v != 0)
+    fallbacks = ", ".join(
+        f"{k} -> R={v}" for k, v in sorted(reference.items()) if v != 0
+    )
     with open(OUT_MD, "w") as f:
         f.write(
             "# Temperature response, rescored with boxed-required scoring\n\n"
@@ -182,8 +217,10 @@ def write_report(df: pd.DataFrame) -> None:
             "shown so the estimator choice is visible rather than load-bearing and invisible.\n\n"
         )
         f.write(table.round(4).to_markdown(index=False))
-        f.write("\n\nConditions contributing to each mean (model size -> replica levels):\n\n"
-                "```\n" + meta["conditions"].to_string() + "\n```\n\n")
+        f.write(
+            "\n\nConditions contributing to each mean (model size -> replica levels):\n\n"
+            "```\n" + meta["conditions"].to_string() + "\n```\n\n"
+        )
         if fallbacks:
             f.write(
                 f"Clean reference: R=0 where it exists; {fallbacks} because all ten 0-shot "
@@ -204,8 +241,11 @@ def write_report(df: pd.DataFrame) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--from-csv", action="store_true",
-                        help="Rebuild the report from the existing per-run CSV, no W&B calls.")
+    parser.add_argument(
+        "--from-csv",
+        action="store_true",
+        help="Rebuild the report from the existing per-run CSV, no W&B calls.",
+    )
     args = parser.parse_args()
     if args.from_csv:
         write_report(pd.read_csv(OUT_CSV))
@@ -227,8 +267,14 @@ def main() -> None:
             reps = re.search(r"rep_(\d+)_sbst", model)
             if not params or not reps:
                 continue
-            jobs.append({"run_id": run.id, "Parameters": params.group(1),
-                         "R": int(reps.group(1)), "T": run.config.get("temperature")})
+            jobs.append(
+                {
+                    "run_id": run.id,
+                    "Parameters": params.group(1),
+                    "R": int(reps.group(1)),
+                    "T": run.config.get("temperature"),
+                }
+            )
     # Deduplicate (a config can appear in more than one sweep); keep the first.
     seen, uniq = set(), []
     for j in jobs:
@@ -245,7 +291,9 @@ def main() -> None:
     df.to_csv(OUT_CSV, index=False)
 
     if int(df["n_exc"].sum()):
-        print(f"\n!! {int(df['n_exc'].sum())} scoring exceptions -- results not trustworthy")
+        print(
+            f"\n!! {int(df['n_exc'].sum())} scoring exceptions -- results not trustworthy"
+        )
 
     write_report(df)
 

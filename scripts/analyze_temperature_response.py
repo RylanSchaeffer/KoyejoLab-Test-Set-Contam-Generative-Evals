@@ -16,6 +16,8 @@ Only a subset of those sweeps carries the extra temperature points; the rest hav
 
 Usage:
     python scripts/analyze_temperature_response.py
+
+NOTE (2026-07-30): 344M R=0 is absent from THESE sweeps (the ten runs of 2025-09-25 all failed). Finished 344M R=0 0-shot runs do exist in sweeps woygzpil (2025-12-19) and oj6o8idv (2025-12-31) and score 0.000-0.140% strict -- on the floor, like the R=1 stand-in, so this fallback is validated and moves nothing. See reviews/2026_neurips/data/LENIENT_SCORER_AUDIT.md.
 """
 
 import argparse
@@ -36,11 +38,15 @@ WANDB_ENTITY = "rylan"
 WANDB_PROJECT = "memorization-scoring-vs-sampling-eval"
 
 ZERO_SHOT_SWEEPS = [
-    "6y9dy2ow", "lnrpy3ed",   # 34M (lnrpy3ed adds temperatures)
-    "5oo55o9s", "10q465ij",   # 62M
-    "q5uoy1eu", "f5djvfth",   # 93M
-    "vnz1h147", "xkzfmbhk",   # 153M
-    "39rugx2e",               # 344M
+    "6y9dy2ow",
+    "lnrpy3ed",  # 34M (lnrpy3ed adds temperatures)
+    "5oo55o9s",
+    "10q465ij",  # 62M
+    "q5uoy1eu",
+    "f5djvfth",  # 93M
+    "vnz1h147",
+    "xkzfmbhk",  # 153M
+    "39rugx2e",  # 344M
 ]
 
 
@@ -207,7 +213,7 @@ def main() -> None:
     # (2) Contamination advantage at matched tau: score(R) - score(R=0) evaluated at the same
     #     temperature for both terms. Generic degradation hits both and cancels in the
     #     difference, so any shrinkage is contamination-specific. This is the real control.
-    # The clean reference is R=0 where it exists. 344M has no 0-shot R=0 run, so without a
+    # The clean reference is R=0 where it exists. 344M has no 0-shot R=0 run in these sweeps, so without a
     # fallback every 344M row would get a NaN advantage and vanish from the mean *silently* —
     # dropping the largest and most contaminated model from the headline number. Fall back to
     # that size's lowest available replica level, which is at the uncontaminated floor anyway
@@ -255,13 +261,13 @@ def main() -> None:
     dropped = len(strong) - len(contributing)
     if dropped:
         print(f"  WARNING: {dropped} conditions dropped for lack of a baseline.")
-    advantage_by_temp = (
-        contributing.groupby("Temp.")["advantage"].mean().reset_index()
-    )
+    advantage_by_temp = contributing.groupby("Temp.")["advantage"].mean().reset_index()
     greedy_advantage = advantage_by_temp.loc[
         np.isclose(advantage_by_temp["Temp."], 0.0), "advantage"
     ]
-    greedy_advantage = float(greedy_advantage.iloc[0]) if len(greedy_advantage) else np.nan
+    greedy_advantage = (
+        float(greedy_advantage.iloc[0]) if len(greedy_advantage) else np.nan
+    )
     advantage_by_temp["fraction_of_greedy_advantage"] = (
         advantage_by_temp["advantage"] / greedy_advantage
     )

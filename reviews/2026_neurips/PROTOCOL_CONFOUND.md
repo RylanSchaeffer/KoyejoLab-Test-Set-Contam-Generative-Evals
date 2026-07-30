@@ -123,6 +123,13 @@ constant:
 | 153M | 0.0118 | **0.0000** | 0.0000 |
 | 344M | 0.0000 | **0.0000** | 0.0000 |
 
+> **Updated 2026-07-30.** 344M was absent from this table because the ten 0-shot R=0 runs from
+> 2025-09-25 all failed. Recovered runs in sweeps `woygzpil` and `oj6o8idv` (both pre-4-shot)
+> give 344M R=0 strict = **0.000%** and **0.060%** at greedy. The three hits behind that 0.060%
+> were inspected individually and are all false positives on problems whose answer is 1. State
+> the floor as 0.00% at four sizes and 0.00-0.06% at 344M rather than "exactly zero everywhere".
+> See `data/LENIENT_SCORER_AUDIT.md`.
+
 **The conclusion survives, and is stronger than the confounded version.** Uncontaminated accuracy
 is *exactly zero under both protocols*. And the 4-shot prefix demonstrably **does** teach the
 format — the well-formed `\boxed{}` rate rises from ~0 to 0.43–0.89 — while accuracy stays at

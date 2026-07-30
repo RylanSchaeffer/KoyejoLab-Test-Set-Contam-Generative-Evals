@@ -42,7 +42,11 @@ Parameters
 93M          [100, 316, 1000]
 ```
 
-Clean reference: R=0 where it exists; 344M -> R=1 because all ten 0-shot 344M R=0 runs failed. 344M R=1 scores 0.0004 strict at greedy, i.e. it sits on the uncontaminated floor, so it is a sound stand-in. Without the fallback 344M drops out of every mean silently and tau=1.0 reads 0.1251 (ratio of means) or 0.0961 (mean of ratios) instead of 0.2528.
+Clean reference: R=0 where it exists; 344M -> R=1 because the ten 0-shot 344M R=0 runs from
+2025-09-25 all failed. **Validated 2026-07-30:** finished 344M R=0 0-shot runs do exist in
+sweeps `woygzpil` (2025-12-19) and `oj6o8idv` (2025-12-31) and score 0.000-0.140% strict across
+tau in {0, 0.316, 1.0} -- on the floor, like the R=1 stand-in, so the fallback moves nothing and
+the retention row below is unaffected. See `reviews/2026_neurips/data/LENIENT_SCORER_AUDIT.md`. 344M R=1 scores 0.0004 strict at greedy, i.e. it sits on the uncontaminated floor, so it is a sound stand-in. Without the fallback 344M drops out of every mean silently and tau=1.0 reads 0.1251 (ratio of means) or 0.0961 (mean of ratios) instead of 0.2528.
 
 One run, 344M R=100 at tau=1.0, was absent from the first version of the per-run CSV (a worker stalled and the table was regex-parsed out of the log). It is present now and scores 0.1758 strict.
 
