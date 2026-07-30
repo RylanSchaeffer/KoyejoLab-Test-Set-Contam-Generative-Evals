@@ -165,6 +165,16 @@ original["Condition"] = "Original"
 frames.append(original[["Condition", "Parameters", "Num. Replicas", "math_verify_score"]])
 
 combined = pd.concat(frames, ignore_index=True)
+# `pivot_table` below aggregates with `mean`, so a duplicated (Condition, size, replicas) — for
+# instance a gap-fill row colliding with a row already in the CSV — would be averaged away
+# silently instead of raising. Assert one row per cell.
+_duplicated = combined.duplicated(
+    ["Condition", "Parameters", "Num. Replicas"], keep=False
+)
+assert not _duplicated.any(), (
+    f"duplicate (Condition, Parameters, Num. Replicas):\n{combined[_duplicated]}"
+)
+assert combined["math_verify_score"].notna().all(), "NaN score in the condition grid"
 combined["Num. Parameters"] = combined["Parameters"].map(
     src.globals.MODEL_NAMES_TO_PARAMETERS_DICT
 )

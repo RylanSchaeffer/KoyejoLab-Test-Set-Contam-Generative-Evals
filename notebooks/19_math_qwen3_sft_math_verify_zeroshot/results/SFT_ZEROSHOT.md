@@ -6,11 +6,11 @@ Both stages measured at 0-shot greedy decoding, so the comparison isolates SFT r
 
 ## What SFT removes, where there was something to remove
 
-Restricted to the 13 conditions scoring >= 5% before SFT.
+Restricted to the 14 conditions scoring >= 5% before SFT.
 
-- Mean pretrained: **70.89%**
-- Mean after SFT: **3.00%**
-- Median retained fraction: **0.028** (range 0.001-0.302)
+- Mean pretrained: **72.95%**
+- Mean after SFT: **2.80%**
+- Median retained fraction: **0.022** (range 0.001-0.302)
 
 The collapse is real and large, but it varies by more than an order of magnitude across conditions — quote the range, not a single multiplier.
 
@@ -31,11 +31,12 @@ Raw accuracy scores a response incorrect both when the model emits no `\boxed{}`
 | 153M         |            1000 |              99.84 |        3.78 |            0.288 |                   13.12 |
 | 344M         |              32 |              12.56 |        0.6  |            0.244 |                    2.46 |
 | 344M         |             100 |              98.96 |        0.46 |            0.111 |                    4.15 |
+| 344M         |             316 |              99.84 |        0.14 |            0.055 |                    2.55 |
 | 344M         |            1000 |              99.84 |        0.12 |            0.019 |                    6.38 |
 | 344M         |            3162 |              99.84 |        2.8  |            0.078 |                   35.71 |
 
 - **3 conditions keep the format** (boxed rate >= 0.5). There the accuracy drop is genuine loss of memorized content: the model still answers in the expected form and is simply wrong.
-- **6 conditions lose the format** (boxed rate < 0.2), and these are concentrated in the larger models. There the raw drop mostly measures that the model stopped emitting `\boxed{}` at all, and attributing it entirely to forgetting would overstate the result.
+- **7 conditions lose the format** (boxed rate < 0.2), and these are concentrated in the larger models. There the raw drop mostly measures that the model stopped emitting `\boxed{}` at all, and attributing it entirely to forgetting would overstate the result.
 
 Report both columns. The defensible claim is that SFT removes the contamination advantage; the mechanism differs by scale, and `sft_score_given_boxed` is the column that isolates capability from formatting. Note it has its own selection effect — it conditions on a subset the model chose — so it is a diagnostic, not a drop-in replacement for the headline number.
 
@@ -73,13 +74,13 @@ Report both columns. The defensible claim is that SFT removes the contamination 
 | 153M         |             100 |              80.74 |        0.44 |               0.005 |            0.099 |
 | 153M         |             316 |              99.84 |        0.36 |               0.004 |            0.071 |
 | 153M         |            1000 |              99.84 |        3.78 |               0.038 |            0.288 |
-| 344M         |               0 |             nan    |        0    |             nan     |            0     |
+| 344M         |               0 |               0    |        0    |             nan     |            0     |
 | 344M         |               1 |               0.04 |        0.02 |               0.5   |            0.027 |
 | 344M         |               3 |               0.06 |        0.02 |               0.333 |            0.022 |
 | 344M         |              10 |               0.26 |        0.18 |               0.692 |            0.059 |
 | 344M         |              32 |              12.56 |        0.6  |               0.048 |            0.244 |
 | 344M         |             100 |              98.96 |        0.46 |               0.005 |            0.111 |
-| 344M         |             316 |             nan    |        0.14 |             nan     |            0.055 |
+| 344M         |             316 |              99.84 |        0.14 |               0.001 |            0.055 |
 | 344M         |            1000 |              99.84 |        0.12 |               0.001 |            0.019 |
 | 344M         |            3162 |              99.84 |        2.8  |               0.028 |            0.078 |
 

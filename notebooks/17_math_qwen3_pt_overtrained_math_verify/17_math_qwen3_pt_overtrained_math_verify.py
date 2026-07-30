@@ -164,6 +164,75 @@ if os.path.isfile(PROTOCOL_CSV):
         6 * anchor_df["Num. Parameters"] * anchor_df["Num. Tokens"]
     )
     anchor_df["Temp."] = 0.0
+    # The superseded 0-shot sweeps have no 344M run at R=0 or R=316. Without these the 344M
+    # R=316 row's `ot_low` falls back to 2, so its retained fraction is measured over 2x-8x
+    # rather than the full span — an absence that is easy to miss when reading the table.
+    # Those two checkpoints were re-run 0-shot into their own group (see notebook 18).
+    try:
+        gap_configs = src.analyze.download_wandb_project_runs_configs_by_group(
+            wandb_project_path="memorization-scoring-vs-sampling-eval",
+            data_dir=data_dir,
+            groups=["zeroshot_original_gap_344m"],
+            refresh=refresh,
+            wandb_username="rylan",
+            finished_only=True,
+        )
+        gap_histories = src.analyze.download_wandb_project_runs_histories_by_group(
+            wandb_project_path="memorization-scoring-vs-sampling-eval",
+            data_dir=data_dir,
+            groups=["zeroshot_original_gap_344m"],
+            refresh=refresh,
+            wandb_username="rylan",
+            filetype="parquet",
+            cols_to_keep=["problem_idx", "math_verify_score"],
+        )
+        gap_configs["Model"] = gap_configs["model_config"].apply(
+            lambda model_config: parse_model_config(model_config)["model"]
+        )
+        gap_configs["Parameters"] = gap_configs["Model"].apply(
+            lambda model_name: re.search(r"Qwen3-([\d.]+[MB])", model_name).group(1)
+        )
+        gap_configs["Num. MATH Test Set Replicas"] = gap_configs["Model"].apply(
+            lambda model_name: int(re.search(r"rep_(\d+)_sbst", model_name).group(1))
+        )
+        gap_df = (
+            gap_histories.groupby("run_id")["math_verify_score"]
+            .mean()
+            .reset_index()
+            .merge(
+                gap_configs[
+                    ["run_id", "Parameters", "Num. MATH Test Set Replicas"]
+                ],
+                on="run_id",
+                how="inner",
+            )
+        )
+        gap_df["Num. Parameters"] = gap_df["Parameters"].map(
+            src.globals.MODEL_NAMES_TO_PARAMETERS_DICT
+        )
+        gap_df["Overtrain Multiplier"] = 1.0
+        gap_df["Num. Tokens"] = 20.0 * gap_df["Num. Parameters"]
+        gap_df["FLOP (6ND)"] = 6 * gap_df["Num. Parameters"] * gap_df["Num. Tokens"]
+        gap_df["Temp."] = 0.0
+        have = set(
+            zip(anchor_df["Parameters"], anchor_df["Num. MATH Test Set Replicas"])
+        )
+        gap_df = gap_df[
+            [
+                (p, r) not in have
+                for p, r in zip(
+                    gap_df["Parameters"], gap_df["Num. MATH Test Set Replicas"]
+                )
+            ]
+        ]
+        if not gap_df.empty:
+            anchor_df = pd.concat([anchor_df, gap_df], ignore_index=True)
+            print(
+                f"Merged {len(gap_df)} gap-filled ot=1 anchor(s): "
+                f"{list(zip(gap_df['Parameters'], gap_df['Num. MATH Test Set Replicas']))}"
+            )
+    except Exception as e:
+        print(f"Gap-fill group unavailable ({type(e).__name__}: {e}).")
     avg_scores_df = pd.concat(
         [
             avg_scores_df,
@@ -188,6 +257,19 @@ else:
         f"WARNING: {PROTOCOL_CSV} missing — no ot=1 anchor. Run "
         f"scripts/compare_zeroshot_vs_fewshot_protocol.py first."
     )
+
+# The retention table below reads `iloc[0]` and `iloc[-1]` of each (size, replicas) group after
+# sorting by multiplier, so a duplicated (size, replicas, multiplier) — e.g. an ot=1 run present
+# in both the sweep and the anchor file — would silently pick an arbitrary denominator. Assert it
+# away rather than trust that the groups are disjoint.
+_duplicated = avg_scores_df.duplicated(
+    ["Parameters", "Num. MATH Test Set Replicas", "Overtrain Multiplier"], keep=False
+)
+assert not _duplicated.any(), (
+    "duplicate (Parameters, Num. MATH Test Set Replicas, Overtrain Multiplier):\n"
+    f"{avg_scores_df[_duplicated]}"
+)
+assert avg_scores_df["math_verify_score"].notna().all(), "NaN score would poison a ratio"
 
 avg_scores_df.to_csv(
     os.path.join(results_dir, "overtrained_math_verify_scores.csv"), index=False

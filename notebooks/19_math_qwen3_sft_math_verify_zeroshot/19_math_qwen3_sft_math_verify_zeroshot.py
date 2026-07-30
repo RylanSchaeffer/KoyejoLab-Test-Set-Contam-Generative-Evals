@@ -106,7 +106,78 @@ pretrained = pretrained[pretrained["protocol"] == "0-shot"][
     ["Parameters", "Num. Replicas", "strict_score"]
 ].rename(columns={"strict_score": "pretrained_score"})
 
+# The superseded 0-shot sweeps have no 344M run at R=0 or R=316, so the left merge below leaves
+# `pretrained_score` NaN there and `informative` silently drops both rows. That is not neutral:
+# 344M R=316 is pretrained 99.84% -> 0.14% post-SFT, one of the largest collapses in the grid,
+# and omitting it biases the headline mean upward. Those two checkpoints were re-run 0-shot into
+# their own group for notebook 18; reuse them here.
+GAP_GROUP = "zeroshot_original_gap_344m"
+try:
+    gap_configs = src.analyze.download_wandb_project_runs_configs_by_group(
+        wandb_project_path="memorization-scoring-vs-sampling-eval",
+        data_dir=data_dir,
+        groups=[GAP_GROUP],
+        refresh=refresh,
+        wandb_username="rylan",
+        finished_only=True,
+    )
+    gap_histories = src.analyze.download_wandb_project_runs_histories_by_group(
+        wandb_project_path="memorization-scoring-vs-sampling-eval",
+        data_dir=data_dir,
+        groups=[GAP_GROUP],
+        refresh=refresh,
+        wandb_username="rylan",
+        filetype="parquet",
+        cols_to_keep=["problem_idx", "math_verify_score"],
+    )
+    gap_configs["Model"] = gap_configs["model_config"].apply(
+        lambda c: parse_model_config(c)["model"]
+    )
+    gap_configs["Parameters"] = gap_configs["Model"].apply(
+        lambda m: re.search(r"Qwen3-([\d.]+[MB])", m).group(1)
+    )
+    gap_configs["Num. Replicas"] = gap_configs["Model"].apply(
+        lambda m: int(re.search(r"rep_(\d+)_sbst", m).group(1))
+    )
+    gap = (
+        gap_histories.groupby("run_id")["math_verify_score"]
+        .mean()
+        .rename("pretrained_score")
+        .reset_index()
+        .merge(
+            gap_configs[["run_id", "Parameters", "Num. Replicas"]],
+            on="run_id",
+            how="inner",
+        )[["Parameters", "Num. Replicas", "pretrained_score"]]
+    )
+    have = set(zip(pretrained["Parameters"], pretrained["Num. Replicas"]))
+    gap = gap[
+        [(p, r) not in have for p, r in zip(gap["Parameters"], gap["Num. Replicas"])]
+    ]
+    if not gap.empty:
+        pretrained = pd.concat([pretrained, gap], ignore_index=True)
+        print(
+            f"Merged {len(gap)} gap-filled pretrained baseline(s): "
+            f"{list(zip(gap['Parameters'], gap['Num. Replicas']))}"
+        )
+except Exception as e:
+    print(f"Gap-fill group unavailable ({type(e).__name__}: {e}); two cells stay blank.")
+
+# The merge is one-to-one by construction; assert it rather than trust it, since a duplicated
+# key would silently inflate `sft` rows and reweight every mean below.
+assert not pretrained.duplicated(["Parameters", "Num. Replicas"]).any()
+assert not sft.duplicated(["Parameters", "Num. Replicas"]).any()
+
+n_sft_rows = len(sft)
 merged = sft.merge(pretrained, on=["Parameters", "Num. Replicas"], how="left")
+assert len(merged) == n_sft_rows, "baseline merge changed the row count"
+_unmatched = merged[merged["pretrained_score"].isna()]
+if not _unmatched.empty:
+    print(
+        "WARNING: no pretrained baseline for "
+        f"{list(zip(_unmatched['Parameters'], _unmatched['Num. Replicas']))} — "
+        "these are dropped from the headline means."
+    )
 merged["retained_fraction"] = merged["sft_score"] / merged["pretrained_score"].replace(
     0, np.nan
 )
