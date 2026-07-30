@@ -80,3 +80,30 @@ model sizes under both protocols.**
 
 The remaining blanks (34M/62M at R ≥ 1000, 93M at R = 3162) are not missing evaluations — those
 checkpoints were never trained. They are absent at 4-shot too.
+
+---
+
+## ⚠️ THIS FILE IS INCOMPLETE — 344M is missing at R = 0 and R = 316
+
+The superseded 0-shot sweeps never produced a finished run for those two cells (all ten 344M R=0
+runs in those sweeps are in state `failed`). They exist only in W&B group
+`zeroshot_original_gap_344m`: run `dmvmnuus` (R=0, strict **0.0000**, boxed 0.0000) and `d2940rxp`
+(R=316, strict **0.9984**, boxed 1.0000).
+
+**This gap has caused two wrong numbers, in two different analyses, by the same mechanism:** a
+left-merge leaves `pretrained_score` NaN for those rows and a downstream `groupby().mean()` or
+`.dropna()` discards them *silently*.
+
+1. `scripts/rescore_temperature_response.py` dropped 344M entirely, turning the τ=1.0 retention
+   figure into 9.6% when it is 25%. Retracted; see `verification/TEMPERATURE_VERIFICATION.md`.
+2. `notebooks/19_*` dropped 344M R=316 — the largest collapse in the grid, 99.84% → 0.14% — which
+   biased the SFT headline *anti-conservatively*. Corrected to 72.95% → 2.80%; see
+   `verification/NOTEBOOK_MERGE_VERIFICATION.md`.
+
+**If you write anything that reads this CSV, gap-fill those two rows or assert they are present.**
+All four current consumers do (notebooks 17, 18, 19 and `scripts/plot_finding1_strict.py`), each
+guarded against double-adding. The rows are deliberately *not* merged into the CSV itself because
+every consumer already handles the absence and appending them now would require re-verifying four
+guards; the cost of that outweighs the benefit while the file is this widely read.
+
+**Never rely on a silent NaN drop.** Assert on unmatched keys instead.
