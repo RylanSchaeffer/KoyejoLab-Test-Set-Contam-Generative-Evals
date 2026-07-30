@@ -152,9 +152,9 @@ no intervals.
 
 ## "Contrived" contamination levels (aPBL Q1)
 
-At R = 1 the test set is 0.02%-0.21% of the training budget depending on model size — at or
+At R = 1 the test set is 0.03%-0.30% of the tokens actually trained on, depending on model size — at or
 below published real-world leakage estimates, and effects are measured there. At the top of the
-ladder it reaches 67%-92%, which is deliberately extreme and should be described that way. The
+ladder it reaches 74% and above, which is deliberately extreme and should be described that way. The
 honest framing is a dose-response curve spanning below-realistic to saturating.
 
 - `reviews/2026_neurips/data/CONTAMINATED_TOKEN_FRACTION.md`

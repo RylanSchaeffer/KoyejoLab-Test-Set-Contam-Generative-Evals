@@ -5,6 +5,25 @@ Training budget is `20 x overtrain_multiplier x num_parameters` (Chinchilla-opti
 `ot = 1`), so the same replica count occupies a very different share of a 34M budget
 than of a 344M budget.
 
+> ⚠️ **These percentages use the NOMINAL budget and are therefore understated (added
+> 2026-07-30).** Runs do not consume the full `20 x N` target: the corpus-trimming step keeps
+> documents while the cumulative token count stays *below* the target, so the actual budget is
+> about **75%** of nominal. Measured on the 34M `ot = 1` runs, whose
+> `train/num_input_tokens_seen` survives in the notebook-11 cache:
+>
+> | R | nominal % | **actual %** |
+> |---|---|---|
+> | 1 | 0.21 | **0.30** |
+> | 3 | 0.64 | **0.89** |
+> | 10 | 2.12 | **2.94** |
+> | 32 | 6.77 | **9.24** |
+> | 100 | 21.16 | **27.33** |
+> | 316 | 66.86 | **73.80** |
+>
+> Multiply the table below by roughly **1.33** for actual shares. The qualitative claim is
+> unchanged — R = 1 is still at or below published real-world leakage estimates, and the top of
+> the ladder is still deliberately extreme — but quote the corrected figures.
+
 Only configurations that exist as checkpoints on the Hub are shown. Combinations that
 would exceed the token budget were rejected at dataset-construction time and were never
 trained, which is why the replica ladders are ragged and why a given model reaches higher

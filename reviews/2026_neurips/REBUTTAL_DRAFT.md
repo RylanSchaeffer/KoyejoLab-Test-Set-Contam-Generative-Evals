@@ -443,9 +443,9 @@ handling), matching the detail already given for pretraining.
 A fair challenge, and quantifying it helped us. Expressed as the fraction of the training token
 budget occupied by contaminated text:
 
-- At **R = 1**, the test set is **0.02%–0.21%** of the budget depending on model size — at or
-  below published real-world leakage estimates. We measure effects at this dose.
-- At the **top of our ladder** it reaches **67%–92%**, which is deliberately extreme.
+- At **R = 1**, the test set is **0.03%–0.30%** of the tokens actually trained on, depending on
+  model size — at or below published real-world leakage estimates. We measure effects at this dose.
+- At the **top of our ladder** it reaches **74% and above**, which is deliberately extreme.
 
 So the ladder is best described as a **dose-response curve spanning from below-realistic to
 saturating**, and we now describe it that way rather than implying every dose is realistic. The
