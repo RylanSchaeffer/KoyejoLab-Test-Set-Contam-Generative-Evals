@@ -43,6 +43,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--checkpoints", nargs="+", required=True,
                    help="Local checkpoint directories (globs are expanded by the shell).")
     p.add_argument("--output_dir", default="results/contaminant_eval")
+    p.add_argument(
+        "--dataset",
+        default="original",
+        choices=["original", "math_rephrased", "math_perturbed"],
+        help=(
+            "Which problems to evaluate on. 'original' asks whether a contaminant-trained model "
+            "can be unlocked by the ORIGINAL problem. The other two are the POSITIVE CONTROLS: "
+            "evaluating a model on the very items it was contaminated with. Without them, a low "
+            "original-problem score is ambiguous between 'retrieval failed' and 'nothing was "
+            "learned'; with them, a high score here and a low score there isolates retrieval."
+        ),
+    )
     p.add_argument("--temperature", type=float, default=0.0)
     p.add_argument("--max_tokens", type=int, default=2048)
     return p.parse_args()
@@ -57,14 +69,18 @@ def main() -> None:
     import src.data
     from src.scoring import extract_boxed_answer, score_response
 
-    # ORIGINAL problems, 0-shot -- the same protocol as Fig. 1 and every teacher-forced result.
-    test = src.data.load_dataset_hendrycks_math()["test"]
+    # 0-shot throughout -- the same protocol as Fig. 1 and every teacher-forced result.
     doc_to_text = src.data.MINERVA_MATH_DOC_TO_TEXT
-    prompts = [
-        doc_to_text.format(problem=q, solution="").rstrip() for q in test["problem"]
-    ]
-    solutions = list(test["solution"])
-    print(f"{len(prompts)} original MATH test problems, 0-shot (no few-shot prefix).")
+    if args.dataset == "original":
+        test = src.data.load_dataset_hendrycks_math()["test"]
+        problems, solutions = list(test["problem"]), list(test["solution"])
+    else:
+        from datasets import load_dataset
+
+        d = load_dataset(f"RylanSchaeffer/{args.dataset}", split="test")
+        problems, solutions = list(d["problem"]), list(d["solution"])
+    prompts = [doc_to_text.format(problem=q, solution="").rstrip() for q in problems]
+    print(f"{len(prompts)} problems from '{args.dataset}', 0-shot (no few-shot prefix).")
 
     os.makedirs(args.output_dir, exist_ok=True)
     sampling = SamplingParams(temperature=args.temperature, max_tokens=args.max_tokens, seed=0)
@@ -91,6 +107,7 @@ def main() -> None:
         )
         rec = {
             "checkpoint": name,
+            "eval_dataset": args.dataset,
             "n": len(prompts),
             "math_verify": n_correct / len(prompts),
             "boxed_rate": n_boxed / len(prompts),
@@ -112,7 +129,7 @@ def main() -> None:
     with open(os.path.join(args.output_dir, "summary.json"), "w") as f:
         json.dump(results, f, indent=2)
 
-    print("\n=== SUMMARY (0-shot, ORIGINAL problems, boxed-required scoring) ===")
+    print(f"\n=== SUMMARY (0-shot, '{args.dataset}' problems, boxed-required scoring) ===")
     for r in results:
         print(f"  {r['checkpoint']:<70} {r['math_verify']:.4f}")
     print(f"\nWrote {args.output_dir}/summary.json")

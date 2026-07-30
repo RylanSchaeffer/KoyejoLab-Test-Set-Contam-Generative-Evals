@@ -87,6 +87,38 @@ perturbed model has learned to emit well-formed answers while the exact model ha
 memorizing, so genre-learning temporarily wins. By R = 316 memorization has taken over
 completely.
 
+## The positive control: same memorization, different key
+
+A low score on the original problems is ambiguous between *retrieval failed* and *nothing was
+learned*. So we evaluated each contaminant arm on **the very items it was contaminated with**.
+
+| Model | Evaluated on | Accuracy | Verbatim solution rate |
+|---|---|---|---|
+| Exact replicas, R = 316 | original problems | **7.22%** | — |
+| **Rephrased, R = 316** | **rephrased problems** (its training items) | **7.56%** | **5.34%** |
+| **Rephrased, R = 316** | **original problems** | **1.52%** | **0.000%** |
+| Rephrased, R = 100 | rephrased problems | 1.56% | 0.000% |
+| Rephrased, R = 100 | original problems | 1.58% | 0.000% |
+| Perturbed, R = 100 | perturbed problems | 1.68% | 0.000% |
+| Perturbed, R = 100 | original problems | 1.16% | 0.000% |
+
+**The rephrased model at R = 316 is exactly as contaminated as the exact-replica model — 7.56%
+versus 7.22% — when measured on the problems it actually saw.** Shown the original problems
+instead, the same model drops to 1.52%. The solutions are byte-identical in both cases; only the
+problem statement differs.
+
+The verbatim rate makes it unambiguous. That model reproduces the gold solution word for word
+**5.34% of the time** when the problem matches training and **0.000% of the time** when it does
+not. It is fully capable of regurgitation. The original problem simply does not trigger it.
+
+So the low original-problem score is a **retrieval failure, not a learning failure** — which is
+what the positive control was run to establish, and what makes "memorization is stored under the
+problem text as key" a measurement rather than a story.
+
+(Memorization only becomes strong at R = 316; at R = 100 both arms sit near 1.6% on their own
+items, so this contrast needs the high-dose point. R = 32 for the rephrased arm and R = 316 for
+the perturbed arm were still running at the time of writing.)
+
 ## Caveats
 
 - 34M only, and one seed. The exact-replica accuracies come from the rescored 0-shot grid; the
