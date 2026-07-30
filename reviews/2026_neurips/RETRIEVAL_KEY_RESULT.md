@@ -57,6 +57,36 @@ problems verbatim.
 dose. Benchmark scores are more robust to non-verbatim leakage than loss is — which is
 reassuring for benchmark validity and cautionary for detection methods built on loss.
 
+## The perturbed arm: no dose-response at all
+
+Adding the third arm (nothing leaked verbatim) sharpens the picture. Accuracy on the original
+problems, 0-shot, boxed-required:
+
+| R | Exact | Rephrased | **Perturbed** |
+|---|---|---|---|
+| 32 | 0.56% | 0.24% | **1.34%** |
+| 100 | 1.70% | 1.58% | **1.16%** |
+| 316 | 7.22% | 1.52% | *(running)* |
+
+Exact and rephrased both climb with dose. **Perturbed is flat** — 1.34% → 1.16%, a change well
+inside the ±0.33 pp bootstrap half-width — and its loss is flat too (3.0741 → 3.0113) while
+exact's keeps falling. Its `\boxed{}` rate is high (0.63 → 0.94) and its verbatim solution rate is
+0.000 at every dose.
+
+So the perturbed model learns the *genre* — format, template, the look of a MATH solution — from
+the first 32 replicas and then stops improving, because further replicas carry no information
+about the specific items being evaluated.
+
+**The dose-response curve that defines contamination requires verbatim content.** Non-verbatim
+leakage produces a one-off genre gain that does not compound. That is a cleaner statement of what
+"realistic leakage" does than anything in the submitted paper, and it is the direct answer to
+1wx9's Q1.
+
+Note the ordering at R = 32 — perturbed (1.34%) *above* exact (0.56%). At light contamination the
+perturbed model has learned to emit well-formed answers while the exact model has only begun
+memorizing, so genre-learning temporarily wins. By R = 316 memorization has taken over
+completely.
+
 ## Caveats
 
 - 34M only, and one seed. The exact-replica accuracies come from the rescored 0-shot grid; the
