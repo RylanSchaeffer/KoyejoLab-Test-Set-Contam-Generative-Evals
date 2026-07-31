@@ -23,6 +23,12 @@ Active work is the **NeurIPS 2026 rebuttal (submission 32216)**. Start with:
 - **`reviews/2026_neurips/PROTOCOL_CONFOUND.md`** — ⚠️ **read before quoting any Math Verify
   number.** The same checkpoint scores 1.0000 at 0-shot and 0.0052 at 4-shot; Fig. 1 is 0-shot
   while Table 1 and the SFT figures are 4-shot.
+- **`docs/ICLR_2027_ROADMAP.md`** — the post-decision experiment plan, tiered by priority, with a
+  decision log of options already considered and rejected. Internal planning only: the rebuttal
+  deliberately makes **no commitments to future experiments**, and none may be added to it.
+
+All rebuttal work was merged to `main` on 2026-07-30 (the `rebuttal/neurips-2026-protocol-and-evidence`
+branch that older handoffs mention is deleted).
 
 Before searching the repo to find out whether an experiment exists, read:
 

@@ -7,6 +7,8 @@ You are picking up the **NeurIPS 2026 rebuttal for submission 32216**. Discussio
 The AC named 8RFz's loss-vs-correctness objection the pivotal critique.
 
 Everything is on branch `rebuttal/neurips-2026-protocol-and-evidence`, **pushed** (54 commits).
+*[Update, later on 2026-07-30: that branch was fast-forward merged into `main` and deleted; all
+work now lives on `main`.]*
 
 ---
 
@@ -129,9 +131,10 @@ and reproduces the gold solution verbatim **0/5000**. The positive control shows
 *exactly as strongly* as the exact arm on its own items (7.56% vs 7.22%, verbatim 5.34%). So:
 **memorization is of the solution text; retrieval is keyed on the problem text.**
 
-**Numbers corrected overnight** — a superseded-vs-use table lives in `REBUTTAL_DRAFT.md`'s posting
-checklist. Do not paste from older drafts or from `REBUTTAL_PLAN.md` / `NEXT_STEPS.md`, which
-still contain pre-correction figures (flagged inline).
+**Numbers corrected overnight** — *[Update, later on 2026-07-30: the posting checklist was
+removed from `REBUTTAL_DRAFT.md` before posting; the criticism-to-number map is
+`REBUTTAL_EVIDENCE.md`.]* Do not paste from older drafts or from `REBUTTAL_PLAN.md` /
+`NEXT_STEPS.md`, which still contain pre-correction figures (flagged inline).
 
 ---
 
