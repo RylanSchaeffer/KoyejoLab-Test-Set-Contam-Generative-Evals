@@ -44,15 +44,31 @@ grid with the corrected budget so every run is genuinely compute-optimal and tot
 constant across R. This converts a defensive footnote into a non-issue and removes the
 dose-compute confound by construction rather than by the perturbed-arm control argument.
 
-### 1.4 Multi-seed with error bands (lower priority, per Rylan 2026-07-30)
+### 1.4 Second model family: Gemma 3 (dense), from scratch
+Instantiate `Gemma3TextConfig` at sizes matched to the Qwen3 ladder and re-run the core
+contamination grid (two or three sizes, R ∈ {0, 100, 316}). Gemma 3 is the chosen family
+(decided 2026-07-30): dense, so it preserves the compute-optimal framing and scaling-law fits;
+proven trainable at small scale (Google ships 270M and 1B); mature HF support; architecturally
+distinct from Qwen3 (interleaved local/global sliding-window attention, GeGLU); name-brand with
+reviewers. **Caveat to handle up front:** Gemma's ~256k vocabulary makes tiny models
+embedding-dominated, so match sizes on *non-embedding* parameters and state the accounting, or
+anchor the comparison at 270M-equivalent and up.
+
+### 1.5 Multi-seed with error bands (lower priority, per Rylan 2026-07-30)
 2–3 seeds over {34M, 93M, 344M} × R ∈ {0, 1, 10, 32, 100}, concentrated on the R ≈ 10–100
 transition where variance should matter most; shaded bands in every figure. Demoted below the
 items above, but note it was promised in the NeurIPS rebuttal for the camera-ready, so it must
 ship in whichever version is accepted.
 
 ### Decisions already made (do not re-propose)
-- **Second model family (Llama/Gemma-style config, tokenizer variation): rejected by Rylan
-  2026-07-30 as not important.** Single-family scope stays a stated limitation.
+- **Second family choice is settled: Gemma 3 dense** (2026-07-30, after considering and rejecting
+  alternatives). **Llama**: rejected, too old. **Inkling** (Thinking Machines, released
+  2026-07-15): rejected; it is a 975B-total / 41B-active multimodal MoE with a 12B-active small
+  variant, so there is no meaningful tiny dense config, and two-week-old architectures have
+  immature from-scratch tooling. **DeepSeek-style / any MoE**: rejected for the robustness arm
+  because active-vs-total parameter ambiguity breaks the tokens-per-parameter budget, the
+  compute-optimal framing, and the E(0) scaling-law fits, and tiny-MoE routing instability would
+  confound any observed difference. MoE contamination is instead a standalone direction (Tier 3).
 
 ---
 
@@ -136,7 +152,16 @@ datasets (fix `RylanSchaeffer/math_rephrased` on the Hub, currently unresolvable
 contamination detectors. This is the cheapest contribution multiplier on the list: the compute is
 already spent, and it gives reviewers a reason to want the paper published.
 
-### 3.4 Post-training interactions beyond SFT
+### 3.4 Contamination in Mixture-of-Experts models (standalone follow-up, not a robustness arm)
+Nobody has run controlled contamination in MoEs, and the retrieval-key mechanism makes sharp
+architectural predictions: if routing on the problem text is the retrieval key, memorized
+solutions should localize in specific experts, paraphrasing the problem should change the routing
+path (explaining transfer failure architecturally), and expert-level activation analysis becomes a
+contamination detector. A small MoE grid (e.g., 8-expert models at two active-parameter sizes,
+exact vs rephrased arms) would be early to an obvious question. Kept out of Tier 1 deliberately:
+see the decision log there for why MoE cannot serve as the robustness family.
+
+### 3.5 Post-training interactions beyond SFT
 The lifecycle story covers pretraining → overtraining → SFT → inference. The missing stage is
 RL-based post-training (RLVR on MATH-train is the natural setting): does RL amplify retrieval of
 memorized solutions (reward hacking via regurgitation) or overwrite it the way SFT does? Timely,
@@ -166,7 +191,7 @@ and the SFT result (72.95% → 2.80%) makes either outcome interesting.
 ## Sequencing under the realistic window
 
 If NeurIPS rejects in September, the eight-ish weeks to ICLR support roughly: Tier 1 items
-1.1–1.3 in parallel on the cluster (1.4 only if capacity remains), 2.1's scale axis (free once
+1.1–1.4 in parallel on the cluster (1.5 only if capacity remains), 2.1's scale axis (free once
 1.1 runs include the rephrased arm), 2.3 and 2.4 (eval-only), and Tier 4. That alone addresses every
 weakness in the NeurIPS metareview with data and adds the transition study. 2.1's capability axis
 and 2.2 are the stretch goals; Tier 3 items are parallel-track writing/analysis that costs little
