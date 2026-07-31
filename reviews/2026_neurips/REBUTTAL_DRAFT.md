@@ -2,12 +2,18 @@
 
 Scores: **8RFz 3** (Quality 2, Originality 2, conf 4) · **1wx9 4** (all 3s) · **aPBL 3** (all 3s).
 
-**Where the score movement is.** 8RFz is dragged by two subscores: Quality 2, from their W1 (the
-evidence doesn't support Findings 4–5), and Originality 2, from their W3 (framing understates prior
-work; our findings replicate and conflict with it undiscussed). Those are the two biggest levers in
-this response. aPBL's subscores are all 3s, so their rating turns on *completeness of reporting* —
-seeds, SFT details, validation — and three of their four concerns are now fully addressed. 1wx9 is
-already at 4 and asked for one experiment, which we ran and which produced the best result here.
+**Where the score movement is.** All three reviewers score Significance 3 — nobody disputes the
+problem matters, so do not argue that. **8RFz's Quality 2 and Originality 2 are the only sub-"good"
+marks in the entire review set**, and both trace to specific, fixable complaints: Quality to their W1
+(loss-based evidence does not establish a claim about generation) and Originality to their W3
+(framing understates prior work; the replication and the conflict go undiscussed). Those two are the
+single biggest lever available. aPBL's subscores are all 3s, so their rating rests on the four
+limitations they list: two are now fully resolved (seeds, SFT details) and two conceded (scale,
+benchmark). 1wx9 is at 4 with all 3s and asked for exactly one experiment, which ran and produced the
+strongest result here.
+
+Each per-reviewer section therefore closes by tallying what they raised against what is now done, and
+asking. Reviewers do not raise scores for work they have to reconstruct themselves.
 
 **Writing rule.** Every paragraph presents a result or answers a question. No process narration, no
 provenance archaeology, no account of how we found our own errors. Corrections appear once, in a
@@ -20,7 +26,15 @@ are wasting their time.
 ## General response
 
 We thank the reviewers. Two new experiments, run in response to these reviews, address the central
-criticisms.
+criticisms — and together they yield a single mechanism that explains the paper's findings more
+tightly than the submitted version did.
+
+**The short version.** Contamination in generative evaluation turns out to be a *retrieval*
+phenomenon, not a learning one. Models store leaked solutions and emit them only when the exact
+problem text cues retrieval. That one mechanism accounts for why scores inflate to near-100%, why
+they collapse under any rephrasing of the problem in either training or evaluation, why loss and
+accuracy dissociate, and why non-verbatim leakage moves cross-entropy substantially while barely
+moving benchmark scores at all.
 
 **1. Findings 4 and 5, now measured in accuracy** (8RFz W1/Q1; the AC's pivotal point). We evaluated
 all 137 overtraining and all 39 SFT checkpoints under Math Verify. Accuracy tracks loss, so the
@@ -46,11 +60,10 @@ model's **7.22%** and never reproduces a gold solution. Measured on its *own* tr
 scores 7.56% and regurgitates verbatim 5.34% of the time. It has memorized the solutions and cannot
 reach them.
 
-**Memorization is of the solution text; retrieval is keyed on the problem text.** Rephrasing at
-training time stores the solution without the key; rephrasing at evaluation time (Table 1) withholds
-the key from a model that has one. One mechanism now explains Finding 2, the new ablation, and the
-loss-versus-accuracy gap the AC asked about — and it inverts the usual detection worry, since
-perplexity flags these models loudly while their benchmark scores stay near clean.
+This is the retrieval mechanism above, seen from the training side: rephrasing at training time
+stores the solution without the key, while rephrasing at evaluation time — our Table 1 — withholds
+the key from a model that has one. Both collapse generation for the same reason, so Finding 2, the
+new ablation, and the loss-versus-accuracy gap the AC asked about now have a single explanation.
 
 **3. Reporting.** We add confidence intervals to every Math Verify number (median half-width 0.12
 pp), five missing references with our findings situated against them, and appendices giving the SFT
@@ -58,9 +71,17 @@ configuration and the construction and validation of the modified test sets. Tab
 Original column and is measured at the same protocol as Figure 1, so the comparison is
 self-contained.
 
-Together these strengthen the paper's central claim: contamination inflates generative benchmark
-scores enormously while creating no capability whatsoever, and the inflation is keyed so tightly to
-the exact problem text that it survives no surface-form change — in training or in evaluation.
+**What this changes in practice.** Contamination inflates generative benchmark scores enormously
+while creating no capability whatsoever: an uncontaminated 344M model produces 0 correct answers in
+5,000,000 samples, so every point of contaminated performance is memorization. Three consequences
+follow for how the field should evaluate and audit models. Detection built on loss or perplexity has
+a false-positive mode — it flags heavily-memorizing models whose benchmark scores are barely
+inflated. Benchmark scores are more robust to realistic non-verbatim leakage than loss is, which is
+reassuring for benchmark validity and cautionary for loss-based auditing. And overtraining on fresh
+data, often assumed to wash contamination out, does essentially nothing once leakage is heavy.
+
+We are grateful for reviews specific enough to be actionable. Every criticism we could address with
+data, we did, and the paper is stronger for it.
 
 ---
 
@@ -158,6 +179,16 @@ report the exclusion and note that including them gives 4.84%. The uncontaminate
 so modification removes the large majority of the contamination advantage while leaving a small
 residual rather than returning performance exactly to baseline.
 
+**In summary.** Your two lowest marks were Quality and Originality, and both rested on specific
+objections we have now acted on. Quality rested on W1 — that cross-entropy on solution text does not
+establish a claim about generation. We have replaced that evidence with direct accuracy measurements
+across all 176 checkpoints, and in the one regime where the two metrics genuinely diverge we now
+show the divergence rather than assume it away. Originality rested on W3 — that we understated prior
+work and left the replication and the conflict undiscussed. We have added the missing references,
+marked Finding 1 as a replication, and turned the apparent conflict with Mehrbakhsh et al. and
+Dekoninck et al. into a capability-boundary account that makes a testable prediction. We would be
+grateful if you would consider whether these changes warrant revisiting those two scores.
+
 ---
 
 ## Reviewer 1wx9
@@ -222,6 +253,14 @@ We would note that the irreducible-error result is not in that category: the sur
 loss drops, but that a *single* replica pushes measured loss below the extrapolated uncontaminated
 asymptote. Nor are the inference-time regimes, which concern how memorized content is emitted rather
 than how well it is stored.
+
+**In summary.** You asked for one thing — contamination that is paraphrased rather than exact — and
+identified it as what would determine whether our conclusions extend beyond blatant leakage. We ran
+it, and it produced what we think is the strongest result in the paper: the retrieval-key mechanism,
+which unifies Finding 2 with the new ablation and explains the loss-versus-accuracy gap the AC
+highlighted. It also answers your W4 directly, by showing which of our results survive when leakage
+is not verbatim. If that addresses the concern behind your score, we would be glad if you would
+consider whether the paper now merits a stronger one.
 
 ---
 
@@ -296,6 +335,16 @@ a mathematics subset of MMLU, and a code benchmark requiring arithmetic reasonin
 whether the contamination advantage transfers across *domain* even where it does not transfer across
 *surface form*. Our capability result predicts it will not at this scale, which makes it a clean
 test of the capability-boundary hypothesis above once run at larger scale.
+
+**In summary.** Of the four limitations you listed, two are now fully resolved: every Math Verify
+number carries a confidence interval, and the missing SFT configuration is documented in a new
+appendix. Your Q2 also proved well-aimed — auditing the modified test sets turned up a real defect,
+the 11.64% of perturbed problems whose answer is unchanged, which we now exclude and report rather
+than let inflate the result. The remaining two limitations, model scale and the single benchmark, we
+concede without argument and commit to addressing for the camera-ready; we would note only that the
+zero-capability result makes scale a substantive boundary condition on Finding 2 rather than a
+caveat, which we think is a more useful thing to say about it than the submission managed. We hope
+the resolved items shift the balance enough for you to reconsider your score.
 
 ---
 
