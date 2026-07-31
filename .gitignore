@@ -212,7 +212,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Downloaded data
+# Downloaded data. NOTE: these exclude the whole directory, so a `!` negation cannot re-include
+# a file underneath them -- the surviving pretraining caches in 10/ and 11/ are force-added
+# (`git add -f`), as they were in commit 04d4980.
 notebooks/10_math_qwen3_pt_cross_entropy/data
 notebooks/11_math_qwen3_pt_math_verify/data
 notebooks/14_math_qwen3_pt_math_verify_teacher_forcing/data
@@ -270,6 +272,12 @@ manuscript_icml_2026/00_main.pdf
 # only affects untracked paths.
 notebooks/**/data/*.feather
 notebooks/**/data/*.parquet
+
+# Exception: the pretraining caches are the only surviving copy of the Finding #3 data (their
+# W&B project no longer resolves), and notebook 11 loads with filetype="parquet". Committing
+# only the .csv left it unable to load from a clean checkout.
+!notebooks/**/data/c39ba9b590fe96b52183328d3d4c7323_runs_configs.parquet
+!notebooks/04_pretraining_loss_scaling/data/43bce56c5b3db7fbdab964899d0f783e_runs_configs.parquet
 models/
 
 

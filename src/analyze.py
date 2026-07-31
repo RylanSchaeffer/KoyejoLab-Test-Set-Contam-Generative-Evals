@@ -36,6 +36,17 @@ import src.globals
 import src.neural_scaling_laws
 
 
+def _usable_cache(path: str) -> bool:
+    """True only if `path` is a non-empty file.
+
+    A zero-byte cache passes `os.path.isfile()`, so the download is skipped and the
+    subsequent read raises or yields an empty frame. Four such files existed on disk
+    (2026-07-30), three of them beside the irreplaceable pretraining caches whose W&B
+    source no longer resolves -- the worst place for a silent empty read.
+    """
+    return os.path.isfile(path) and os.path.getsize(path) > 0
+
+
 def add_pretraining_quantities_to_pretrain_runs_configs_df(
     pretrain_run_configs_df: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -202,7 +213,7 @@ def download_wandb_project_runs_configs(
         data_dir, hashed_filename + f"_runs_configs.{filetype}"
     )
 
-    if refresh or not os.path.isfile(runs_configs_df_path):
+    if refresh or not _usable_cache(runs_configs_df_path):
         print(f"Creating {runs_configs_df_path} anew.")
 
         api = wandb.Api(timeout=600)
@@ -329,7 +340,7 @@ def download_wandb_project_runs_configs_by_group(
         data_dir, hashed_filename + f"_runs_configs.{filetype}"
     )
 
-    if refresh or not os.path.isfile(runs_configs_df_path):
+    if refresh or not _usable_cache(runs_configs_df_path):
         print(f"Creating {runs_configs_df_path} anew.")
 
         api = wandb.Api(timeout=600)
@@ -438,7 +449,7 @@ def download_wandb_project_runs_histories_by_group(
         data_dir, hashed_filename + f"_runs_histories.{filetype}"
     )
 
-    if refresh or not os.path.isfile(runs_histories_df_path):
+    if refresh or not _usable_cache(runs_histories_df_path):
         api = wandb.Api(timeout=6000)
         if wandb_username is None:
             wandb_username = api.viewer.username
@@ -474,7 +485,9 @@ def download_wandb_project_runs_histories_by_group(
                     if result is not None:
                         runs_histories_list.append(result)
 
-        runs_histories_df = pd.concat(runs_histories_list, sort=False, ignore_index=True)
+        runs_histories_df = pd.concat(
+            runs_histories_list, sort=False, ignore_index=True
+        )
         runs_histories_df.reset_index(inplace=True, drop=True)
 
         runs_histories_df.to_csv(
@@ -655,7 +668,7 @@ def download_wandb_project_runs_histories(
     runs_histories_df_path = os.path.join(
         data_dir, hashed_filename + f"_runs_histories.{filetype}"
     )
-    if refresh or not os.path.isfile(runs_histories_df_path):
+    if refresh or not _usable_cache(runs_histories_df_path):
         # Download sweep results
         api = wandb.Api(timeout=6000)
 
@@ -754,9 +767,7 @@ def download_wandb_project_runs_histories_helper(
     for num_attempts in range(5):
         try:
             if cols_to_keep is not None:
-                history = pd.DataFrame(
-                    list(run.scan_history(keys=list(cols_to_keep)))
-                )
+                history = pd.DataFrame(list(run.scan_history(keys=list(cols_to_keep))))
             else:
                 history = run.history(samples=wandb_run_history_num_samples)
             break

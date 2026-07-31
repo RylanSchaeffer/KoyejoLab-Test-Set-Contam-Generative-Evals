@@ -1,2 +1,7 @@
 *.parquet filter=lfs diff=lfs merge=lfs -text
 *.feather filter=lfs diff=lfs merge=lfs -text
+# The surviving pretraining caches are ~220 KB each and are the only copy of the Finding #3
+# data. Store them as ordinary git blobs rather than LFS objects: they are small, they never
+# change, and LFS quota should not gate access to irreplaceable data.
+notebooks/**/data/c39ba9b590fe96b52183328d3d4c7323_runs_configs.parquet -filter -diff -merge text=auto
+notebooks/04_pretraining_loss_scaling/data/43bce56c5b3db7fbdab964899d0f783e_runs_configs.parquet -filter -diff -merge text=auto
