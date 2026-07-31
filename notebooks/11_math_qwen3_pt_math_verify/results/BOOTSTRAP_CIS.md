@@ -1,5 +1,15 @@
 # Bootstrap Confidence Intervals on Math Verify
 
+> ⛔ **SUPERSEDED 2026-07-30. Do not quote this file.** These intervals are computed from the
+> **leniently** scored logs, while every number the rebuttal reports is strict-scored, so the point
+> estimates here (R=0 reading 0.38-1.26%) contradict the measured 0.00% floor. A percentile
+> bootstrap is also degenerate at zero counts.
+>
+> Use `strict_score_binomial_cis.csv` instead: exact binomial 95% intervals on the strict scores,
+> median half-width **0.123 pp**, max **1.350 pp**, zero-scoring conditions bounded above by
+> **0.074%**. For a proportion this is equivalent to bootstrapping the per-problem mean, and it is
+> well defined when a condition scores zero.
+
 95% percentile bootstrap over the 5001 MATH test problems, 10,000 resamples, greedy decoding, **0-shot** (the protocol behind the manuscript's Finding #1 figure).
 
 > **Scoring caveat (added 2026-07-30).** These intervals are computed from the scores the 0-shot

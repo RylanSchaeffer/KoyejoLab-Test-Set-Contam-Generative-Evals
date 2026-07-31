@@ -178,8 +178,20 @@ Three things not to overstate:
 
 ## Uncertainty (aPBL W3, AC bullet 3)
 
-95% percentile bootstrap over the 5,000 test problems, 10,000 resamples. **Median CI half-width
-0.33 percentage points** against effects spanning ~1% to 100%.
+**Use the strict-scored intervals** in `notebooks/11_*/results/strict_score_binomial_cis.csv`:
+exact binomial 95% intervals over the 5,001 logged problems, median half-width **0.123 pp**, max
+**1.350 pp**, and 8 zero-scoring conditions bounded above by **0.074%**. Equivalent to bootstrapping
+the per-problem mean and well defined at zero counts, which a percentile bootstrap is not.
+
+**These two figures are consistent, not contradictory.** The 0.123 pp is the *median across all 37
+conditions*, most of which sit near 0% or 100% where the interval is tiny. The half-width scales
+with sqrt(p(1-p)): +/-0.15 pp at 0.24%, **+/-0.33 pp at ~1.4%**, +/-0.73 pp at 7.2%, +/-1.40 pp at
+50%. So the +/-0.33 pp used in `CONTAMINANT_ABLATION.md` and `RETRIEVAL_KEY_RESULT.md` to judge
+plateau movement at ~1.5% is the right number for those conditions and needs no change.
+
+⚠️ The earlier figure (**0.33 pp**, 10,000 percentile-bootstrap resamples, `BOOTSTRAP_CIS.md`) was
+computed from the **leniently** scored logs while every reported number is strict, so its point
+estimates contradict the 0.00% floor. Do not quote it.
 
 State plainly that this is test-set sampling error, **not** multi-seed variance, and commit to
 seeds for camera-ready. Presenting it as covering seed variance would be worse than reporting

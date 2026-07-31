@@ -51,10 +51,10 @@ the answer and cannot reach it. This unifies Finding 2 with the new experiment, 
 detection concern: perplexity flags these models loudly while their benchmark scores stay near
 clean.
 
-**4. Also addressed.** Bootstrap confidence intervals on every Math Verify number (median
-half-width 0.33 pp; test-set sampling error, not seed variance, and we say so). Five missing
-references added and our findings situated against them. New appendices giving SFT hyperparameters
-and the construction and validation of the modified test sets.
+**4. Also addressed.** 95% confidence intervals on every Math Verify number (median half-width
+**0.12 pp** against effects spanning 0% to 100%; test-set sampling error, not seed variance, and we
+say so). Five missing references added and our findings situated against them. New appendices giving
+SFT hyperparameters and the construction and validation of the modified test sets.
 
 ---
 
@@ -186,10 +186,13 @@ and model family. One observation from this rebuttal: the *reason* our models sh
 transfer is that they have zero baseline capability, which makes scale a **substantive boundary
 condition** on Finding 2 rather than a caveat.
 
-**W3 — single seed, no error bars.** Added. 95% percentile bootstrap intervals over the test
-problems (10,000 resamples); median half-width **0.33 pp** against effects spanning ~1% to 100%. We
-state explicitly that this is test-set sampling error and **not** seed-to-seed variance, and commit
-to multiple seeds at the R ≈ 10–100 transition for the camera-ready.
+**W3 — single seed, no error bars.** Added. We report exact binomial 95% intervals over the 5,000
+test problems — equivalent to bootstrapping the per-problem mean, and, unlike a percentile
+bootstrap, well defined when a condition scores zero. The median half-width is **0.12 pp** and the
+maximum **1.35 pp**, against effects spanning 0% to 100%; uncontaminated conditions are bounded above
+by **0.074%**. We state explicitly that this is test-set sampling error and **not** seed-to-seed
+variance — presenting it as the latter would be worse than reporting nothing — and commit to
+multiple seeds at the R ≈ 10–100 transition for the camera-ready.
 
 **W4 — missing SFT hyperparameters.** You are right. We add an appendix with the full configuration
 (AdamW, lr 1×10⁻⁴, cosine schedule, 0.2 warmup ratio, 1 epoch, effective batch 64, max length 2048,
