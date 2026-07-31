@@ -13,10 +13,11 @@ tested. The resubmission should close the first and cash in the second.
 
 ---
 
-## Tier 1: kill the universal objections (do all of these)
+## Tier 1: kill the universal objections
 
-These were raised independently by all three reviewers and the AC. They will be raised again by any
-future reviewer, and none can be argued away.
+Scale and the single benchmark were raised independently by all three reviewers and the AC, and
+will be raised again by any future reviewer; the token-matched rerun retires our one known
+methods caveat.
 
 ### 1.1 Scale ladder to ≥1B parameters
 Extend the contamination grid to Qwen3 600M and 1.4B (configs already exist in `src/models.py`;
@@ -26,13 +27,7 @@ single highest-value item on the list because it also powers item 2.1: if paraph
 switches on anywhere below 1.4B, we find it, and the paper's biggest liability becomes its
 headline.
 
-### 1.2 Second model family
-One non-Qwen architecture (Llama- or Gemma-style config, trained from scratch with the same
-pipeline) at two or three sizes, R ∈ {0, 100, 316}. This also varies the tokenizer, which matters:
-verbatim memorization is a token-sequence phenomenon, and showing the effects are
-tokenizer-independent closes an objection nobody has raised yet but someone will.
-
-### 1.3 Second and third benchmarks
+### 1.2 Second and third benchmarks
 - **GSM8K**: nearly free. The test set is ~1.3k problems (a fraction of MATH's token footprint),
   automatically verifiable, same eval harness. A contamination mini-sweep at two model sizes
   showing the same qualitative signatures (dose-response, loss below the uncontaminated asymptote,
@@ -41,18 +36,23 @@ tokenizer-independent closes an objection nobody has raised yet but someone will
   structure. This substantiates the Limitations-section claim that the framework applies to any
   generative task, currently asserted without evidence.
 
-### 1.4 Multi-seed with error bands
-2–3 seeds at minimum over {34M, 93M, 344M} × R ∈ {0, 1, 10, 32, 100}, concentrated on the
-R ≈ 10–100 transition where variance should matter most. Shaded bands in every figure. This was
-promised in the rebuttal for the camera-ready; the resubmission must deliver it regardless.
-
-### 1.5 Token-matched rerun with the fixed pipeline
+### 1.3 Token-matched rerun with the fixed pipeline
 The published runs trained on 14.3 tokens/parameter (not 20) and total tokens rise 27% with
 contamination dose (`docs/TOKEN_BUDGET_SHORTFALL.md`; code fixed 2026-07-30). No conclusion
 changed, but a resubmission is the natural moment to retire the caveat entirely: re-run the core
 grid with the corrected budget so every run is genuinely compute-optimal and total tokens are
 constant across R. This converts a defensive footnote into a non-issue and removes the
 dose-compute confound by construction rather than by the perturbed-arm control argument.
+
+### 1.4 Multi-seed with error bands (lower priority, per Rylan 2026-07-30)
+2–3 seeds over {34M, 93M, 344M} × R ∈ {0, 1, 10, 32, 100}, concentrated on the R ≈ 10–100
+transition where variance should matter most; shaded bands in every figure. Demoted below the
+items above, but note it was promised in the NeurIPS rebuttal for the camera-ready, so it must
+ship in whichever version is accepted.
+
+### Decisions already made (do not re-propose)
+- **Second model family (Llama/Gemma-style config, tokenizer variation): rejected by Rylan
+  2026-07-30 as not important.** Single-family scope stays a stated limitation.
 
 ---
 
@@ -165,9 +165,9 @@ and the SFT result (72.95% → 2.80%) makes either outcome interesting.
 
 ## Sequencing under the realistic window
 
-If NeurIPS rejects in September, the eight-ish weeks to ICLR support roughly: all of Tier 1
-(1.1–1.4 in parallel on the cluster, 1.5 overlapping), 2.1's scale axis (free once 1.1 runs
-include the rephrased arm), 2.3 and 2.4 (eval-only), and Tier 4. That alone addresses every
+If NeurIPS rejects in September, the eight-ish weeks to ICLR support roughly: Tier 1 items
+1.1–1.3 in parallel on the cluster (1.4 only if capacity remains), 2.1's scale axis (free once
+1.1 runs include the rephrased arm), 2.3 and 2.4 (eval-only), and Tier 4. That alone addresses every
 weakness in the NeurIPS metareview with data and adds the transition study. 2.1's capability axis
 and 2.2 are the stretch goals; Tier 3 items are parallel-track writing/analysis that costs little
 GPU and can land late.
