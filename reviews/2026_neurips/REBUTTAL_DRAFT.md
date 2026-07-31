@@ -75,8 +75,8 @@ persist while loss rises; we looked for that specifically and it does not occur.
 The measurement improves Finding 4. Dilution is **threshold-dependent**: at 93M over ot 1→16, the
 advantage retained is **0.0188 at R = 100** and **0.9966 at R = 1000**. The mechanism is dilution of
 the contaminated *token fraction*, which stops working once that fraction stays high — so
-overtraining is not a mitigation for heavy leakage. Our unqualified phrasing was misleading and is
-replaced by the threshold formulation. For Finding 5, SFT takes mean Math Verify from **72.95% to
+overtraining is not a mitigation for heavy leakage. The revision states this threshold behaviour in
+place of our original unqualified claim. For Finding 5, SFT takes mean Math Verify from **72.95% to
 2.80%** across the 14 conditions scoring ≥ 5% beforehand (median retained fraction 0.022).
 
 **We also found a regime where your objection is exactly right, and we think it is the most
@@ -143,8 +143,8 @@ assessment.)
 Each contaminated checkpoint is evaluated on the rephrased and numerically perturbed MATH test sets
 under greedy decoding, 0-shot, and a response counts as correct only if it contains a well-formed
 `\boxed{}` answer that Math Verify accepts. The revision reports this across 39 checkpoints and adds
-an **Original** column measured the same way, so the comparison no longer requires reading a
-baseline off Figure 1. Averaged over the 14 contaminated checkpoints with R ≥ 100:
+an **Original** column measured the same way, so the table is self-contained. Averaged over the 14
+contaminated checkpoints with R ≥ 100:
 
 | Condition | Math Verify | Advantage removed |
 |---|---|---|
@@ -154,9 +154,9 @@ baseline off Figure 1. Averaged over the 14 contaminated checkpoints with R ≥ 
 
 The perturbed column excludes 582 problems (11.64%) whose numerical perturbation leaves the
 ground-truth answer unchanged, since those score a memorizing model correct by construction; we
-report the exclusion and note that including them gives 4.84%. We also no longer describe
-performance as collapsing "to baseline": the uncontaminated floor is 0.00%, and the modified
-conditions sit 1.9–2.8 percentage points above it.
+report the exclusion and note that including them gives 4.84%. The uncontaminated floor is 0.00%,
+so modification removes the large majority of the contamination advantage while leaving a small
+residual rather than returning performance exactly to baseline.
 
 ---
 
