@@ -259,6 +259,17 @@ manuscript_icml_2026/*.blg
 manuscript_icml_2026/*.out
 manuscript_icml_2026/*.toc
 manuscript_icml_2026/00_main.pdf
+
+# W&B download caches under notebooks/*/data/. Convention: the CSV is the committed copy;
+# the .feather/.parquet are format duplicates of the same download and are regenerable via
+# src.analyze.download_wandb_project_runs_{configs,histories}. Ignoring them keeps ~12 GB of
+# per-problem history caches out of the repo.
+#
+# The irreplaceable pretraining caches (c39ba9b5..., 43bce56c...) are tracked as .csv and are
+# unaffected -- see MISSING_PRETRAINING_DATA.md. Files already tracked stay tracked; .gitignore
+# only affects untracked paths.
+notebooks/**/data/*.feather
+notebooks/**/data/*.parquet
 models/
 
 

@@ -58,6 +58,12 @@ All were verified directly against the HF Hub and W&B APIs, not against repo doc
    Rescoring must run in a *process* pool — `math_verify.verify()` uses a signal-based timeout
    that raises outside the main thread.
 
+**Notebook data caches are regenerable; the pretraining ones are not.** `notebooks/*/data/*.feather`
+and `*.parquet` are gitignored format duplicates of the committed `.csv` (~12 GB of per-problem
+history otherwise). Re-download with `src.analyze.download_wandb_project_runs_{configs,histories}`;
+verified 2026-07-30 that every source sweep still resolves (`2zpwcnek` 117 runs, `mprek7pj` 27,
+`25xeednq` 9, `onaspopu` 34, all finished). The exception is below.
+
 ⚠️ **The pretraining cross-entropy behind Finding #3 exists only in local caches.** The 15 sweeps
 it came from are gone: 0 of 218 run IDs found across 305 projects in 7 entities (searched by
 exact run ID with a validated matcher). Copies live in `notebooks/{10,11,20}_*/data/
