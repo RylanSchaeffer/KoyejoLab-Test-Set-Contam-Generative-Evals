@@ -82,3 +82,7 @@ Columns are the overtrain multiplier; rows are model size and contamination.
 | 93M          |                           316 |   0.9856 |   0.98   |   0.9532 |   0.8462 |   0.2861 |
 | 93M          |                          1000 |   0.9978 |   0.9956 |   0.9964 |   0.9956 |   0.9944 |
 | 93M          |                          3162 | nan      | nan      |   0.9978 |   0.998  |   0.9982 |
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python notebooks/17_math_qwen3_pt_overtrained_math_verify/17_math_qwen3_pt_overtrained_math_verify.py`

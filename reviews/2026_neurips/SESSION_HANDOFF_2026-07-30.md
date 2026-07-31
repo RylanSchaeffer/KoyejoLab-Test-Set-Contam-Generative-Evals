@@ -1,5 +1,7 @@
 # Session handoff — 2026-07-30, for a fresh context
 
+> ⛔ **HISTORICAL RECORD — do not quote numbers from this file.** It is a point-in-time session artifact. Several figures in it were later corrected. The current numbers live in `REBUTTAL_DRAFT.md` and `REBUTTAL_EVIDENCE.md`.
+
 You are picking up the **NeurIPS 2026 rebuttal for submission 32216**. Discussion closes
 **2026-08-03**. Scores: **8RFz 3** (Quality 2, Originality 2, conf 4) · **1wx9 4** · **aPBL 3**.
 The AC named 8RFz's loss-vs-correctness objection the pivotal critique.

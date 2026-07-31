@@ -77,6 +77,9 @@ perturbed 0.879 / 0.726 / 0.570.
 and stay there: rephrased 0.24 → 1.58 → 1.52%, perturbed 1.34 → 1.16 → 1.60%. All the plateau
 movement is inside the ±0.33 pp bootstrap half-width.
 
+> The +/-0.33 pp here is the interval at a ~1.5% score specifically. The 0.12 pp figure quoted elsewhere is the *median* across all 37 conditions, most of which sit near 0% or 100% where the interval is far tighter; half-width scales with sqrt(p(1-p)). The two are consistent. See `data/LENIENT_SCORER_AUDIT.md`.
+
+
 **The perturbed arm never improves with dose in loss either** — 3.0741 → 3.0113 → 3.3705, flat
 and then slightly worse, while exact falls monotonically. That is the signature of domain
 adaptation: once MATH style and problem templates are learned from 32 replicas, further replicas

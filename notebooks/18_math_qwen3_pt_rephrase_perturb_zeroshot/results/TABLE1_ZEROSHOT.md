@@ -58,3 +58,7 @@ Uncontaminated floor (R = 0, Original): **0.00%** (n = 5 model sizes).
 The residual is small but consistent and should be stated rather than rounded away. Describing the collapse as reaching 'baseline' overstates it; 'removes the large majority of the contamination advantage, leaving a small residual' is what the data support.
 
 Note that with boxed-required scoring the uncontaminated floor is exactly 0.00% at every model size, so the residual cannot be expressed as a multiple of it. The earlier '2-3x the floor' phrasing came from a floor of ~1% that was entirely lenient-scorer false positives.
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python notebooks/18_math_qwen3_pt_rephrase_perturb_zeroshot/18_math_qwen3_pt_rephrase_perturb_zeroshot.py`

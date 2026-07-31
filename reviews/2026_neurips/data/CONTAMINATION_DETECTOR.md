@@ -61,3 +61,7 @@ clean models as negatives. That is a concrete, checkable camera-ready commitment
 Present it as a proof of concept with a clear path to validation, not as a working
 detector. Overclaiming here would repeat the framing error the paper is already being
 criticized for.
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python scripts/contamination_detector_from_temperature.py`

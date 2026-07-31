@@ -47,3 +47,7 @@ discarded, since an asymptote is not identifiable without spread in the covariat
 driven to 0, is flagged unreliable in the table and should not be reported as a measured
 irreducible error — `E = 0` means the optimizer pushed `e_0` toward negative infinity,
 i.e. the data are consistent with *no* asymptote, not that the asymptote is zero.
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python scripts/bootstrap_irreducible_error.py`

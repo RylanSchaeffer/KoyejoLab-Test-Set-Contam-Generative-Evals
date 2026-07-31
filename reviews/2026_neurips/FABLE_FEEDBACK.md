@@ -1,5 +1,7 @@
 I've read both the paper and the full review packet. Quick situational read before the list: you're at 3/3/4, and the AC has done you a favor by telegraphing exactly what matters — they explicitly singled out one critique (8RFz's loss-vs-correctness objection to Findings 4–5) as the only one that questions whether your evidence supports your claims, and noted external validity was raised independently by all three. That gives the rebuttal a clear hierarchy: neutralize the AC-flagged objection with new numbers, show at least partial data on realistic contamination, and fix the related-work framing. Papers at this margin get pulled up by rebuttals that bring data, not prose.
 
+> ⛔ **HISTORICAL RECORD — do not quote numbers from this file.** It is a point-in-time session artifact. Several figures in it were later corrected. The current numbers live in `REBUTTAL_DRAFT.md` and `REBUTTAL_EVIDENCE.md`.
+
 The objections, ordered by threat level
 
 1. Findings 4–5 (overtraining dilutes contamination; SFT hurts high-contamination models) are supported by cross-entropy loss, not by generation correctness. — Reviewer 8RFz (W1, Q1), elevated by the AC as the pivotal critique (their "Reviewer #1").

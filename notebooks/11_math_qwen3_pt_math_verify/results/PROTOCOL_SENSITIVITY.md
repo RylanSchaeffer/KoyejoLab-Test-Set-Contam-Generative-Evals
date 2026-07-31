@@ -66,3 +66,7 @@ the memorized context, and the same checkpoints score near the uncontaminated fl
 | 93M          |             100 |   0.3729 |   0.0036 |                  103.6111 |
 | 93M          |             316 |   0.9872 |   0.0054 |                  182.8519 |
 | 93M          |            1000 |   0.9994 |   0.0052 |                  192.2308 |
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python scripts/compare_zeroshot_vs_fewshot_protocol.py`

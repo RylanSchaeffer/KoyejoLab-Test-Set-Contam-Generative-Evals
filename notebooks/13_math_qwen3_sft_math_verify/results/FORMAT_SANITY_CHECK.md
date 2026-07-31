@@ -51,3 +51,7 @@ first reading.
 ## Per-run detail
 
 See `boxed_format_rates.csv`.
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python scripts/check_boxed_format_rate.py`

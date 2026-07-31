@@ -1,5 +1,7 @@
 # Handoff — NeurIPS 2026 rebuttal, submission 32216
 
+> ⛔ **HISTORICAL RECORD — do not quote numbers from this file.** It is a point-in-time session artifact. Several figures in it were later corrected. The current numbers live in `REBUTTAL_DRAFT.md` and `REBUTTAL_EVIDENCE.md`.
+
 Updated **2026-07-30 03:30**, end of overnight session. **All experiments complete.** Scores: **8RFz 3** (Quality 2, Originality 2,
 conf 4) · **1wx9 4** · **aPBL 3**. The AC named 8RFz's loss-vs-correctness objection the pivotal
 critique. **Discussion closes 2026-08-03.**

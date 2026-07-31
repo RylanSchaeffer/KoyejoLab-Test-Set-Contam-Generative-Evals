@@ -43,3 +43,7 @@ on magnitude. Both halves of that should be stated; quoting only the first would
 | 344M         |                          3162 |             5.6902 |              3.6314 |                               -2.0588 |                7138 |
 
 Negative delta = SFT lowered NLL = improved generalization to unseen problems.
+
+---
+
+Provenance: written by hand from the notebook's per-condition table; the notebook does not emit this file. Recompute the underlying numbers by running `notebooks/16_sft_generalization_teacher_forcing_perturbed/16_sft_generalization_teacher_forcing_perturbed.py`.

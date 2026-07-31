@@ -63,3 +63,7 @@ everything degrades; concede that rather than claiming it.
 ## Per-condition data
 
 `temperature_response.csv`.
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python scripts/analyze_temperature_response.py`

@@ -1,5 +1,7 @@
 # Verification handoff — check the overnight work adversarially
 
+> ⛔ **HISTORICAL RECORD — do not quote numbers from this file.** It is a point-in-time session artifact. Several figures in it were later corrected. The current numbers live in `REBUTTAL_DRAFT.md` and `REBUTTAL_EVIDENCE.md`.
+
 Written 2026-07-30 by the session that produced the results, *for a fresh session that did not*.
 The point is to find errors, not to confirm the work. Assume the author was tired and motivated to
 find a good story.

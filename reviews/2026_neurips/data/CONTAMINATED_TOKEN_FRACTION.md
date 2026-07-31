@@ -92,3 +92,7 @@ computation in `notebooks/11_*` (`Num. Tokens = 20 * Num. Parameters`) omits the
 overtrain multiplier. That is harmless for the `ot = 1` runs it was written for, and
 **wrong for the overtrained checkpoints** — it would understate their compute by up to
 16x and misplace every point on a FLOP axis. Fix before plotting the overtraining results.
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python scripts/compute_contaminated_token_fraction.py`

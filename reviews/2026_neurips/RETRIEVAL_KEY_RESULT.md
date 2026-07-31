@@ -75,6 +75,9 @@ bootstrap half-width. Perturbed loss never improves either (3.0741 → 3.0113 �
 exact's falls monotonically. Its `\boxed{}` rate is high (0.63 → 0.94) and its verbatim solution rate is
 0.000 at every dose.
 
+> The +/-0.33 pp here is the interval at a ~1.5% score specifically. The 0.12 pp figure quoted elsewhere is the *median* across all 37 conditions, most of which sit near 0% or 100% where the interval is far tighter; half-width scales with sqrt(p(1-p)). The two are consistent. See `data/LENIENT_SCORER_AUDIT.md`.
+
+
 So the perturbed model learns the *genre* — format, template, the look of a MATH solution — from
 the first 32 replicas and then stops, because further replicas carry no information about the
 specific items being evaluated. At R = 316 it is slightly *worse* in loss, consistent with

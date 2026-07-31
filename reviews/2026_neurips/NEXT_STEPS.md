@@ -1,5 +1,7 @@
 # NeurIPS 2026 Rebuttal — Execution Plan (skampere1)
 
+> ⛔ **HISTORICAL RECORD — do not quote numbers from this file.** It is a point-in-time session artifact. Several figures in it were later corrected. The current numbers live in `REBUTTAL_DRAFT.md` and `REBUTTAL_EVIDENCE.md`.
+
 Written to be picked up by a Claude Code session **running on skampere1 with GPU access**.
 Rationale and reviewer-by-reviewer mapping: [`REBUTTAL_PLAN.md`](REBUTTAL_PLAN.md).
 

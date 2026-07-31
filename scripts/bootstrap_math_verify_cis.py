@@ -15,6 +15,9 @@ actually uses (see `reviews/2026_neurips/PROTOCOL_CONFOUND.md`).
 
 Usage:
     python scripts/bootstrap_math_verify_cis.py --num-bootstrap 10000
+
+
+SUPERSEDED 2026-07-30. This computes percentile-bootstrap intervals from the *leniently* scored logs, while every number the rebuttal reports is strict-scored, so its point estimates contradict the measured 0.00% floor; a percentile bootstrap is also degenerate at the eight zero-scoring conditions. Use the exact binomial intervals in `notebooks/11_*/results/strict_score_binomial_cis.csv` instead (median half-width 0.123 pp). Kept because it records how the superseded 0.33 pp figure arose.
 """
 
 import argparse

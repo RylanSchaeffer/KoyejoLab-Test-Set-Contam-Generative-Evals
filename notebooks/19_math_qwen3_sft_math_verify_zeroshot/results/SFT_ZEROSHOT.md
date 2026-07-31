@@ -85,3 +85,7 @@ Report both columns. The defensible claim is that SFT removes the contamination 
 | 344M         |            3162 |              99.84 |        2.8  |               0.028 |            0.078 |
 
 `sft_boxed_rate` is the fraction of responses containing a `\boxed{}` at all. If it collapses, the accuracy drop is partly a formatting artifact rather than lost capability — check it before attributing the drop entirely to forgetting.
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python notebooks/19_math_qwen3_sft_math_verify_zeroshot/19_math_qwen3_sft_math_verify_zeroshot.py`

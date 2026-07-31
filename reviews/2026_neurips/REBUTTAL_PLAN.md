@@ -1,5 +1,7 @@
 # NeurIPS 2026 Rebuttal Plan — Submission 32216
 
+> ⛔ **HISTORICAL RECORD — do not quote numbers from this file.** It is a point-in-time session artifact. Several figures in it were later corrected. The current numbers live in `REBUTTAL_DRAFT.md` and `REBUTTAL_EVIDENCE.md`.
+
 Scores: **8RFz = 3** (conf 4, Quality 2, Originality 2) · **1wx9 = 4** (conf 4) · **aPBL = 3** (conf 3).
 AC published a 5-bullet weakness checklist and explicitly named 8RFz's loss-vs-correctness objection
 as *the* critique that questions whether the evidence supports the claims.

@@ -48,3 +48,7 @@ larger than test-set sampling noise.
 |            3162 | nan               | nan                  | nan                   | nan                     | 100.00 [100.00, 100.00] |
 
 Median CI half-width across all conditions: **0.33 percentage points**.
+
+---
+
+Regenerate: `./mem_scoring_vs_sampling_env/bin/python scripts/bootstrap_math_verify_cis.py`
