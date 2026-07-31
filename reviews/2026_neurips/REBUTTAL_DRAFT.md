@@ -304,38 +304,3 @@ limitations; the zero-capability result makes scale a substantive boundary
 condition on Finding 2 rather than a caveat. We hope the resolved items shift the balance enough
 for you to reconsider your score.
 
----
-
-## Posting checklist
-
-- [x] **OpenReview limit confirmed: 5,000 characters per box.** All four sections fit (re-measure
-      after any edit; the splitter below counts every section body).
-      `python3 -c "import re;[print(len(p.strip()),p.strip().split(chr(10))[0][:40]) for p in re.split(r'\n---\n',open('reviews/2026_neurips/REBUTTAL_DRAFT.md').read())]"`
-- [x] No em dashes anywhere in the posted sections (verify: `grep -c $'\\u2014' REBUTTAL_DRAFT.md`
-      should return 0).
-- [x] **No commitments to future experiments anywhere in the responses** (per Rylan 2026-07-30).
-      Concede limitations and state internal priorities ("top priorities of our follow-up work");
-      never promise deliverables for the camera-ready or the discussion window. Reviewers hold
-      scores hostage to promised work, and internal planning lives in `docs/ICLR_2027_ROADMAP.md`.
-- [ ] Do not use the "~60× SFT collapse" figure, an artifact of comparing 0-shot pretrained against
-      4-shot SFT.
-- [x] General response opens with the metareview-mapping table, in the AC's own weakness order.
-- [x] No protocol archaeology, provenance narration, or scorer methodology in the response.
-      Corrections appear once, in a clause.
-- [x] Five citations added and `\citep`'d; bibliography verified (128 entries, 0 undefined).
-- [x] SFT and modified-test-set appendices written; manuscript compiles (47 pages).
-
-### Numbers to use
-
-| Quantity | **Use** |
-|---|---|
-| Table 1 (R ≥ 100) | **72.18 → 2.78 / 1.91%** |
-| Uncontaminated floor | **0.00%** |
-| SFT | **72.95 → 2.80%** (14 conditions) |
-| Finding #4 retention | **0.0188 / 0.9966** |
-| Temperature at τ = 1.0 | **25%** |
-| Answer-overlap inflation | **4.84%** |
-| Contaminated fraction at R = 1 | **0.03–0.30%** |
-| CI median half-width | **0.12 pp** (exact binomial, strict scores) |
-
-`notebooks/11_*/results/protocol_sensitivity_rescored.csv` (`strict_score`) is authoritative.
