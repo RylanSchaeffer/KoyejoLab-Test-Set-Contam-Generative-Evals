@@ -9,69 +9,72 @@ Consistent with discriminative evaluations, adding benchmark replicas to the pre
 
 \begin{table}[t!]
     \centering
-    \begin{minipage}{0.32\textwidth}
+    \begin{minipage}[t]{0.32\textwidth}
         \centering
-        \begin{tabular}{crr}
+        \setlength{\tabcolsep}{3.5pt}
+        \begin{tabular}{crrr}
             \toprule
-            \textbf{Replicas} & \textbf{Reph.} & \textbf{Pert.} \\
+            \textbf{Reps.} & \textbf{Orig.} & \textbf{Reph.} & \textbf{Pert.} \\
             \midrule
-            0    & 0.04\% & 0.00\% \\
-            1    & 0.00\% & 0.00\% \\
-            3    & 0.00\% & 0.00\% \\
-            10   & 0.00\% & 0.00\% \\
-            32   & 0.00\% & 0.00\% \\
-            100  & 0.00\% & 0.00\% \\
-            316  & 0.02\% & 0.00\% \\
+            0    & 0.00 & 0.00 & 0.00 \\
+            1    & 0.00 & 0.00 & 0.00 \\
+            3    & 0.00 & 0.00 & 0.00 \\
+            10   & 0.06 & 0.04 & 0.02 \\
+            32   & 0.56 & 0.66 & 0.36 \\
+            100  & 1.70 & 1.74 & 1.09 \\
+            316  & 7.22 & 1.86 & 1.45 \\
             \phantom{0}\\
             \phantom{0}\\
             \bottomrule
         \end{tabular}
         \subcaption*{34M}
     \end{minipage}\hfill
-    \begin{minipage}{0.32\textwidth}
+    \begin{minipage}[t]{0.32\textwidth}
         \centering
-        \begin{tabular}{crr}
+        \setlength{\tabcolsep}{3.5pt}
+        \begin{tabular}{crrr}
             \toprule
-            \textbf{Replicas} & \textbf{Reph.} & \textbf{Pert.} \\
+            \textbf{Reps.} & \textbf{Orig.} & \textbf{Reph.} & \textbf{Pert.} \\
             \midrule
-            0    & 0.04\% & 0.00\% \\
-            1    & 0.00\% & 0.00\% \\
-            3    & 0.00\% & 0.00\% \\
-            10   & 0.00\% & 0.00\% \\
-            32   & 0.00\% & 0.00\% \\
-            100  & 0.00\% & 0.00\% \\
-            316  & 0.00\% & 0.00\% \\
-            1000 & 0.00\% & 0.00\% \\
+            0    & 0.00 & 0.00 & 0.00 \\
+            1    & 0.00 & 0.00 & 0.00 \\
+            3    & 0.02 & 0.10 & 0.02 \\
+            10   & 0.02 & 0.10 & 0.07 \\
+            32   & 1.42 & 1.46 & 1.13 \\
+            100  & 37.25 & 2.40 & 2.08 \\
+            316  & 98.56 & 3.18 & 2.10 \\
+            1000 & 99.78 & 3.44 & 1.63 \\
             \phantom{0}\\
             \bottomrule
         \end{tabular}
         \subcaption*{93M}
     \end{minipage}\hfill
-    \begin{minipage}{0.32\textwidth}
+    \begin{minipage}[t]{0.32\textwidth}
         \centering
-        \begin{tabular}{crr}
+        \setlength{\tabcolsep}{3.5pt}
+        \begin{tabular}{crrr}
             \toprule
-            \textbf{Replicas} & \textbf{Reph.} & \textbf{Pert.} \\
+            \textbf{Reps.} & \textbf{Orig.} & \textbf{Reph.} & \textbf{Pert.} \\
             \midrule
-            0    & 0.04\% & 0.00\% \\
-            1    & 0.00\% & 0.00\% \\
-            3    & 0.00\% & 0.00\% \\
-            10   & 0.00\% & 0.00\% \\
-            32   & 0.00\% & 0.00\% \\
-            100  & 0.02\% & 0.00\% \\
-            316  & 0.00\% & 0.00\% \\
-            1000 & 0.00\% & 0.00\% \\
-            3162 & 0.04\% & 0.00\% \\
+            0    & 0.00 & 0.00 & 0.00 \\
+            1    & 0.04 & 0.02 & 0.02 \\
+            3    & 0.06 & 0.04 & 0.07 \\
+            10   & 0.26 & 0.14 & 0.43 \\
+            32   & 12.56 & 2.12 & 1.74 \\
+            100  & 98.96 & 2.80 & 2.51 \\
+            316  & 99.84 & 3.26 & 2.20 \\
+            1000 & 99.84 & 3.10 & 2.38 \\
+            3162 & 99.84 & 5.24 & 2.10 \\
             \bottomrule
         \end{tabular}
         \subcaption*{344M}
     \end{minipage}
-    \caption{\textbf{Contamination-Driven Performance Is Memorization, Not Generalization.} When MATH test problems are rephrased (same numbers, different wording) or perturbed (same wording, different numbers), model performance collapses to baseline regardless of contamination level or model size, confirming that gains from contamination are not attributable to general mathematical reasoning. Results were consistent across all model sizes.}
+    \caption{\textbf{Contamination-Driven Performance Is Memorization, Not Generalization.} Math Verify scores (percent; greedy decoding, 0-shot) on the original MATH test set and on two modified versions: \emph{rephrased} (same numbers, different wording) and \emph{perturbed} (same wording, different numbers). Contamination lifts performance on the original problems to near-ceiling, yet both modifications remove the large majority of that advantage at every model size and contamination level --- averaged over the 14 contaminated checkpoints with $R \geq 100$, $72.18$ falls to $2.78$ (rephrased) and $1.91$ (perturbed), removing $96.1\%$ and $97.4\%$ of the advantage. The uncontaminated floor is $0.00$, so a small residual remains rather than performance returning exactly to baseline. Gains from contamination are therefore not attributable to general mathematical reasoning. The perturbed column excludes the $582$ problems ($11.64\%$) whose perturbation leaves the ground-truth answer unchanged (App.~\ref{app:sec:modified_test_set_validation}); including them raises it to $4.84$.}
     \label{tab:rephrase_perturb}
 \end{table}
 
 \paragraph{Finding \#2: Contamination-Driven Performance Is Memorization, Not Generalization}
-To determine whether performance gains stemmed from generalization or memorization, we evaluated contaminated models on two modified versions of the MATH test set. First, we \emph{rephrased} the problems, keeping the original numerical values and logic but altering the linguistic surface form. Second, we \emph{perturbed} them, modifying numerical values and correct answers while preserving the problem structure. In both conditions, performance regresses to match uncontaminated models across all model sizes and contamination levels (Table~\ref{tab:rephrase_perturb}). This strongly suggests that gains from contamination rely on verbatim memorization rather than acquired mathematical reasoning.
+To determine whether performance gains stemmed from generalization or memorization, we evaluated contaminated models on two modified versions of the MATH test set. First, we \emph{rephrased} the problems, keeping the original numerical values and logic but altering the linguistic surface form. Second, we \emph{perturbed} them, modifying numerical values and correct answers while preserving the problem structure. In both conditions, the large majority of the contamination advantage disappears across all model sizes and contamination levels (Table~\ref{tab:rephrase_perturb}): averaged over the contaminated checkpoints with $R \geq 100$, $72.18\%$ on the original problems falls to $2.78\%$ when they are rephrased and $1.91\%$ when they are perturbed, against an uncontaminated floor of $0.00\%$. This strongly suggests that gains from contamination rely on verbatim memorization rather than acquired mathematical reasoning.
 
 \paragraph{Finding \#3: Scaling Laws Suggest Including A Single Test Set Replica Achieves Lower Loss Than the Irreducible Error of the Uncontaminated Corpus}
 
