@@ -57,8 +57,8 @@ anchor the comparison at 270M-equivalent and up.
 ### 1.5 Multi-seed with error bands (lower priority, per Rylan 2026-07-30)
 2–3 seeds over {34M, 93M, 344M} × R ∈ {0, 1, 10, 32, 100}, concentrated on the R ≈ 10–100
 transition where variance should matter most; shaded bands in every figure. Demoted below the
-items above, but note it was promised in the NeurIPS rebuttal for the camera-ready, so it must
-ship in whichever version is accepted.
+items above. (The rebuttal deliberately makes no camera-ready commitments; per Rylan 2026-07-30,
+these items are forward planning, not promises.)
 
 ### Decisions already made (do not re-propose)
 - **Second family choice is settled: Gemma 3 dense** (2026-07-30, after considering and rejecting

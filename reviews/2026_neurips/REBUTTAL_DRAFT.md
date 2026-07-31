@@ -36,7 +36,7 @@ the central criticisms. Against the metareview's five weaknesses, in order:
 | Metareview weakness | Resolution |
 |---|---|
 | Exact replicas are not realistic leakage | **New experiment**: three-arm pretraining ablation with paraphrased and perturbed contamination (details in reply to 1wx9) |
-| ≤350M params, one family, one benchmark | **Conceded**; second benchmark and model family committed for the camera-ready, and scale reframed as a substantive boundary condition (below) |
+| ≤350M params, one family, one benchmark | **Conceded**; scale reframed as a substantive boundary condition (below), and additional benchmarks and larger models are the top priorities of our follow-up work |
 | Single seed, no error bars | **Added**: exact binomial 95% CIs on every Math Verify number; median half-width 0.12 pp against effects spanning 0–100% |
 | Findings 4–5 rest on loss, not generation correctness | **New measurement**: all 137 overtraining and 39 SFT checkpoints evaluated under Math Verify (details in reply to 8RFz) |
 | Related work understated; replication and conflict undiscussed | **Fixed**: five references added, Finding 1 marked as a replication, the conflict reconciled (reply to 8RFz) |
@@ -211,8 +211,8 @@ the entire effect. This reconciles Finding 2 with prior work reporting that reph
 *does* transfer: in already-capable models, a different regime rather than a contradictory result.
 
 **W3: small models, single benchmark and mixture.** Conceded; raised by all three reviewers. We
-retain the deliberate scale-for-control tradeoff, state the limitation more prominently, and commit
-to a second benchmark and a second model family for the camera-ready.
+retain the deliberate scale-for-control tradeoff and state the limitation more prominently.
+Additional benchmarks and larger models are the top priorities of our follow-up work.
 
 **W4: exact leakage makes the loss results less surprising.** Agreed, and we now say so directly.
 The irreducible-error result is not in that category: the surprise is not that loss drops, but that
@@ -233,17 +233,18 @@ consider whether the paper now merits a stronger one.
 ## Reviewer aPBL
 
 **W1/W2: small models, single dataset.** Conceded without argument. We keep the scale-for-control
-tradeoff and the scaling-law bridge, state the limitation more prominently, and commit to a second
-benchmark and model family for the camera-ready. One new observation: the *reason* our models show
+tradeoff and the scaling-law bridge, and state the limitation more prominently; additional
+benchmarks and larger models are the top priorities of our follow-up work. One new observation:
+the *reason* our models show
 no paraphrase transfer is that they have zero baseline capability, which makes scale a
 **substantive boundary condition** on Finding 2 rather than a caveat, and yields a testable
 prediction that transfer switches on with capability.
 
 **W3: single seed, no error bars.** Added. We report exact binomial 95% intervals over the 5,000
 test problems for every Math Verify number: median half-width **0.12 pp**, maximum 1.35 pp, against
-effects spanning 0–100%. These quantify test-set sampling error, **not** seed-to-seed variance; we
-commit to multiple seeds at the R ≈ 10–100 transition, where variance should matter most, for the
-camera-ready.
+effects spanning 0–100%. These quantify test-set sampling error, **not** seed-to-seed variance;
+seed replication at the R ≈ 10–100 transition, where variance should matter most, is where we
+would invest next on this axis.
 
 **W4: missing SFT hyperparameters.** They were absent; a new appendix gives the full
 configuration: AdamW, learning rate 1×10⁻⁴, cosine schedule with 0.2 warmup ratio, one epoch,
@@ -298,8 +299,8 @@ hypothesis once run larger.
 **In summary.** Of your four limitations, two are fully resolved: every Math Verify number carries
 a confidence interval, and the SFT configuration is documented in a new appendix. Your Q2 proved
 well-aimed: auditing the modified sets turned up a real defect, the 11.64% of answer-unchanged
-perturbations, now excluded and reported. Scale and the single benchmark we concede and commit to
-addressing for the camera-ready; the zero-capability result makes scale a substantive boundary
+perturbations, now excluded and reported. Scale and the single benchmark we concede as
+limitations; the zero-capability result makes scale a substantive boundary
 condition on Finding 2 rather than a caveat. We hope the resolved items shift the balance enough
 for you to reconsider your score.
 
@@ -312,6 +313,10 @@ for you to reconsider your score.
       `python3 -c "import re;[print(len(p.strip()),p.strip().split(chr(10))[0][:40]) for p in re.split(r'\n---\n',open('reviews/2026_neurips/REBUTTAL_DRAFT.md').read())]"`
 - [x] No em dashes anywhere in the posted sections (verify: `grep -c $'\\u2014' REBUTTAL_DRAFT.md`
       should return 0).
+- [x] **No commitments to future experiments anywhere in the responses** (per Rylan 2026-07-30).
+      Concede limitations and state internal priorities ("top priorities of our follow-up work");
+      never promise deliverables for the camera-ready or the discussion window. Reviewers hold
+      scores hostage to promised work, and internal planning lives in `docs/ICLR_2027_ROADMAP.md`.
 - [ ] Do not use the "~60× SFT collapse" figure, an artifact of comparing 0-shot pretrained against
       4-shot SFT.
 - [x] General response opens with the metareview-mapping table, in the AC's own weakness order.
