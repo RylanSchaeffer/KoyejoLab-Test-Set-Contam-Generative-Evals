@@ -374,6 +374,18 @@ before any write — training run, sweep, or upload.**
   upload target is *whoever `HF_TOKEN` resolves to* — it is not hard-coded. Combined with the shared
   `HF_HOME` cache below, this is how checkpoints end up in the wrong namespace.
 - ⚠️ **Set `HF_TOKEN` explicitly before any `push_to_hub`.** See `reviews/2026_neurips/HF_TOKEN_INCIDENT.md`.
+  Rylan's token is stored at **`/lfs/skampere1/0/rschaef/.hf_token`** (mode 600, outside the repo,
+  deliberately *not* in the shared `HF_HOME`, whose token file is world-readable). Load it in every
+  shell that trains or uploads — an `export` in one shell does not carry to the next:
+
+  ```bash
+  export HF_TOKEN="$(cat /lfs/skampere1/0/rschaef/.hf_token)"
+  python scripts/scratch/check_hub_identity_and_access.py   # must print RylanSchaeffer
+  ```
+
+  `scripts/pretrain_language_model.py` calls `assert_hf_identity()` before training and refuses to
+  start under the wrong account. Override with `PRETRAIN_ALLOW_ANY_HF_USER=1`, or train without
+  uploading via `PRETRAIN_SKIP_HUB_PUSH=1` (the checkpoint is saved locally either way).
 - **Known exception:** the 72 `_sft` checkpoints live under **`jkazdan`**, not `RylanSchaeffer`
   (e.g. `jkazdan/mem_Qwen3-344M_..._ot_1.000_sft`, which is the default in `src/globals.py`).
   A collaborator trained them. Any exhaustive checkpoint census must enumerate both namespaces.

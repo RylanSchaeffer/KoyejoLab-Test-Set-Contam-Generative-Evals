@@ -2,14 +2,21 @@
 # Phase 0 of docs/ICLR_2027_CHECKLIST.md: measure the clean GSM8K capability floor
 # across every uncontaminated (R=0) checkpoint.
 #
-# Two prompt styles run as SEPARATE W&B groups, deliberately:
-#   native  -- GSM8K's "Q:/A:" format, what GSM8K-contaminated models will be trained on
-#   minerva -- MATH's "Problem:/Solution:" format, in-distribution for these checkpoints
-# A zero under `native` alone cannot distinguish "no grade-school math capability" from
-# "never saw this prompt shape". Both together can.
+# 4-SHOT, deliberately. The first version of this script ran 0-shot and was wrong:
+# our R=0 checkpoints are pretrained on fineweb-edu alone and have never seen an
+# answer marker of any kind, so a 0-shot prompt asks them to invent a convention
+# they have never observed. That returns 0.00 for reasons unrelated to grade-school
+# maths and answers nothing. Demonstrating the format is what makes a capability
+# floor measurable. Compare the existing MATH result, where 4-shot lifts the boxed
+# rate from 0 to 0.43-0.89 while accuracy stays at exactly 0.0000 -- format was
+# never the blocker there, and this measures whether GSM8K differs.
 #
-# They must not share a group: the resume logic in fetch_completed_pairs() dedupes on
-# (model, temperature) within a group, so the second style would be skipped entirely.
+# Demonstrations come from GSM8K's TRAIN split (src.data.GSM8K_FEWSHOT_EXAMPLES);
+# the eval set is the platinum TEST split, so no evaluation item enters the prompt.
+#
+# This is a capability measurement, NOT a memorization measurement. The 0-shot
+# protocol standardised on 2026-07-30 remains correct for contaminated checkpoints,
+# where the prompt must match the memorized document's opening.
 #
 # GPU 7 is excluded -- another user's sglang server lives there.
 #
@@ -22,42 +29,34 @@ source mem_scoring_vs_sampling_env/bin/activate
 
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 export TOKENIZERS_PARALLELISM=false
+export HF_TOKEN="$(cat /lfs/skampere1/0/rschaef/.hf_token)"
 
 MODELS_FILE="sweeps/eval_pt/gsm8k/models_phase0_uncontaminated.txt"
-LOG_DIR="logs/phase0_gsm8k"
+LOG_DIR="logs/phase0_gsm8k_4shot"
+GROUP="phase0-gsm8k-4shot"
+NUM_SHARDS=6
+
 mkdir -p "${LOG_DIR}"
 
-NUM_SHARDS=3
-
-launch_style () {
-  local style="$1"        # native | minerva
-  local group="$2"
-  local gpu_offset="$3"   # first GPU index for this style
-
-  for shard in $(seq 0 $((NUM_SHARDS - 1))); do
-    local gpu=$((gpu_offset + shard))
-    echo "launching style=${style} shard=${shard}/${NUM_SHARDS} on GPU ${gpu}"
-    CUDA_VISIBLE_DEVICES="${gpu}" nohup python scripts/eval_language_model_multi_temperature.py \
-      --models-file "${MODELS_FILE}" \
-      --dataset madrylab/gsm8k-platinum \
-      --prompt-style "${style}" \
-      --num-fewshot 0 \
-      --temperatures 0.0 \
-      --group "${group}" \
-      --tags phase0 gsm8k "${style}" \
-      --shard-index "${shard}" \
-      --num-shards "${NUM_SHARDS}" \
-      --gpu-memory-utilization 0.85 \
-      > "${LOG_DIR}/${style}_shard${shard}.log" 2>&1 &
-    sleep 5   # stagger: co-resident vLLM workers race during memory profiling
-  done
-}
-
-launch_style native  phase0-gsm8k-native  0
-launch_style minerva phase0-gsm8k-minerva 3
+for shard in $(seq 0 $((NUM_SHARDS - 1))); do
+  echo "launching shard ${shard}/${NUM_SHARDS} on GPU ${shard}"
+  CUDA_VISIBLE_DEVICES="${shard}" nohup python scripts/eval_language_model_multi_temperature.py \
+    --models-file "${MODELS_FILE}" \
+    --dataset madrylab/gsm8k-platinum \
+    --prompt-style native \
+    --num-fewshot 4 \
+    --temperatures 0.0 \
+    --group "${GROUP}" \
+    --tags phase0 gsm8k 4shot \
+    --shard-index "${shard}" \
+    --num-shards "${NUM_SHARDS}" \
+    --gpu-memory-utilization 0.85 \
+    --wandb-log-sleep 0.0 \
+    > "${LOG_DIR}/shard${shard}.log" 2>&1 &
+  sleep 5   # stagger: co-resident vLLM workers race during memory profiling
+done
 
 echo
-echo "Launched $((NUM_SHARDS * 2)) workers on GPUs 0-5. Logs in ${LOG_DIR}/"
-echo "Monitor:  tail -f ${LOG_DIR}/native_shard0.log"
-echo "Summarize: python scripts/scratch/summarize_gsm8k_phase0.py --group phase0-gsm8k-native"
+echo "Launched ${NUM_SHARDS} workers on GPUs 0-$((NUM_SHARDS - 1)). Logs in ${LOG_DIR}/"
+echo "Summarize: python scripts/scratch/summarize_gsm8k_phase0.py --group ${GROUP}"
 wait

@@ -84,6 +84,42 @@ MINERVA_MATH_FEWSHOT_EXAMPLES = [
 ]
 
 
+# 4-shot examples for GSM8K, taken verbatim from the first four rows of the
+# `openai/gsm8k` **train** split, with the <<...>> calculator annotations stripped
+# (an artifact of GSM8K's collection process, not something to teach a model).
+#
+# Train, not test: madrylab/gsm8k-platinum is a cleaned version of GSM8K's *test*
+# split, so demonstrations drawn from it would put evaluation items in the prompt.
+#
+# Keyed `problem`/`solution` rather than `question`/`answer` so that
+# `build_fewshot_prefix` formats them without special-casing.
+#
+# Why these exist at all: our R=0 checkpoints are pretrained on fineweb-edu alone
+# and have never seen an answer marker of any kind, so a 0-shot prompt asks them to
+# invent a convention they have never observed. That measures nothing about
+# mathematical capability. Demonstrating the format is what makes a capability
+# floor measurable -- compare the MATH result, where 4-shot raises the boxed rate
+# from 0 to 0.43-0.89 while accuracy stays at exactly 0.0000.
+GSM8K_FEWSHOT_EXAMPLES = [
+    {
+        "problem": "Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?",
+        "solution": "Natalia sold 48/2 = 24 clips in May.\nNatalia sold 48+24 = 72 clips altogether in April and May.\n#### 72",
+    },
+    {
+        "problem": "Weng earns $12 an hour for babysitting. Yesterday, she just did 50 minutes of babysitting. How much did she earn?",
+        "solution": "Weng earns 12/60 = $0.2 per minute.\nWorking 50 minutes, she earned 0.2 x 50 = $10.\n#### 10",
+    },
+    {
+        "problem": "Betty is saving money for a new wallet which costs $100. Betty has only half of the money she needs. Her parents decided to give her $15 for that purpose, and her grandparents twice as much as her parents. How much more money does Betty need to buy the wallet?",
+        "solution": "In the beginning, Betty has only 100 / 2 = $50.\nBetty's grandparents gave her 15 * 2 = $30.\nThis means, Betty needs 100 - 50 - 30 - 15 = $5 more.\n#### 5",
+    },
+    {
+        "problem": "Julie is reading a 120-page book. Yesterday, she was able to read 12 pages and today, she read twice as many pages as yesterday. If she wants to read half of the remaining pages tomorrow, how many pages should she read?",
+        "solution": "Maila read 12 x 2 = 24 pages today.\nSo she was able to read a total of 12 + 24 = 36 pages since yesterday.\nThere are 120 - 36 = 84 pages left to be read.\nSince she wants to read half of the remaining pages tomorrow, then she should read 84/2 = 42 pages.\n#### 42",
+    },
+]
+
+
 def build_fewshot_prefix(
     fewshot_examples=MINERVA_MATH_FEWSHOT_EXAMPLES,
     doc_to_text=MINERVA_MATH_DOC_TO_TEXT,

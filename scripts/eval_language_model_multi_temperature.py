@@ -447,14 +447,18 @@ def main() -> None:
     # ~1.00 at 0-shot (the prompt matches the memorized document's opening, so the model
     # regurgitates the solution verbatim) and ~0.005 at 4-shot. Which one a sweep uses must
     # therefore be recorded in the run config, not just in the launch command.
-    if is_gsm8k(args.dataset) and args.num_fewshot != 0:
-        # build_fewshot_prefix() formats MATH problems with MATH's template; there
-        # is no GSM8K few-shot example set. Fail rather than prepend four MATH
-        # problems to a GSM8K prompt.
-        raise NotImplementedError(
-            "GSM8K evaluation supports 0-shot only; no GSM8K few-shot examples exist."
+    if args.num_fewshot == 0:
+        fewshot_prefix = ""
+    elif is_gsm8k(args.dataset):
+        # GSM8K's own demonstrations, drawn from the train split. Never the MATH
+        # examples: prepending four LaTeX competition problems to a GSM8K question
+        # would teach the wrong format and the wrong task at once.
+        fewshot_prefix = src.data.build_fewshot_prefix(
+            fewshot_examples=src.data.GSM8K_FEWSHOT_EXAMPLES[: args.num_fewshot],
+            doc_to_text=doc_to_text,
         )
-    fewshot_prefix = "" if args.num_fewshot == 0 else src.data.build_fewshot_prefix()
+    else:
+        fewshot_prefix = src.data.build_fewshot_prefix()
     formatted_problems = [
         fewshot_prefix + doc_to_text.format(problem=question, solution="").rstrip()
         for question in test_dataset["problem"]
