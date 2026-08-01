@@ -290,7 +290,25 @@ Two further traps found in the same pass:
    `memorization-scoring-vs-sampling-pt` no longer resolves, so writing to it would create an
    empty project; the join with published points has to happen in the notebook cache layer.
 
-- [ ] **D4 signed off**
+- [ ] **D4 signed off** — *recipe empirically validated 2026-08-01, still needs your decision.*
+
+**Smoke test result.** The 499M sweep was created and run for ~10 minutes on 4 GPUs
+(`logs/phase1_smoke/499M_smoke.log`), then killed. Everything the recipe claims, it does:
+
+| Check | Result |
+|---|---|
+| v1 script accepts the config | **No `KeyError`** — the `train_test_split_seed` addition is what makes this work |
+| `gradient_accumulation_steps_unrounded` | **15.687** — the validator predicted 15.69 |
+| `gradient_accumulation_steps` | **16** — confirms v1 rounds with `math.ceil`, not `round` |
+| `world_size` / `num_tokens_per_forward_pass` | 4 / 90,112 = 4 × 11 × 2048 ✓ |
+| `target_num_training_tokens_total` | 9,981,136,640 = 20 × 499.06M ✓ |
+| Legacy budget | Warning fired: *"reproducing the published runs' token shortfall (~71.4%)"* ✓ |
+
+⚠️ **One scheduling cost the throughput calibration did not capture: dataset construction.** The
+499M run sampled **9,059,079 corpus documents** and was still tokenizing them when killed after
+ten minutes. Every run in the grid pays this before its first training step, and the calibration
+in 1.1 measured only steady-state training. Budget for it separately, or cache the corpus subsets
+across doses if the pipeline allows.
 
 ⚠️ Two residual caveats that cannot be engineered away, and should be stated in the paper:
 
