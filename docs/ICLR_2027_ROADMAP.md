@@ -1,5 +1,11 @@
 # ICLR 2027 roadmap: what would supercharge this paper
 
+> **For execution order, see `docs/ICLR_2027_CHECKLIST.md` (2026-08-01).** This file remains the
+> rationale document — the reviewer-objection mapping and the decision log of rejected options.
+> The checklist is newer and wins where the two disagree; in particular the checklist recommends
+> **keeping 14.3 tokens/parameter rather than rerunning** (item 1.3 below), and its architecture
+> survey supersedes the Gemma 3 note in 1.4, which predates Gemma 4's release.
+
 Written 2026-07-30, at the close of the NeurIPS 2026 rebuttal (submission 32216, scores 3/4/3).
 This is the "infinite time and compute" list, ordered by expected score-moving power at the next
 venue, with the realistic window flagged: **ICLR 2027 abstracts are typically due late September

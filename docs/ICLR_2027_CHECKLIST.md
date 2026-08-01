@@ -1,0 +1,317 @@
+# ICLR 2027 execution checklist
+
+Drafted 2026-08-01. This is the **execution** document: the same work as
+`docs/ICLR_2027_ROADMAP.md`, but ordered by the sequence I would actually run it in rather than by
+score-moving power, and narrowed to the four areas Rylan named on 2026-08-01.
+
+The roadmap remains the rationale document — it holds the reviewer-objection mapping and the
+decision log of options already rejected. **Read the roadmap for *why*; use this file for *what
+next*.** Where the two disagree, this file is newer.
+
+**Status: D1, D2 and D3 all signed off by Rylan on 2026-08-01.** Execution order revised the same
+day at Rylan's direction — see "Agreed order" below. Nothing has been started yet.
+
+Cluster as of 2026-08-01 11:47: 7 of 8 A100-80GB free on skampere1 (GPU 7 held by another user's
+sglang server, ~74 GB, up 17 h).
+
+---
+
+## Agreed order (Rylan, 2026-08-01)
+
+1. **Finish the MATH Qwen3 scale sweep** (Phase 1).
+2. **Move to GSM8K** (Phase 3) — an easier benchmark, where we may actually see models capable of
+   some generalization, which would let the paper make statements it currently cannot.
+3. **Stop and evaluate** before committing to the coding benchmark (Phases 2 and 4).
+
+Coding work is therefore **deferred behind a decision gate**, not cancelled. Phase 5 (Gemma 3) and
+Phase 6 (eval-only) still fill gaps around the long Phase 1 runs.
+
+**One addition I am proposing on top of this order — Phase 0 below.** The GSM8K step rests on the
+premise that our models are "somewhat capable" there. That premise is cheap to test *today*, with
+no training, by evaluating existing uncontaminated checkpoints on GSM8K. Doing it first means the
+whole GSM8K campaign is either de-risked or redirected before the cluster is committed. It costs
+hours and it gates real weeks of work, so I want it first even though it is not in the list above.
+
+---
+
+## Section 0 — Decisions (all signed off 2026-08-01)
+
+My recommendation is given for each; all remain revisable if evidence changes.
+
+### D1. Token budget: keep 14.3, don't rerun. ⭐ the important one
+
+**Recommendation: keep 14.3 tokens/parameter, run all new pretraining with
+`PRETRAIN_LEGACY_TOKEN_BUDGET=1`, fix the four prose claims, and buy back the caveat with a small
+token-matched *control* rather than a full rerun.**
+
+Rerunning everything is not affordable, and I want to be concrete about why rather than assert it.
+The published corpus is 115 compute-optimal + 138 overtrained + 85 subset-fraction = **338
+pretraining runs** (`docs/EXPERIMENT_INVENTORY.md`). The overtrained arm alone runs to multiplier
+m = 16, so a single 344M m=16 run at the corrected budget is 110B tokens. Retraining the whole
+corpus is on the order of 10^12 tokens. That is not an eight-week job on seven A100s; it is not a
+one-year job on seven A100s.
+
+The scientific case for keeping 14.3 is also stronger than it first looks. The shortfall is
+**uniform** — 0.7136–0.7141 across every size and every multiplier, spread ±0.0005
+(`docs/TOKEN_BUDGET_SHORTFALL.md`). A constant ratio is a legitimate experimental design, not a
+defect: scaling-law fits require a *consistent* tokens-per-parameter ratio, not specifically the
+Chinchilla one, and `src/analyze.py` fits on measured `num_input_tokens_seen` rather than the
+nominal budget. What we lose is only the word "compute-optimal," which we replace with "a fixed
+14.3 tokens per parameter, 0.71× Chinchilla-optimal" — a factual description that costs the paper
+nothing.
+
+This decision also **forces the new scale ladder to 14.3**, which matters more than the prose. If
+we extend the ladder to 1.44B at 20 tokens/parameter while the existing points sit at 14.3, the
+ladder acquires a kink in the (N, D) plane at exactly the new large sizes — the place we most want
+to extrapolate. Mixed budgets would be worse than either uniform choice. As a bonus it is 29%
+cheaper, which is load-bearing given the estimates in Phase 1.
+
+The one claim that stays genuinely false under this option is the appendix's "total training tokens
+remain constant across contamination levels" (+27% from R=0 to R=316). That is what the control
+below is for.
+
+- [x] **D1 signed off by Rylan 2026-08-01** — keep 14.3, no rerun, add the control.
+- [ ] Fix the four affected prose claims (`02_methodology.tex:8`, `01_introduction.tex:28`,
+      `04_further_training.tex:12,17`, `99_appendix.tex:74`) — the appendix one must be rewritten,
+      not relabeled, since it is a claim about experimental validity.
+- [ ] Run the **token-matched control**: 34M and 93M at R ∈ {0, 100, 316} with the fixed pipeline
+      and total tokens genuinely held constant across R. Six runs, ~8B tokens total, hours not days.
+      This converts "the dose–compute confound is bounded by the perturbed arm" from an argument
+      into a measurement, and it is the honest way to keep 14.3 without hand-waving.
+
+*If you'd rather rerun*: the only affordable version is the compute-optimal (m=1) grid at the five
+published sizes, ~35 runs, leaving the overtrained and subset-fraction arms at 14.3 — which
+reintroduces mixed budgets inside the paper. I don't recommend it.
+
+### D2. Second architecture: Gemma 3 dense now; Gemma 4 only if a transformers upgrade proves safe
+
+Investigated 2026-08-01, superseding the roadmap's Gemma 3 note (which predates Gemma 4):
+
+| Candidate | Finding | Verdict |
+|---|---|---|
+| **Gemma 3 dense** | `Gemma3TextConfig` present in our installed transformers **4.56.1**. Google ships 270M and 1B, so small-scale training is proven. Dense, architecturally distinct from Qwen3. | **Recommended.** Zero infrastructure risk. |
+| **Gemma 4** | Released 2026-04-02. Sizes E2B / E4B / 26B MoE / 31B dense, multimodal, Apache 2.0. **Not in transformers 4.56.1** — needs an upgrade of the pinned pipeline. The "effective parameter" naming on E2B/E4B implies a MatFormer-style elastic design, which is awkward to instantiate tiny and from scratch. | **Stretch.** Only on a branch, only if the upgrade doesn't disturb pretraining. |
+| **Inkling-Small** | Verified from the model card: **276B total / 12B active**, 42 layers, 256 experts (6 routed + 2 shared per token), natively multimodal. The "Small" is relative to the 975B flagship. | **Rejected**, confirming the roadmap. There is no tiny dense config; nothing here is trainable from scratch at 34M–1.4B. |
+| **MoE (Qwen3-MoE)** | `Qwen3MoeConfig` is in installed transformers, so a small MoE arm needs no upgrade. | **Yes, but as a standalone probe** (Phase 5), never as the robustness family — active-vs-total parameters break the tokens-per-parameter budget and the scaling-law fits. |
+
+- [x] **D2 signed off by Rylan 2026-08-01** — Gemma 3 dense as the second family, on the strength of
+      the config already being present in installed transformers. MoE stays a separate small probe.
+
+### D3. Which coding benchmark — **recommendation: MBPP**, with a corrected rationale
+
+*Revised 2026-08-01 after Rylan challenged two claims in the first draft. Both challenges were
+correct; the original reasoning is retracted and recorded here so it does not get re-proposed.*
+
+**Retraction 1 — "HumanEval is harder than MATH" is false.** For capable models the ordering runs
+the other way: Qwen2.5-7B scores **57.9 on HumanEval versus 49.8 on MATH**. Benchmark difficulty is
+not the obstacle and I should not have implied it was.
+
+**Retraction 2 — "PoT-GSM8K" was a construction, not an existing benchmark.** Program-of-thought
+prompting (Chen et al. 2022) and PAL (Gao et al. 2022) are real published *methods*, and
+MathQA-Python (Austin et al. 2021, same paper as MBPP, 23,914 math-word-problems-to-Python) is a
+real *dataset*. But a canonical "PoT-GSM8K benchmark" is not a standard artifact — I was proposing
+to build one. **Dropped.**
+
+**The actual obstacle is our corpus and token budget, not the benchmark.** Two verified facts:
+
+- Our pretraining corpus is **`fineweb-edu-dedup` only** (`src/globals.py:57`). That is the
+  educational-web-text subset of smollm-corpus, explicitly *not* the `python-edu` code subset. Our
+  models see essentially no Python at all.
+- **SmolLM2-135M scores 0.0% pass@1 on HumanEval** — and that model has code deliberately in its
+  corpus and was trained on **2T tokens**. Our 344M models see 4.9B tokens; even 1.44B sees ~20.6B.
+  That is 100–400× less data, without the code.
+
+A model trained *with* code on 400× more tokens still scores zero. Ours will score zero on any code
+benchmark, and this is a budget-and-corpus fact rather than a difficulty fact.
+
+**The same reasoning applies to math, which is the part worth internalizing:** we already measure a
+**0.00%** uncontaminated floor on MATH. There is no benchmark at this scale with a non-zero clean
+floor, so *no choice of benchmark* delivers the "models of this size could possibly solve it"
+property. Only changing the regime does — which is exactly what the roadmap's 2.1 capability axis
+(continued pretraining of capable off-the-shelf base models) is for. If a real capability floor is
+what you want, that is the item that provides it, not a benchmark swap.
+
+**Recommendation: MBPP.** It is real, off-the-shelf, CC-BY-4.0, loadable via
+`load_dataset("mbpp")` (974 problems; 427 in the hand-verified `sanitized` config), designed to be
+"solvable by entry-level programmers," and every example ships a `test_list` of executable asserts —
+precisely the input the Phase 2 harness needs. We use it as a **contamination substrate** against a
+0% clean floor, which is the same footing as our MATH result and is perfectly sound: the finding is
+that contamination lifts scores off the floor.
+
+- [x] **D3 signed off by Rylan 2026-08-01** — MBPP as a contamination substrate, 0% clean floor
+      stated plainly. Note the coding work is now gated behind the GSM8K results (see "Agreed
+      order"), so these sub-items are not yet live.
+- [ ] **D3 optional**: also add `python-edu` to the corpus for the code arm? Makes the arm less
+      degenerate, but changes the pretraining setup mid-paper and on the SmolLM2 evidence still
+      probably yields 0%. My inclination is **no**.
+- [ ] **D3 optional**: MathQA-Python as a second code arm — real dataset, but I could not confirm a
+      maintained public release, so this needs an availability check before it is planned around.
+
+---
+
+## Phase 0 — Test the GSM8K capability premise (hours, no training, do this first)
+
+Purpose: find out whether our models have *any* non-zero clean capability on GSM8K before the
+cluster is committed to Phase 3. Every checkpoint needed already exists.
+
+The premise is plausible and worth testing rather than assuming. GSM8K is grade-school word
+problems, which matches `fineweb-edu-dedup`'s educational-web content far better than MATH's
+competition problems do, and the one comparison point I have found runs the right way:
+**SmolLM2-135M scores 1.8% on GSM8K but 0.0% on HumanEval.** That is a real ordering — GSM8K is the
+benchmark most likely to show a floor above zero. The counterweight is that SmolLM2-135M saw 2T
+tokens against our 4.9B at 344M, so a 0.00% result here would not be surprising either.
+
+- [ ] **0.1 Evaluate existing *uncontaminated* (R=0) checkpoints on GSM8K**, 0-shot with required
+      `\boxed{}`, across the full size ladder. Eval-only, no training, no new sweeps.
+- [ ] **0.2 Include the most heavily overtrained checkpoints** (up to m=16). If clean capability
+      exists anywhere in our checkpoint zoo it is most likely there, and those checkpoints are
+      already trained and sitting on the Hub.
+- [ ] **0.3 Report the honest floor and decide.** Three outcomes, all useful:
+  - **Non-zero clean capability** → the premise holds. Phase 3 can make generalization claims the
+    MATH results cannot support, and this becomes a genuinely new contribution. Proceed at full
+    scope, and reconsider whether GSM8K should outrank part of Phase 1.
+  - **0.00% everywhere** → GSM8K is another contamination substrate, exactly like MATH. Still worth
+    running (it defuses "MATH-specific" completely) but scope it as replication, not as a
+    capability result, and do not promise generalization statements we cannot make.
+  - **Non-zero only at the largest / most overtrained sizes** → the most interesting outcome: it
+    locates a capability onset inside our own ladder, which feeds the roadmap's 2.1 transition
+    study directly.
+- [ ] **0.4 Bring the numbers back before Phase 3 scope is fixed.**
+
+## Phase 1 — Qwen3 scale ladder (the long pole; start as soon as Phase 0 is launched)
+
+Everything else is CPU or short-GPU work that can proceed while these train. GPUs are free now, so
+this starts the day it is signed off.
+
+`src/models.py` already parameterizes every size we need — `499M (18, 704)`, `660M (21, 832)`,
+`934M (25, 1010)`, `1.44B (31, 1260)`. No new architecture code. Note the real config names are
+**660M and 1.44B**, not the roadmap's "600M and 1.4B."
+
+- [ ] **1.1 Calibrate throughput before committing to a schedule.** One short run per new size
+      (a few hundred steps, killed early) to measure tokens/sec on 7 GPUs. My paper estimates below
+      could be off by 2–3× in either direction and the whole plan depends on them; a 30-minute
+      measurement replaces the guess. **I will bring the measured numbers back before launching the
+      full set.**
+- [ ] **1.2 Confirm the dose grid against measured throughput.** At 14.3 tokens/parameter a single
+      run costs ~7.1B tokens at 499M, ~9.4B at 660M, ~13.4B at 934M, ~20.6B at 1.44B, plus up to
+      +27% at the highest dose. The full 4-sizes × 5-doses ladder is ~280B tokens, which on my
+      rough arithmetic is **weeks of exclusive cluster time** — likely too much alongside Phases
+      2–5. Provisional trim, to be revised once 1.1 lands:
+
+  | Size | Doses R | Runs |
+  |---|---|---|
+  | 499M | 0, 1, 10, 100, 316 | 5 |
+  | 934M | 0, 10, 100, 316 | 4 |
+  | 1.44B | 0, 100, 316 | 3 |
+
+- [ ] **1.3 Re-upload `RylanSchaeffer/math_rephrased`.** Currently unresolvable on the Hub; the
+      guarded re-upload script exists (commit `2a97cbb`). This blocks 1.4, so do it early and
+      cheaply. ⚠️ Set `HF_TOKEN` first — see `reviews/2026_neurips/HF_TOKEN_INCIDENT.md`.
+- [ ] **1.4 Include the rephrased arm at every new size.** This is what makes the capability-boundary
+      transition study (roadmap 2.1) free rather than a separate campaign: if paraphrase transfer
+      switches on anywhere below 1.44B, these runs find it. Do not launch 1.2 without it.
+- [ ] **1.5 Launch with `PRETRAIN_LEGACY_TOKEN_BUDGET=1`** (per D1) so the new points join the
+      published ladder rather than forking it.
+- [ ] **1.6 Evaluate all new checkpoints** 0-shot with required `\boxed{}` — never 4-shot, never
+      mixed protocols in one comparison.
+
+## Phase 2 — Code-execution eval harness (build while Phase 1 trains)
+
+No GPU needed; this is the prerequisite for any coding benchmark, and it does not exist yet.
+
+- [ ] **2.1 Sandboxed execution of model-generated code.** Subprocess isolation, wall-clock timeout
+      per problem, memory cap, no network, scratch working directory, and a crash/timeout path that
+      scores 0 rather than killing the run. We are executing untrusted model output, so the
+      isolation is a correctness requirement, not a nicety.
+- [ ] **2.2 Unit-test scoring path** mirroring `math_verify`'s interface so eval scripts and the W&B
+      logging schema need minimal change, and per-problem results stay in run history (which is what
+      makes bootstrap CIs and rescoring possible without a GPU).
+- [ ] **2.3 Validate the harness against known-good solutions** — reference solutions must score
+      100%, and deliberately broken ones 0%, before any model output is scored with it.
+- [ ] **2.4 Decide pass@1 vs pass@k** and match whatever the greedy/sampling protocol does for MATH.
+
+## Phase 3 — GSM8K replication (priority 2 of the agreed order)
+
+Cheap in GPU terms (~1.3k test problems is a fraction of MATH's token footprint) and it defuses
+"MATH-specific" completely. **Scope is set by the Phase 0 outcome** — if clean capability turns out
+to be non-zero, add 3.5 below and this becomes more than a replication.
+
+- [ ] **3.1 Extend the contamination injection pipeline** in `src/data.py` to GSM8K — currently
+      MATH-specific.
+- [ ] **3.2 Contamination mini-sweep at two model sizes**, doses matched to the MATH grid.
+- [ ] **3.3 Reproduce the three qualitative signatures**: dose-response, loss below the
+      uncontaminated asymptote, collapse under rephrasing.
+- [ ] **3.4 Rephrased and perturbed arms** for GSM8K, so the ablation transfers too.
+- [ ] **3.5 (Only if Phase 0 found non-zero clean capability) The generalization question.** With a
+      real capability floor we can ask what MATH could not: does contamination *add* to genuine
+      capability or merely sit on top of it? Compare contaminated-vs-clean on held-out GSM8K items
+      that were never injected, at matched dose. This is the "additional statements" Rylan is after,
+      and it is only available in a regime where the clean floor is above zero.
+
+## Decision gate — stop here and evaluate
+
+Per the agreed order, do not start Phases 2 and 4 (the coding benchmark) until the Phase 3 results
+are in and reviewed. Write up what GSM8K changed about the story first.
+
+## Phase 4 — Coding benchmark replication (MBPP)
+
+Blocked on Phase 2. Substantiates the Limitations-section claim that the framework applies to any
+generative task, currently asserted without evidence.
+
+- [ ] **4.1 Build the MBPP contaminant dataset** (exact / rephrased / perturbed), injecting problem
+      text plus reference `code` as the "solution" analogue of MATH's worked solution.
+- [ ] **4.2 Contamination sweep at two sizes**, doses matched to the MATH grid.
+- [ ] **4.3 Report the clean floor as 0% and say so plainly.** Expected and fine: per D3 this is a
+      corpus-and-budget consequence, not a failed experiment. The claim being tested is that
+      contamination lifts a generative score off its floor in a *third* task modality, which does
+      not require non-zero clean capability. Do not quietly omit the floor.
+- [ ] **4.4 Verify contaminated models emit executable Python at all.** If contaminated models
+      cannot reproduce even memorized code as valid syntax, the arm is uninformative and should be
+      cut rather than reported — check this on the first checkpoint, before running the sweep.
+
+## Phase 5 — Second architecture (Gemma 3 dense) and the MoE probe
+
+- [ ] **5.1 Instantiate `Gemma3TextConfig` at sizes matched to the Qwen3 ladder.** ⚠️ Match on
+      **non-embedding** parameters and state the accounting — Gemma's ~256k vocabulary makes tiny
+      models embedding-dominated, and naive total-parameter matching would compare models with
+      wildly different capacity.
+- [ ] **5.2 Core contamination grid** at two or three sizes, R ∈ {0, 100, 316}.
+- [ ] **5.3 Verify the qualitative findings replicate across families.**
+- [ ] **5.4 (Stretch) Gemma 4 feasibility spike on a branch**: does upgrading transformers past
+      4.56.1 break pretraining, SFT, or vLLM eval? Abandon quickly if it does — Gemma 3 already
+      satisfies the reviewer objection.
+- [ ] **5.5 (Stretch) Small Qwen3-MoE contamination probe** — 8 experts, two active-parameter sizes,
+      exact vs rephrased. Tests the roadmap's sharp prediction that memorized solutions localize in
+      specific experts and that paraphrasing changes the routing path. Standalone contribution, not
+      part of the robustness argument.
+
+## Phase 6 — Eval-only wins (no new training; fold in whenever the cluster is busy)
+
+- [ ] **6.1 Discriminative vs generative head-to-head** on existing contaminated checkpoints
+      (MCQ-ified MATH or MMLU-math alongside Math Verify). One figure, no training, and it turns the
+      paper's central contrast into a measured result instead of a literature comparison.
+- [ ] **6.2 Cross-domain transfer**: MATH-contaminated models evaluated on GSM8K and MMLU-math.
+- [ ] **6.3 Perturbed positive control at R = 316** — the one missing ablation cell.
+- [ ] **6.4 pass@k capability floors at every size**, not just 344M.
+- [ ] **6.5 Coherence control for the temperature result.**
+- [ ] **6.6 The 5,001-row footnote** (W&B pagination duplicate; cancels in ratios).
+
+---
+
+## Critical path
+
+Phase 0 runs first and finishes in hours; Phase 1 launches as soon as it is underway rather than
+waiting for it, since the two do not compete for the same resources for long. Phase 1 is the only
+item with a multi-week floor, so everything else fills the gaps around it. Phase 3 follows Phase 1
+on the cluster. Phase 5 (Gemma 3) queues behind Phase 1 — the main argument for trimming the dose
+grid in 1.2 — and Phase 6 is eval-only and can land at any point. Phases 2 and 4 sit behind the
+decision gate.
+
+Three things would change this ordering, all cheap to learn early:
+
+- **Phase 0 finds non-zero clean capability** → GSM8K gets more valuable than a replication, and
+  part of it may deserve to outrank part of the Phase 1 ladder.
+- **The 1.1 calibration shows the ladder is faster than estimated** → restore the full 5-dose grid
+  at every size.
+- **The 1.1 calibration shows it is slower** → drop 934M, keep 499M and 1.44B as the two
+  extrapolation anchors.
