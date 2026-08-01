@@ -85,8 +85,18 @@ def _first_number(text: str) -> str | None:
 _GSM8K_ANSWER_LINE_RE = re.compile(r"^[$\s]*(-?\d[\d,]*(?:\.\d+)?)\s*[.\s]*$")
 
 
-def _sole_number_on_line(text: str) -> str | None:
+def _sole_number_on_line(text: str, require_terminated: bool = False) -> str | None:
     """Return the number if the first line of `text` is *only* a number, else None.
+
+    `require_terminated` additionally demands that the line end with a newline.
+    Pass it when the response was cut off at the token limit: a generation
+    truncated mid-number leaves a fragment that looks like a complete answer. A
+    real case, Qwen3-344M at ot=8, looped on `#### 120+24 = 120` until it hit the
+    2,048-token cap mid-digit, leaving a trailing `#### 1` against a gold of 1.
+    Truncation manufactured the answer. Only apply this when truncation actually
+    occurred -- a memorized regurgitation that ends at EOS right after its number
+    is legitimate and must still score, which matters for the contaminated
+    checkpoints in Phase 3.
 
     Stricter than `_first_number`, and the strictness is load-bearing. A degenerate
     model looping on a few-shot demonstration emitted
@@ -100,6 +110,8 @@ def _sole_number_on_line(text: str) -> str | None:
     exists for the same reason: to keep a capability floor from being inflated by
     coincidental substring matches.
     """
+    if require_terminated and "\n" not in text:
+        return None
     match = _GSM8K_ANSWER_LINE_RE.match(text.strip().split("\n", 1)[0])
     if match is None:
         return None
@@ -119,7 +131,9 @@ def extract_gsm8k_gold_answer(answer_text: str) -> str | None:
     return _first_number(answer_text.rsplit("####", 1)[1])
 
 
-def extract_gsm8k_predicted_answer(response_text: str) -> str | None:
+def extract_gsm8k_predicted_answer(
+    response_text: str, truncated: bool = False
+) -> str | None:
     """Extract a predicted answer, accepting either answer convention.
 
     Two formats are honoured, and the choice is deliberate. "#### <n>" is GSM8K's
@@ -136,7 +150,9 @@ def extract_gsm8k_predicted_answer(response_text: str) -> str | None:
     Returns None when neither marker is present.
     """
     if "####" in response_text:
-        number = _sole_number_on_line(response_text.rsplit("####", 1)[1])
+        number = _sole_number_on_line(
+            response_text.rsplit("####", 1)[1], require_terminated=truncated
+        )
         if number is not None:
             return number
     boxed_content = extract_boxed_answer(response_text)
@@ -145,15 +161,21 @@ def extract_gsm8k_predicted_answer(response_text: str) -> str | None:
     return None
 
 
-def score_gsm8k_response(gold_answer: str | None, response_text: str) -> bool:
+def score_gsm8k_response(
+    gold_answer: str | None, response_text: str, truncated: bool = False
+) -> bool:
     """Score a GSM8K response by numeric comparison against the gold answer.
 
     `gold_answer` is the output of `extract_gsm8k_gold_answer`. Comparison is
     numeric rather than string-wise so that "18" and "18.0" agree.
+
+    Set `truncated` when the generation stopped at the token limit rather than at
+    EOS; see `_sole_number_on_line` for why a truncated final line cannot be
+    trusted as an answer.
     """
     if gold_answer is None:
         return False
-    predicted = extract_gsm8k_predicted_answer(response_text)
+    predicted = extract_gsm8k_predicted_answer(response_text, truncated=truncated)
     if predicted is None:
         return False
     try:

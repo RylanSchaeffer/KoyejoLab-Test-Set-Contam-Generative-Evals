@@ -161,8 +161,17 @@ def score_and_log(
     """
     problem_responses: List[str] = []
     log_probs_per_problem_response: List[List[float]] = []
+    # vLLM's own reason for stopping. "length" means the generation was cut at
+    # max_tokens rather than finishing, so its final line may be a fragment -- a
+    # model looping on "#### 120+24 = 120" that gets cut mid-digit leaves a
+    # trailing "#### 1" that parses as a complete answer. This cannot be recovered
+    # after the fact: `token_per_response` re-tokenizes the decoded text, and
+    # repetitive text re-encodes more compactly (1,527 tokens for a 2,048-token
+    # generation in one observed case), so it does not identify truncation.
+    finish_reasons: List[str] = []
     for request_outputs in requests_outputs:
         problem_responses.append(request_outputs.outputs[0].text)
+        finish_reasons.append(str(request_outputs.outputs[0].finish_reason))
         log_probs_list_of_dicts = request_outputs.outputs[0].logprobs
         log_probs_per_token = [
             list(d.values())[0].logprob for d in log_probs_list_of_dicts
@@ -181,8 +190,14 @@ def score_and_log(
                 "marker; refusing to score against an unparseable reference."
             )
         results = [
-            src.scoring.score_gsm8k_response(gold_answer=gold, response_text=response)
-            for gold, response in zip(gold_answers, problem_responses)
+            src.scoring.score_gsm8k_response(
+                gold_answer=gold,
+                response_text=response,
+                truncated=(finish_reason == "length"),
+            )
+            for gold, response, finish_reason in zip(
+                gold_answers, problem_responses, finish_reasons
+            )
         ]
     else:
         results = [
@@ -215,6 +230,7 @@ def score_and_log(
             "math_verify_score": math_verify_scores[problem_idx],
             "has_boxed": has_boxed[problem_idx],
             "response_chars": len(problem_responses[problem_idx]),
+            "finish_reason": finish_reasons[problem_idx],
         }
 
         log_probs_per_problem = log_probs_per_problem_response[problem_idx]

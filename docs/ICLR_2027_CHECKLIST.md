@@ -170,9 +170,23 @@ that contamination lifts scores off the floor.
 
 ## Phase 0 — Test the GSM8K capability premise (hours, no training, do this first)
 
-**Status 2026-08-01: running.** 32 checkpoints, 4-shot, greedy, 6 shards on GPUs 0-5, W&B group
-`phase0-gsm8k-4shot`. Summarize with
-`python scripts/scratch/summarize_gsm8k_phase0.py --group phase0-gsm8k-4shot`.
+**Status 2026-08-01: COMPLETE. The floor is zero.** Full write-up in
+`docs/PHASE0_GSM8K_CAPABILITY_FLOOR.md` (generated from the data, not hand-written); per-cell
+numbers in `docs/data/phase0_gsm8k_4shot.csv`.
+
+**1 credited response out of 38,688, across all 32 uncontaminated checkpoints — and that one was
+inspected and is a truncation artifact.** The premise does not hold: GSM8K is easier than MATH and
+it makes no difference at this scale.
+
+The result is a *dissociation*, not just a null. The `####` rate reaches **59.7%** at 344M/ot=8,
+so the larger overtrained checkpoints plainly learn the demonstrated format from four examples,
+and still answer nothing correctly — the same pattern the manuscript reports on MATH, where 4-shot
+lifts the boxed rate to 0.43-0.89 and buys exactly 0.0000. Format competence is present;
+arithmetic competence is absent.
+
+Seven cells needed rescoring downward, each a degenerate loop emitting a number that coincidentally
+matched the gold. Two scorer bugs were found and fixed by reading the credited responses rather
+than trusting the aggregate — see the write-up.
 
 Purpose: find out whether our models have *any* non-zero clean capability on GSM8K before the
 cluster is committed to Phase 3. Every checkpoint needed already exists.
@@ -208,7 +222,18 @@ opening — that remains correct and is a memorization measurement, not a capabi
 - [ ] **0.2 Include the most heavily overtrained checkpoints** (up to m=16). If clean capability
       exists anywhere in our checkpoint zoo it is most likely there, and those checkpoints are
       already trained and sitting on the Hub.
-- [ ] **0.3 Report the honest floor and decide.** Three outcomes, all useful:
+- [x] **0.3 Reported. Outcome: the "0.00% everywhere" branch.** GSM8K is another contamination
+      substrate, exactly like MATH. Phase 3 stays worth running — it defuses "MATH-specific"
+      completely — but **scope it as replication, not as a capability result**, and promise no
+      generalization statements. **Item 3.5 is off the table**: it requires a clean floor above
+      zero and there is none. A real capability floor has to come from the roadmap's 2.1 capability
+      axis (continued pretraining of capable off-the-shelf base models), not from an easier
+      benchmark.
+- [x] **0.4 Numbers brought back before Phase 3 scope was fixed.**
+
+<details><summary>Original decision criteria (kept for the record)</summary>
+
+  Three outcomes, all useful:
   - **Non-zero clean capability** → the premise holds. Phase 3 can make generalization claims the
     MATH results cannot support, and this becomes a genuinely new contribution. Proceed at full
     scope, and reconsider whether GSM8K should outrank part of Phase 1.
@@ -218,7 +243,8 @@ opening — that remains correct and is a memorization measurement, not a capabi
   - **Non-zero only at the largest / most overtrained sizes** → the most interesting outcome: it
     locates a capability onset inside our own ladder, which feeds the roadmap's 2.1 transition
     study directly.
-- [ ] **0.4 Bring the numbers back before Phase 3 scope is fixed.**
+
+</details>
 
 ## D4 — NEW, needs sign-off: matching the published ladder needs more than the token flag
 
@@ -374,15 +400,19 @@ to be non-zero, add 3.5 below and this becomes more than a replication.
       the 0-shot eval prompt.** If injection and evaluation disagreed by even a character, a
       contaminated model would be asked to continue text it never saw, would look clean, and
       the experiment would silently measure nothing. Only sweep configs remain.
-- [ ] **3.2 Contamination mini-sweep at two model sizes**, doses matched to the MATH grid.
+- [ ] **3.2 Contamination mini-sweep at two model sizes.** Doses can go **higher** than the MATH
+      grid, not merely match it. GSM8K's contaminant is 227,396 tokens per replica against MATH's
+      1.5e6 — **0.15×** — so a given replica count costs a seventh as much corpus displacement.
+      Two consequences worth exploiting: the dose ladder can extend past R=3162 cheaply, and the
+      dose–compute confound that forced the perturbed-arm control on MATH (total tokens rising 27%
+      from R=0 to R=316) is roughly seven times smaller here, so the token-matching is nearly free.
 - [ ] **3.3 Reproduce the three qualitative signatures**: dose-response, loss below the
       uncontaminated asymptote, collapse under rephrasing.
 - [ ] **3.4 Rephrased and perturbed arms** for GSM8K, so the ablation transfers too.
-- [ ] **3.5 (Only if Phase 0 found non-zero clean capability) The generalization question.** With a
-      real capability floor we can ask what MATH could not: does contamination *add* to genuine
-      capability or merely sit on top of it? Compare contaminated-vs-clean on held-out GSM8K items
-      that were never injected, at matched dose. This is the "additional statements" Rylan is after,
-      and it is only available in a regime where the clean floor is above zero.
+- [x] ~~**3.5 The generalization question.**~~ **CANCELLED by the Phase 0 result.** It required a
+      clean floor above zero — comparing contaminated against clean on held-out GSM8K items — and
+      the floor is zero. The "additional statements" this was meant to enable are not available on
+      GSM8K at this scale, and would have to come from the roadmap's 2.1 capability axis instead.
 
 ## Decision gate — stop here and evaluate
 

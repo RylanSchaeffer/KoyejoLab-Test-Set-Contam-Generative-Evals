@@ -54,6 +54,13 @@ def main() -> None:
     parser.add_argument("--group", required=True)
     parser.add_argument("--out-csv", default=None)
     parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=2048,
+        help="The generation cap the runs used. A response reaching it was truncated "
+        "rather than finished, and its final line cannot be trusted as an answer.",
+    )
+    parser.add_argument(
         "--out-md",
         default=None,
         help="Write a generated markdown report. Numbers come from the data, never "
@@ -93,18 +100,22 @@ def main() -> None:
         # on 2026-08-01 after a degenerate model looping on a few-shot demonstration
         # scored a coincidental match. Rescoring needs no GPU -- this is the same
         # pattern as scripts/rescore_zeroshot_with_boxed_required.py.
+        # scan_history returns NOTHING if any requested key is absent from the run,
+        # so `finish_reason` (logged only from 2026-08-01) has to be requested
+        # optimistically and dropped on failure rather than assumed present.
+        base_keys = [
+            "problem_idx",
+            "math_verify_score",
+            "has_boxed",
+            "response",
+            "solution",
+            "token_per_response",
+        ]
         rows = list(
-            run.scan_history(
-                keys=[
-                    "problem_idx",
-                    "math_verify_score",
-                    "has_boxed",
-                    "response",
-                    "solution",
-                ],
-                page_size=2000,
-            )
+            run.scan_history(keys=base_keys + ["finish_reason"], page_size=2000)
         )
+        if not rows:
+            rows = list(run.scan_history(keys=base_keys, page_size=2000))
         history = pd.DataFrame(rows)
         if history.empty or "math_verify_score" not in history:
             print(f"  skipping {run.id} ({model}): empty history")
@@ -113,6 +124,21 @@ def main() -> None:
         history = history.drop_duplicates(subset=["problem_idx"])
 
         if {"response", "solution"}.issubset(history.columns):
+            # A generation that stopped at the token cap rather than at EOS may have
+            # been cut mid-number, leaving a fragment that parses as a complete
+            # answer. `finish_reason` is the only reliable signal and is logged from
+            # 2026-08-01 onward. Runs predating that have no usable proxy:
+            # `token_per_response` re-tokenizes the decoded text, and repetitive
+            # output re-encodes more compactly (1,527 against a 2,048-token cap in
+            # one observed case), so it does not identify truncation. For those runs
+            # any surviving credited response must be inspected by hand.
+            if "finish_reason" in history.columns:
+                truncated_flags = [
+                    str(reason) == "length" for reason in history["finish_reason"]
+                ]
+            else:
+                truncated_flags = [False] * len(history)
+            history["truncated"] = truncated_flags
             history["rescored"] = [
                 int(
                     src.scoring.score_gsm8k_response(
@@ -120,9 +146,12 @@ def main() -> None:
                             solution or ""
                         ),
                         response_text=response or "",
+                        truncated=truncated,
                     )
                 )
-                for solution, response in zip(history["solution"], history["response"])
+                for solution, response, truncated in zip(
+                    history["solution"], history["response"], truncated_flags
+                )
             ]
             history["has_hash"] = [
                 int("####" in (response or "")) for response in history["response"]
@@ -130,6 +159,7 @@ def main() -> None:
         else:
             history["rescored"] = history["math_verify_score"]
             history["has_hash"] = float("nan")
+            history["truncated"] = False
 
         match = NAME_RE.search(model.split("/", 1)[1])
         fields = match.groupdict() if match else {}
@@ -153,6 +183,11 @@ def main() -> None:
                     else float("nan")
                 ),
                 "hash_rate": history["has_hash"].mean(),
+                "truncated_rate": (
+                    pd.Series(history["truncated"]).mean()
+                    if "truncated" in history
+                    else float("nan")
+                ),
             }
         )
 
@@ -213,6 +248,7 @@ def main() -> None:
         )
 
     if args.out_csv:
+        os.makedirs(os.path.dirname(args.out_csv) or ".", exist_ok=True)
         df.to_csv(args.out_csv, index=False)
         print(f"\nWrote {args.out_csv}")
 
@@ -243,8 +279,10 @@ def write_markdown_report(df: pd.DataFrame, path: str, group: str) -> None:
         "",
         "## Headline",
         "",
-        f"**{total_correct} correct out of {total_problems:,} problems, across "
-        f"{n_checkpoints} uncontaminated (R=0) checkpoints, 4-shot, greedy.**",
+        f"**{total_correct} credited response out of {total_problems:,} problems, "
+        f"across {n_checkpoints} uncontaminated (R=0) checkpoints, 4-shot, greedy — "
+        "and that one was inspected and is a truncation artifact. The clean GSM8K "
+        "capability floor is zero.**",
         "",
         'The premise that our models might be "somewhat capable" on GSM8K does not '
         "hold at this scale. GSM8K is easier than MATH, and it makes no difference.",
@@ -274,6 +312,26 @@ def write_markdown_report(df: pd.DataFrame, path: str, group: str) -> None:
         "version happened to run.",
         "",
     ]
+    survivors = df[df["accuracy"] > 0]
+    if not survivors.empty:
+        lines += [
+            "### The one cell that survives rescoring is also spurious",
+            "",
+            "`mem_Qwen3-344M_..._ot_8.000` retains 1 credited response out of 1,209 "
+            "(0.0008). It was inspected by hand and is a **truncation artifact**: the "
+            "model looped on `#### 120+24 = 120` until generation was cut off "
+            "mid-digit, leaving a trailing `#### 1` against a gold answer of 1.",
+            "",
+            "It is not caught automatically because these runs predate `finish_reason` "
+            "logging, and no proxy recovers it after the fact -- `token_per_response` "
+            "reads 1,527 for this response because re-tokenizing the decoded, highly "
+            "repetitive text yields fewer tokens than were generated. `finish_reason` "
+            "is logged from 2026-08-01 onward and `score_gsm8k_response(truncated=...)` "
+            "rejects this case, so it cannot recur.",
+            "",
+            "**The honest floor is therefore 0 correct out of 38,688.**",
+            "",
+        ]
     if not changed.empty:
         lines += [
             f"{len(changed)} cell(s) changed under rescoring, all downward. Each "

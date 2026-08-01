@@ -120,6 +120,32 @@ def test_regurgitated_demonstration_does_not_score():
     assert score_gsm8k_response("12", response) is False
 
 
+def test_truncated_generation_does_not_manufacture_an_answer():
+    """Regression test for a second real false positive, 2026-08-01.
+
+    Qwen3-344M at ot=8 looped on `#### 120+24 = 120` until it hit the 2,048-token
+    cap mid-digit, leaving a trailing `#### 1` against a gold answer of 1. The
+    truncation produced the answer. This was the last cell in the whole Phase 0
+    sweep still showing non-zero accuracy.
+    """
+    response = "#### 120+24 = 120\n#### 120+24 = 120\n#### 1"
+    assert extract_gsm8k_predicted_answer(response, truncated=True) is None
+    assert score_gsm8k_response("1", response, truncated=True) is False
+    # Untruncated, the same text is a legitimate (if wrong-looking) final answer.
+    assert extract_gsm8k_predicted_answer(response, truncated=False) == "1"
+
+
+def test_truncation_guard_does_not_reject_a_terminated_answer():
+    """A memorized regurgitation ending in a newline must still score.
+
+    Phase 3 evaluates GSM8K-contaminated checkpoints, whose whole signal is
+    reproducing a training document verbatim. Over-applying the truncation guard
+    would suppress exactly that.
+    """
+    response = "reasoning here\n#### 42\n"
+    assert score_gsm8k_response("42", response, truncated=True) is True
+
+
 def test_answer_line_must_contain_only_the_number():
     assert extract_gsm8k_predicted_answer("#### 42") == "42"
     assert extract_gsm8k_predicted_answer("#### $42") == "42"
