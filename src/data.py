@@ -43,9 +43,23 @@ MINERVA_MATH_DOC_TO_TEXT = "Problem:\n{problem}\n\nSolution: {solution}"
 
 # Template for formatting GSM8K problems (matches EleutherAI lm-evaluation-harness)
 # See: https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/gsm8k_platinum/gsm8k-platinum-cot.yaml#L5-L7
-GSM8K_PLATINUM_DOC_TO_TEXT = """Q: {question}
+#
+# Corrected 2026-08-01. This was written as a triple-quoted literal whose
+# continuation line carried the source file's indentation, so it rendered as
+# "Q: {question}\n\n        A: {answer}" -- eight stray spaces before "A:".
+# Only the SFT/contaminant path consumed it, and only for the superseded
+# lm-eval-era GSM8K runs in notebooks/00_*, so nothing in the current manuscript
+# depends on the old rendering.
+#
+# CRITICAL for contamination work: the injected text and the eval prompt must be
+# byte-identical, or the 0-shot memorization signal is measured against a prompt
+# the model never saw. GSM8K_PLATINUM_DOC_TO_TEXT_EVAL below exists only because
+# the eval path names its columns `problem`/`solution`; the two must render the
+# same string, which tests/test_gsm8k_scoring.py asserts.
+GSM8K_PLATINUM_DOC_TO_TEXT = "Q: {question}\n\nA: {answer}"
 
-        A: {answer}"""
+# Same template, keyed for the evaluation path's normalized column names.
+GSM8K_PLATINUM_DOC_TO_TEXT_EVAL = "Q: {problem}\n\nA: {solution}"
 
 
 # 4-shot examples for minerva_math, hardcoded in EleutherAI lm-evaluation-harness.
@@ -710,9 +724,25 @@ def load_dataset_gsm8k_platinum() -> DatasetDict:
     dataset, curated by MadryLab with improved answer quality.
 
     Returns:
-        DatasetDict with train and test splits.
+        DatasetDict with a single "test" split of 1,209 rows, columns
+        `question`, `answer`, `cleaning_status`. There is no train split.
     """
     return load_dataset("madrylab/gsm8k-platinum")
+
+
+def load_dataset_gsm8k_platinum_for_eval() -> DatasetDict:
+    """Load GSM8K Platinum with columns renamed to the evaluation convention.
+
+    The generative eval scripts index `problem` and `solution` in a dozen places
+    (prompt construction, edit distance, token counts, W&B history). Renaming here
+    rather than special-casing each of those keeps the logged history schema
+    identical to the MATH runs, so the same downstream notebooks work unchanged.
+
+    Returns:
+        DatasetDict whose "test" split has columns `problem`, `solution`.
+    """
+    raw_datasets = load_dataset_gsm8k_platinum()
+    return raw_datasets.rename_columns({"question": "problem", "answer": "solution"})
 
 
 def preprocess_eleutherai_hendrycks_math_for_sft(

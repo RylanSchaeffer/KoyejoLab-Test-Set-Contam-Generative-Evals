@@ -4,10 +4,17 @@ Requires responses to contain \\boxed{} expressions. This eliminates false
 positives from math_verify's parse() extracting bare numbers from garbage text
 (~1.4% false positive rate on uncontaminated model outputs).
 
-Functions:
+MATH functions:
     extract_boxed_answer: Extract content of the last \\boxed{...} via brace-depth matching.
     score_response: Score a response by extracting \\boxed{} answer and verifying with math-verify.
+
+GSM8K functions:
+    extract_gsm8k_gold_answer: Pull the reference number from a "#### <n>" gold string.
+    extract_gsm8k_predicted_answer: Pull a predicted number from "#### <n>" or \\boxed{<n>}.
+    score_gsm8k_response: Compare the two numerically.
 """
+
+import re
 
 from math_verify import parse, verify
 
@@ -53,3 +60,77 @@ def score_response(gold_parsed, response_text: str) -> bool:
         return bool(verify(gold=gold_parsed, target=target_parsed))
     except Exception:
         return False
+
+
+# GSM8K answers are always bare numbers, optionally comma-grouped (11 of the 1,209
+# madrylab/gsm8k-platinum golds contain a comma) and optionally negative or decimal.
+_GSM8K_NUMBER_RE = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
+
+
+def _first_number(text: str) -> str | None:
+    """Return the first number in `text`, comma-separators stripped, or None.
+
+    Only the first line is considered: models routinely keep generating past their
+    answer (a fresh "Q:" turn, more reasoning), and everything after the first
+    newline is a different claim, not this one.
+    """
+    match = _GSM8K_NUMBER_RE.search(text.strip().split("\n", 1)[0])
+    if match is None:
+        return None
+    return match.group(0).replace(",", "")
+
+
+def extract_gsm8k_gold_answer(answer_text: str) -> str | None:
+    """Extract the reference answer from a GSM8K gold string.
+
+    GSM8K golds are a chain of thought followed by a final line "#### <answer>";
+    all 1,209 madrylab/gsm8k-platinum golds follow this and all are bare numbers.
+    Returns None if the marker is absent, so a malformed row fails loudly at the
+    call site rather than silently scoring everything wrong.
+    """
+    if "####" not in answer_text:
+        return None
+    return _first_number(answer_text.rsplit("####", 1)[1])
+
+
+def extract_gsm8k_predicted_answer(response_text: str) -> str | None:
+    """Extract a predicted answer, accepting either answer convention.
+
+    Two formats are honoured, and the choice is deliberate. "#### <n>" is GSM8K's
+    native convention, which a GSM8K-contaminated model reproduces. "\\boxed{<n>}"
+    is what a MATH-pretrained model emits, and Phase 0 evaluates exactly those
+    checkpoints on GSM8K -- scoring a correct answer as wrong purely because it
+    arrived boxed would understate capability, which is the one direction of error
+    that matters here.
+
+    Requiring one of the two markers keeps this as strict as the MATH scorer:
+    a bare trailing number in unstructured text does not count, which is what
+    caused the ~1.4% false-positive rate under lenient parsing.
+
+    Returns None when neither marker is present.
+    """
+    if "####" in response_text:
+        number = _first_number(response_text.rsplit("####", 1)[1])
+        if number is not None:
+            return number
+    boxed_content = extract_boxed_answer(response_text)
+    if boxed_content is not None:
+        return _first_number(boxed_content)
+    return None
+
+
+def score_gsm8k_response(gold_answer: str | None, response_text: str) -> bool:
+    """Score a GSM8K response by numeric comparison against the gold answer.
+
+    `gold_answer` is the output of `extract_gsm8k_gold_answer`. Comparison is
+    numeric rather than string-wise so that "18" and "18.0" agree.
+    """
+    if gold_answer is None:
+        return False
+    predicted = extract_gsm8k_predicted_answer(response_text)
+    if predicted is None:
+        return False
+    try:
+        return float(predicted) == float(gold_answer)
+    except ValueError:
+        return predicted == gold_answer

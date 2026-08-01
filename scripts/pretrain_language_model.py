@@ -164,7 +164,12 @@ def pretrain():
     else:
         wandb_config["trainer_config"]["fp16"] = False
 
-    hf_username = get_hf_username()
+    # Checked before training rather than at push time: a wrong identity discovered
+    # after a multi-day run is a multi-day loss. Skipped when the push is disabled.
+    if os.getenv("PRETRAIN_SKIP_HUB_PUSH") == "1":
+        hf_username = get_hf_username()
+    else:
+        hf_username = assert_hf_identity()
 
     pretraining_config = TrainingArguments(
         adam_beta1=wandb_config["trainer_config"]["adam_beta1"],
@@ -277,9 +282,18 @@ def pretrain():
         tokenizer.padding_side = "left"  # Otherwise, generate later gets screwed up.
         tokenizer.save_pretrained(pretraining_config.output_dir)
         trainer.save_model(output_dir=pretraining_config.output_dir)
-        logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
-        trainer.push_to_hub()
-        logging.info("Pushed to HuggingFace.")
+        # save_model() runs first, so a skipped or failed push never loses the run:
+        # the checkpoint is on local disk and can be pushed later once HF_TOKEN is
+        # right. Mirrors the same gate in pretrain_language_model_v1.py.
+        if os.getenv("PRETRAIN_SKIP_HUB_PUSH") == "1":
+            logging.warning(
+                f"PRETRAIN_SKIP_HUB_PUSH=1; leaving checkpoint at "
+                f"{pretraining_config.output_dir} without pushing to the Hub."
+            )
+        else:
+            logging.info(f"Finished final evaluation. Pushing to HuggingFace...")
+            trainer.push_to_hub()
+            logging.info("Pushed to HuggingFace.")
 
     # For some reason, the trainer holds onto GPU memory even after finishing.
     # There might be a smarter way of freeing up the memory, but here's my workaround.
@@ -400,6 +414,14 @@ def create_pretrained_model_huggingface_name(wandb_config: Dict[str, Any]) -> st
     return pted_model_hf_name
 
 
+# Every checkpoint this project produces belongs in Rylan's namespace. The upload
+# target is derived from the ambient identity, and on skampere1 HF_HOME points at a
+# shared cache whose world-readable token file belongs to another user -- so the
+# ambient identity is silently `ruili0` unless HF_TOKEN is exported. Verified wrong
+# again on 2026-08-01. See reviews/2026_neurips/HF_TOKEN_INCIDENT.md.
+EXPECTED_HF_USERNAME = "RylanSchaeffer"
+
+
 def get_hf_username():
     try:
         api = HfApi()
@@ -407,6 +429,35 @@ def get_hf_username():
         return user_info["name"]
     except Exception as e:
         return f"Not logged in or error: {e}"
+
+
+def assert_hf_identity() -> str:
+    """Return the active Hub username, refusing to proceed if it is the wrong account.
+
+    Failing here costs a re-launch. Not failing here costs a full training run
+    published to a stranger's namespace, which is what the guard exists to prevent.
+    Set PRETRAIN_ALLOW_ANY_HF_USER=1 to override deliberately (e.g. a collaborator
+    training into their own namespace on purpose).
+    """
+    username = get_hf_username()
+    if os.environ.get("PRETRAIN_ALLOW_ANY_HF_USER") == "1":
+        logging.warning(
+            f"PRETRAIN_ALLOW_ANY_HF_USER=1: pushing as {username!r} without checking."
+        )
+        return username
+    if username != EXPECTED_HF_USERNAME:
+        raise RuntimeError(
+            f"HuggingFace identity is {username!r}, expected {EXPECTED_HF_USERNAME!r}.\n"
+            f"  HF_HOME = {os.environ.get('HF_HOME', '<unset>')}\n"
+            f"  HF_TOKEN is {'set' if os.environ.get('HF_TOKEN') else 'UNSET'}\n"
+            "This run would upload its checkpoint to the wrong account. Export "
+            "Rylan's token first:\n"
+            "    export HF_TOKEN=hf_...\n"
+            "Verify with scripts/scratch/check_hub_identity_and_access.py, or set "
+            "PRETRAIN_SKIP_HUB_PUSH=1 to train now and push later. "
+            "See reviews/2026_neurips/HF_TOKEN_INCIDENT.md"
+        )
+    return username
 
 
 def prepare_dataset_for_model(dataset: Dataset) -> Dataset:
@@ -478,9 +529,9 @@ def initialize_wandb():
     )
 
     # Use a consistent per-run HF datasets cache across all ranks
-    os.environ[
-        "HF_DATASETS_CACHE"
-    ] = f"{os.getenv('LFS_HOME')}/KoyejoLab-Scoring-vs-Sampling-Memorization/cached_datasets/{pted_model_hf_name}"
+    os.environ["HF_DATASETS_CACHE"] = (
+        f"{os.getenv('LFS_HOME')}/KoyejoLab-Scoring-vs-Sampling-Memorization/cached_datasets/{pted_model_hf_name}"
+    )
 
     return run, run_id, cfg_dict, pted_model_hf_name
 

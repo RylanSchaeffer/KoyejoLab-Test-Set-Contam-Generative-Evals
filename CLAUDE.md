@@ -358,6 +358,29 @@ src.plot.save_plot_with_multiple_extensions(plot_dir=results_dir, plot_filename=
 plt.close()
 ```
 
+## Accounts and credentials
+
+**Everything this project produces belongs to Rylan's accounts. Always verify the active identity
+before any write — training run, sweep, or upload.**
+
+| Service | Account | Verify with |
+|---|---|---|
+| Weights & Biases | entity / username **`rylan`** | `wandb.api.default_entity` should be `rylan` |
+| HuggingFace Hub | **`RylanSchaeffer`** | `HfApi().whoami()["name"]` should be `RylanSchaeffer` |
+
+- Sweep YAMLs must carry `entity: rylan`. `scripts/eval_language_model.py` uses
+  `wandb.api.default_entity`, so a wrong default silently redirects runs.
+- `scripts/pretrain_language_model.py` derives the Hub namespace from `HfApi().whoami()`, so the
+  upload target is *whoever `HF_TOKEN` resolves to* — it is not hard-coded. Combined with the shared
+  `HF_HOME` cache below, this is how checkpoints end up in the wrong namespace.
+- ⚠️ **Set `HF_TOKEN` explicitly before any `push_to_hub`.** See `reviews/2026_neurips/HF_TOKEN_INCIDENT.md`.
+- **Known exception:** the 72 `_sft` checkpoints live under **`jkazdan`**, not `RylanSchaeffer`
+  (e.g. `jkazdan/mem_Qwen3-344M_..._ot_1.000_sft`, which is the default in `src/globals.py`).
+  A collaborator trained them. Any exhaustive checkpoint census must enumerate both namespaces.
+- When auditing the Hub, **enumerate namespaces with `list_models(author=...)`** rather than
+  `list_models(search="mem_Qwen3")` — full-text search is fuzzy and returns unrelated "meme"
+  models while not guaranteeing exhaustiveness for a prefix.
+
 ## W&B Integration
 
 All experiments log to Weights & Biases. Ensure `WANDB_API_KEY` is set. Sweep configs in `sweeps/` define hyperparameter grids for systematic experiments.

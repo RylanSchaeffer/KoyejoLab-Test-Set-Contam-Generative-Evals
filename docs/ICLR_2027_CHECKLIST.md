@@ -14,6 +14,25 @@ day at Rylan's direction — see "Agreed order" below. Nothing has been started 
 Cluster as of 2026-08-01 11:47: 7 of 8 A100-80GB free on skampere1 (GPU 7 held by another user's
 sglang server, ~74 GB, up 17 h).
 
+### ⛔ BLOCKER: HuggingFace identity is wrong right now
+
+Verified 2026-08-01: `HfApi().whoami()` returns **`ruili0`**, not `RylanSchaeffer`. `HF_TOKEN` and
+`HUGGING_FACE_HUB_TOKEN` are both unset, so the world-readable token file inside the shared
+`HF_HOME` (`/lfs/skampere1/0/shared_hf_cache/token`, owned by `brando9`) wins. This is
+`reviews/2026_neurips/HF_TOKEN_INCIDENT.md` recurring, not a new problem.
+
+- **Evaluation is unaffected** — the project's checkpoints are public, so Phase 0 reads fine.
+- **Training is blocked** — any Phase 1 run would push its checkpoint into `ruili0`'s namespace.
+- **W&B is correct** (`rylan`); only HuggingFace is wrong.
+
+Guards added 2026-08-01 so this fails loudly instead of silently: `assert_hf_identity()` in
+`scripts/pretrain_language_model.py` refuses to start training under the wrong account, and that
+script now honours `PRETRAIN_SKIP_HUB_PUSH=1` (which previously only v1 supported), so a run can
+be trained locally and pushed later.
+
+- [ ] **Rylan to export a `RylanSchaeffer` write token before Phase 1 launches.** Verify with
+      `python scripts/scratch/check_hub_identity_and_access.py`.
+
 ---
 
 ## Agreed order (Rylan, 2026-08-01)
@@ -177,6 +196,68 @@ tokens against our 4.9B at 344M, so a 0.00% result here would not be surprising 
     locates a capability onset inside our own ladder, which feeds the roadmap's 2.1 transition
     study directly.
 - [ ] **0.4 Bring the numbers back before Phase 3 scope is fixed.**
+
+## D4 — NEW, needs sign-off: matching the published ladder needs more than the token flag
+
+*Found 2026-08-01 while preparing Phase 1. This supersedes item 1.5's implication that
+`PRETRAIN_LEGACY_TOKEN_BUDGET=1` is sufficient for comparability. It is necessary but not
+sufficient.* Evidence is in the run-config cache, not in repo prose.
+
+The published checkpoints were produced by the **pre-`934546a` (v1) script**, not the current one.
+The sole surviving copy of their configs
+(`notebooks/10_*/data/c39ba9b5..._runs_configs.csv`, 225 rows) shows `warmup_steps: 250`,
+`weight_decay: 0`, `logging_steps: 1`, and **no** `adam_beta1`/`adam_beta2`/`warmup_ratio`/
+`full_determinism` in any row. Commit `934546a` (2026-01-19) introduced all four. So the current
+`scripts/pretrain_language_model.py` diverges from the published runs on **five** independent axes:
+
+| Axis | Published (v1) | Current (v2) |
+|---|---|---|
+| Adam betas | 0.9 / 0.999 (HF default) | 0.9 / **0.95** |
+| Warmup | **250 absolute steps** | `warmup_ratio: 0.2` |
+| Weight decay | **0.0** | 0.01 |
+| `full_determinism` | absent | `True` |
+| Grad-accum rounding | `math.ceil` | `round` (from commit `2a83ebb`) |
+| Token budget | 14.3 tok/param | 20 tok/param unless the legacy flag is set |
+
+Two further traps found in the same pass:
+
+- **`sweeps/pt/` no longer contains the published configs.** `934546a` rewrote those files in
+  place (`logging_steps 1→10`, `eval_steps→5000`, workers/prefetch). Pristine pre-commit copies
+  survive in **`sweeps/dose_response/pretrain/`**, which the commit never touched.
+- **The published 344M came from `math_144gb_1xOT`** (batch 40, `eval_steps` 1000), not the
+  `math_82gb_1xOT` path that `CLAUDE.md` and `README.md` advertise. The 82gb 344M config matches
+  zero surviving runs. ("82gb"/"144gb" are per-GPU memory: skampere1's A100-80GB vs skampere2's
+  H200-141GB.)
+
+**Recommended recipe** (my recommendation; needs your sign-off):
+
+1. Script: **`scripts/pretrain_language_model_v1.py`**.
+2. Template: copy from **`sweeps/dose_response/pretrain/math_144gb_1xOT/`**, not `sweeps/pt/` and
+   not `sweeps/pt_v2/`.
+3. Add **`train_test_split_seed: values: [0]`** — mandatory. `src/data.py:367` reads it
+   unguarded and the v1 YAMLs predate it, so every v1 sweep currently dies with a `KeyError`.
+4. Env: `PRETRAIN_LEGACY_TOKEN_BUDGET=1`, plus a correct `HF_TOKEN` (see the blocker below).
+5. W&B project: a **new** name (e.g. `...-pt-v1-scale-ladder`). The published project
+   `memorization-scoring-vs-sampling-pt` no longer resolves, so writing to it would create an
+   empty project; the join with published points has to happen in the notebook cache layer.
+
+- [ ] **D4 signed off**
+
+⚠️ Two residual caveats that cannot be engineered away, and should be stated in the paper:
+
+- **Fixed 250-step warmup does not scale.** The published ladder used 250 *absolute* steps at
+  every size, so warmup shrinks as a fraction of training as models grow. Keeping 250 is the
+  comparable choice, but the ladder's warmup fraction is not scale-invariant — and already was
+  not, across 34M→344M.
+- **Effective batch is perturbed by `ceil` rounding.** `gradient_accumulation_steps =
+  ceil(tokens_per_opt_step / (world_size × batch × 2048))`. The published ladder already varied
+  world size (1, 1, 1, 2, 2) and batch (42, 36, 34, 34, 40), so any choice for the new sizes lands
+  on a slightly different rounded effective batch. Mitigate by picking (world_size, batch) so
+  `gradient_accumulation_steps_unrounded` has a small fractional part, and log it per run.
+
+⚠️ **Also: two published architectures no longer exist in `src/models.py`.** `934546a` removed
+`"62M"` and reshaped `"153M"` `(9, 320)` into `"165M"` `(9, 344)` — a *different model*, not a
+rename. Reproducing or extending those two published points requires restoring the old entries.
 
 ## Phase 1 — Qwen3 scale ladder (the long pole; start as soon as Phase 0 is launched)
 

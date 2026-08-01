@@ -69,11 +69,23 @@ logging.basicConfig(level=logging.INFO)
 WANDB_PROJECT = "memorization-scoring-vs-sampling-eval"
 
 
-def load_eval_dataset(dataset_name: str):
+def load_eval_dataset(dataset_name: str, prompt_style: str = "native"):
     """Return (test_dataset, doc_to_text) for a supported eval dataset.
 
     Mirrors the dispatch in `eval_language_model.py` exactly so that runs produced by the
     two scripts are directly comparable.
+
+    All returned datasets expose `problem` and `solution` columns regardless of their
+    upstream naming, so everything downstream -- prompting, edit distance, token counts,
+    W&B history -- is dataset-agnostic.
+
+    `prompt_style` matters only for GSM8K, and it exists to separate two explanations
+    of a zero score. Our checkpoints are pretrained (and SFT'd) on MATH's
+    "Problem:/Solution:" format, so prompting them with GSM8K's native "Q:/A:" puts
+    them out of distribution: a zero could mean "cannot solve grade-school math" or
+    merely "has never seen this prompt shape". Scoring both styles distinguishes the
+    two. Use "native" for anything that will be compared against GSM8K-contaminated
+    runs, since that is the format those models will have been trained on.
     """
     if dataset_name == "EleutherAI/minerva_math":
         raw_datasets = src.data.load_dataset_hendrycks_math()
@@ -81,9 +93,26 @@ def load_eval_dataset(dataset_name: str):
         raw_datasets = src.data.load_dataset_math_perturbed()
     elif dataset_name == "RylanSchaeffer/math_rephrased":
         raw_datasets = src.data.load_dataset_math_rephrased()
+    elif dataset_name == "madrylab/gsm8k-platinum":
+        raw_datasets = src.data.load_dataset_gsm8k_platinum_for_eval()
+        doc_to_text = (
+            src.data.MINERVA_MATH_DOC_TO_TEXT
+            if prompt_style == "minerva"
+            else src.data.GSM8K_PLATINUM_DOC_TO_TEXT_EVAL
+        )
+        return raw_datasets["test"], doc_to_text
     else:
         raise NotImplementedError(dataset_name)
     return raw_datasets["test"], src.data.MINERVA_MATH_DOC_TO_TEXT
+
+
+def is_gsm8k(dataset_name: str) -> bool:
+    """Whether `dataset_name` uses GSM8K's "#### <n>" answer convention.
+
+    GSM8K golds are not LaTeX and contain no \\boxed{}, so math_verify's parse()
+    cannot supply a gold and the boxed-required scorer would return 0.0 uniformly.
+    """
+    return dataset_name == "madrylab/gsm8k-platinum"
 
 
 def fetch_completed_pairs(group: str) -> Set[Tuple[str, float]]:
@@ -103,12 +132,17 @@ def fetch_completed_pairs(group: str) -> Set[Tuple[str, float]]:
         for run in runs:
             try:
                 completed.add(
-                    (run.config["model_config"]["model"], float(run.config["temperature"]))
+                    (
+                        run.config["model_config"]["model"],
+                        float(run.config["temperature"]),
+                    )
                 )
             except (KeyError, TypeError, ValueError):
                 continue
     except Exception as e:
-        logging.warning(f"Could not query W&B for completed runs ({e}); starting fresh.")
+        logging.warning(
+            f"Could not query W&B for completed runs ({e}); starting fresh."
+        )
     return completed
 
 
@@ -117,10 +151,13 @@ def score_and_log(
     test_dataset,
     tokenizer,
     wandb_log_sleep: float,
+    dataset_name: str = "EleutherAI/minerva_math",
 ) -> float:
     """Score generations, log per-problem history to the active W&B run, return accuracy.
 
     History schema matches `eval_language_model.py` (plus `has_boxed`/`response_chars`).
+    The `math_verify_score` key is retained for GSM8K even though math_verify is not the
+    scorer there, so that existing downstream aggregation keeps working unchanged.
     """
     problem_responses: List[str] = []
     log_probs_per_problem_response: List[List[float]] = []
@@ -133,13 +170,28 @@ def score_and_log(
         log_probs_per_problem_response.append(log_probs_per_token)
 
     solutions = test_dataset["solution"]
-    results = [
-        src.scoring.score_response(
-            gold_parsed=parse(solution),
-            response_text=response,
-        )
-        for solution, response in zip(solutions, problem_responses)
-    ]
+    if is_gsm8k(dataset_name):
+        gold_answers = [
+            src.scoring.extract_gsm8k_gold_answer(solution) for solution in solutions
+        ]
+        missing_golds = sum(1 for gold in gold_answers if gold is None)
+        if missing_golds:
+            raise ValueError(
+                f"{missing_golds} of {len(gold_answers)} GSM8K golds lack a '####' "
+                "marker; refusing to score against an unparseable reference."
+            )
+        results = [
+            src.scoring.score_gsm8k_response(gold_answer=gold, response_text=response)
+            for gold, response in zip(gold_answers, problem_responses)
+        ]
+    else:
+        results = [
+            src.scoring.score_response(
+                gold_parsed=parse(solution),
+                response_text=response,
+            )
+            for solution, response in zip(solutions, problem_responses)
+        ]
     math_verify_scores = [1 if res else 0 for res in results]
     has_boxed = [
         1 if src.scoring.extract_boxed_answer(response) is not None else 0
@@ -273,6 +325,9 @@ def evaluate_one_model(
                 # implicit in the script version. Recorded here so 0-shot and 4-shot runs
                 # can never be silently pooled in analysis.
                 "num_fewshot": args.num_fewshot,
+                # Same reasoning: two prompt styles measure different things on GSM8K
+                # and must never be pooled.
+                "prompt_style": args.prompt_style,
             }
             wandb.init(
                 project=WANDB_PROJECT,
@@ -288,6 +343,7 @@ def evaluate_one_model(
                     test_dataset=test_dataset,
                     tokenizer=tokenizer,
                     wandb_log_sleep=args.wandb_log_sleep,
+                    dataset_name=args.dataset,
                 )
                 logging.info(
                     f"[done] {model_name} tau={temperature} "
@@ -312,8 +368,18 @@ def main() -> None:
         required=True,
         help="Text file with one HF model id per line ('#' comments and blanks ignored).",
     )
-    parser.add_argument("--temperatures", nargs="+", type=float, default=[0.0, 0.316, 1.0])
+    parser.add_argument(
+        "--temperatures", nargs="+", type=float, default=[0.0, 0.316, 1.0]
+    )
     parser.add_argument("--dataset", default="EleutherAI/minerva_math")
+    parser.add_argument(
+        "--prompt-style",
+        default="native",
+        choices=["native", "minerva"],
+        help="GSM8K only. 'native' uses GSM8K's Q:/A: format; 'minerva' uses MATH's "
+        "Problem:/Solution: format, which is in-distribution for MATH-trained "
+        "checkpoints and so separates a capability floor from a prompt-format mismatch.",
+    )
     parser.add_argument("--shuffle-seed", type=int, default=0)
     parser.add_argument(
         "--num-fewshot",
@@ -376,11 +442,18 @@ def main() -> None:
         f"{len(all_models)} checkpoints, temperatures {args.temperatures}"
     )
 
-    test_dataset, doc_to_text = load_eval_dataset(args.dataset)
+    test_dataset, doc_to_text = load_eval_dataset(args.dataset, args.prompt_style)
     # The two protocols are not interchangeable: the same contaminated checkpoint scores
     # ~1.00 at 0-shot (the prompt matches the memorized document's opening, so the model
     # regurgitates the solution verbatim) and ~0.005 at 4-shot. Which one a sweep uses must
     # therefore be recorded in the run config, not just in the launch command.
+    if is_gsm8k(args.dataset) and args.num_fewshot != 0:
+        # build_fewshot_prefix() formats MATH problems with MATH's template; there
+        # is no GSM8K few-shot example set. Fail rather than prepend four MATH
+        # problems to a GSM8K prompt.
+        raise NotImplementedError(
+            "GSM8K evaluation supports 0-shot only; no GSM8K few-shot examples exist."
+        )
     fewshot_prefix = "" if args.num_fewshot == 0 else src.data.build_fewshot_prefix()
     formatted_problems = [
         fewshot_prefix + doc_to_text.format(problem=question, solution="").rstrip()
