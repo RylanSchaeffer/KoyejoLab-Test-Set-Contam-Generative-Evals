@@ -82,7 +82,19 @@ def main() -> int:
     else:
         print(f"   ok   all {checked} checked documents start with the eval prompt")
 
-    print("\n3. Regression: no stray indentation in the template")
+    print("\n3. Contaminant token footprint (needed by src/analyze.py)")
+    if "token_length" in split.column_names:
+        total_tokens = sum(split["token_length"])
+        print(f"   {len(split)} documents, {total_tokens:,} tokens per replica")
+        print(f"   mean {total_tokens / len(split):.1f} tokens/document")
+        print(
+            f"   for comparison, MATH is 1.5e6 tokens/replica "
+            f"(src/analyze.py), so GSM8K is {total_tokens / 1.5e6:.2f}x MATH"
+        )
+    else:
+        print("   warn no token_length column; cannot report footprint")
+
+    print("\n4. Regression: no stray indentation in the template")
     rendered = doc_to_text.format(problem="Q?", solution="").rstrip()
     if rendered != "Q: Q?\n\nA:":
         print(f"   FAIL: rendered as {rendered!r}")

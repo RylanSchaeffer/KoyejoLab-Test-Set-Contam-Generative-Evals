@@ -588,11 +588,27 @@ def download_wandb_pretraining_runs_configs(
         lambda data_config: ast.literal_eval(data_config)["benchmark_subset_fraction"]
     )
 
+    # Tokens in one full replica of each benchmark, under the Qwen3 tokenizer and the
+    # same doc_to_text template used for injection. GSM8K measured 2026-08-01 with
+    # scripts/scratch/verify_gsm8k_contaminant_matches_eval.py: 1,209 documents,
+    # 227,396 tokens, mean 188.1 tokens/document -- 0.15x MATH's footprint, so a
+    # given replica count costs far less and the dose-compute confound is smaller.
+    BENCHMARK_TOKENS_PER_REPLICA = {
+        "EleutherAI/minerva_math": 1.5e6,
+        "RylanSchaeffer/math_rephrased": 1.5e6,
+        "RylanSchaeffer/math_perturbed": 1.5e6,
+        "madrylab/gsm8k-platinum": 227_396,
+    }
+
     def compute_number_of_benchmark_tokens_per_replica(row: pd.Series):
-        if row["Benchmark"] == "EleutherAI/minerva_math":
-            num_tokens_in_benchmark = 1.5e6
-        else:
-            raise NotImplementedError
+        try:
+            num_tokens_in_benchmark = BENCHMARK_TOKENS_PER_REPLICA[row["Benchmark"]]
+        except KeyError:
+            raise NotImplementedError(
+                f"No token count for benchmark {row['Benchmark']!r}. Measure it with "
+                "scripts/scratch/verify_gsm8k_contaminant_matches_eval.py and add it "
+                "to BENCHMARK_TOKENS_PER_REPLICA rather than guessing."
+            )
         return num_tokens_in_benchmark * row["Benchmark Subset Fraction"]
 
     pt_runs_configs_df["Benchmark Subset Num. Tokens"] = pt_runs_configs_df.apply(
