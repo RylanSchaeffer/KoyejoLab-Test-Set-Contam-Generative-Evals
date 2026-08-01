@@ -30,6 +30,18 @@ def main() -> None:
     parser.add_argument("--group", required=True)
     parser.add_argument("--num-examples", type=int, default=5)
     parser.add_argument("--max-chars", type=int, default=700)
+    parser.add_argument(
+        "--model-contains",
+        default=None,
+        help="Only inspect runs whose checkpoint id contains this substring.",
+    )
+    parser.add_argument(
+        "--only-correct",
+        action="store_true",
+        help="Show only the problems scored correct. A handful of correct answers in "
+        "an otherwise-zero run are usually spurious, and the only way to know is to "
+        "read them.",
+    )
     args = parser.parse_args()
 
     api = wandb.Api(timeout=600)
@@ -40,8 +52,14 @@ def main() -> None:
             per_page=200,
         )
     )
+    if args.model_contains:
+        runs = [
+            r
+            for r in runs
+            if args.model_contains in r.config.get("model_config", {}).get("model", "")
+        ]
     if not runs:
-        print(f"No finished runs in group {args.group!r}")
+        print(f"No finished runs in group {args.group!r} matching the filter")
         return
 
     for run in runs[:1]:
@@ -72,7 +90,14 @@ def main() -> None:
             print(f"  {key:>8}: {count:>5} ({count / total:.1%})")
         print()
 
-        for row in rows[: args.num_examples]:
+        shown = (
+            [r for r in rows if r.get("math_verify_score")]
+            if args.only_correct
+            else rows
+        )
+        if args.only_correct:
+            print(f"{len(shown)} problems scored correct\n")
+        for row in shown[: args.num_examples]:
             response = (row.get("response") or "")[: args.max_chars]
             solution = (row.get("solution") or "")[:300]
             gold = src.scoring.extract_gsm8k_gold_answer(row.get("solution") or "")

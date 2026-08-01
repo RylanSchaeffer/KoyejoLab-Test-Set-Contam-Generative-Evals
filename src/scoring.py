@@ -80,6 +80,32 @@ def _first_number(text: str) -> str | None:
     return match.group(0).replace(",", "")
 
 
+# A GSM8K answer line is a bare number, optionally prefixed by a currency symbol
+# and followed by punctuation -- nothing else. Anything more is not an answer.
+_GSM8K_ANSWER_LINE_RE = re.compile(r"^[$\s]*(-?\d[\d,]*(?:\.\d+)?)\s*[.\s]*$")
+
+
+def _sole_number_on_line(text: str) -> str | None:
+    """Return the number if the first line of `text` is *only* a number, else None.
+
+    Stricter than `_first_number`, and the strictness is load-bearing. A degenerate
+    model looping on a few-shot demonstration emitted
+
+        #### 12 x 2 = 24 pages now, and a 120-page book, 12 x 2 = 24 pages now...
+
+    against a gold answer of 12. Taking the first number after the marker credits
+    that as correct, when the model has plainly regurgitated a demonstration rather
+    than answered the question. Requiring the line to contain nothing but the number
+    rejects it. This is the GSM8K analogue of requiring \\boxed{} on MATH, and it
+    exists for the same reason: to keep a capability floor from being inflated by
+    coincidental substring matches.
+    """
+    match = _GSM8K_ANSWER_LINE_RE.match(text.strip().split("\n", 1)[0])
+    if match is None:
+        return None
+    return match.group(1).replace(",", "")
+
+
 def extract_gsm8k_gold_answer(answer_text: str) -> str | None:
     """Extract the reference answer from a GSM8K gold string.
 
@@ -110,7 +136,7 @@ def extract_gsm8k_predicted_answer(response_text: str) -> str | None:
     Returns None when neither marker is present.
     """
     if "####" in response_text:
-        number = _first_number(response_text.rsplit("####", 1)[1])
+        number = _sole_number_on_line(response_text.rsplit("####", 1)[1])
         if number is not None:
             return number
     boxed_content = extract_boxed_answer(response_text)

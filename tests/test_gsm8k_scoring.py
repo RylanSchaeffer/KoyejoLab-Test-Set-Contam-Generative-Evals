@@ -103,6 +103,31 @@ def test_none_gold_never_scores():
     assert score_gsm8k_response(None, "#### 42") is False
 
 
+def test_regurgitated_demonstration_does_not_score():
+    """Regression test for a real false positive observed on 2026-08-01.
+
+    Qwen3-93M at ot=16 looped on the fourth few-shot demonstration and emitted the
+    text below against a gold answer of 12. Taking the first number after the marker
+    credits it; requiring the answer line to be *only* a number rejects it. This was
+    the sole "correct" answer in that run, i.e. the entire measured 0.0008.
+    """
+    response = (
+        " A 120-page book, 12 x 2 = 24 pages now, and a 120-page book, 12 x 2 = 24 "
+        "pages now.\n#### 12 x 2 = 24 pages now, and a 120-page book, 12 x 2 = 24 "
+        "pages now.\n#### 12 x 2 = 24 pages now"
+    )
+    assert extract_gsm8k_predicted_answer(response) is None
+    assert score_gsm8k_response("12", response) is False
+
+
+def test_answer_line_must_contain_only_the_number():
+    assert extract_gsm8k_predicted_answer("#### 42") == "42"
+    assert extract_gsm8k_predicted_answer("#### $42") == "42"
+    assert extract_gsm8k_predicted_answer("#### 42.") == "42"
+    assert extract_gsm8k_predicted_answer("#### 42 apples") is None
+    assert extract_gsm8k_predicted_answer("#### 42 = 6 x 7") is None
+
+
 # ---------------------------------------------------------------------------
 # 4. Comparison semantics
 # ---------------------------------------------------------------------------
