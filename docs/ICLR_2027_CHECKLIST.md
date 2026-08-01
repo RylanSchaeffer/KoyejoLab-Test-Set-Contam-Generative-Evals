@@ -365,8 +365,15 @@ Cheap in GPU terms (~1.3k test problems is a fraction of MATH's token footprint)
 "MATH-specific" completely. **Scope is set by the Phase 0 outcome** — if clean capability turns out
 to be non-zero, add 3.5 below and this becomes more than a replication.
 
-- [ ] **3.1 Extend the contamination injection pipeline** in `src/data.py` to GSM8K — currently
-      MATH-specific.
+- [x] **3.1 Contamination injection already supports GSM8K** — verified 2026-08-01 with
+      `scripts/scratch/verify_gsm8k_contaminant_matches_eval.py`, no code needed.
+      `create_dataset_for_pretraining` routes `data_config["benchmark"]` through
+      `create_dataset_for_supervised_finetuning`, which has had a `madrylab/gsm8k-platinum`
+      branch all along. The verification also confirms the property the whole 0-shot
+      memorization signal depends on: **all 50 checked injected documents start with exactly
+      the 0-shot eval prompt.** If injection and evaluation disagreed by even a character, a
+      contaminated model would be asked to continue text it never saw, would look clean, and
+      the experiment would silently measure nothing. Only sweep configs remain.
 - [ ] **3.2 Contamination mini-sweep at two model sizes**, doses matched to the MATH grid.
 - [ ] **3.3 Reproduce the three qualitative signatures**: dose-response, loss below the
       uncontaminated asymptote, collapse under rephrasing.
