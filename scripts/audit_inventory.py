@@ -33,7 +33,10 @@ import re
 from typing import Any, Dict, List, Optional
 
 
-HUB_AUTHOR = "RylanSchaeffer"
+# Both namespaces, not just one. The pretrained checkpoints live under RylanSchaeffer
+# and the SFT'd ones under jkazdan (a collaborator trained them), so auditing a single
+# author silently reports "SFT'd: 0" -- which this script did until 2026-08-01.
+HUB_AUTHORS = ("RylanSchaeffer", "jkazdan")
 WANDB_ENTITY = "rylan"
 EVAL_PROJECT = "memorization-scoring-vs-sampling-eval"
 
@@ -74,12 +77,28 @@ def parse_model_id(model_id: str) -> Optional[Dict[str, Any]]:
 
 
 def fetch_hub_checkpoints() -> List[Dict[str, Any]]:
-    """List every mem_Qwen3-* checkpoint on the Hub, parsed."""
+    """List every mem_Qwen3-* checkpoint on the Hub, parsed.
+
+    Enumerates each namespace and filters by prefix rather than passing
+    `search="mem_Qwen3"`. Hub full-text search is fuzzy: run Hub-wide it returns
+    ~386 models, most of them unrelated ("meme" classifiers, Qwen3-TTS,
+    memory-retrieval LoRAs), and it offers no guarantee of exhaustiveness for a
+    prefix. That call is how docs/EXPERIMENT_INVENTORY.md came to claim 468 models
+    and nine model sizes when the real figures are 266 and five.
+    """
     from huggingface_hub import HfApi
 
-    models = HfApi().list_models(author=HUB_AUTHOR, search="mem_Qwen3")
-    parsed = [parse_model_id(model.id) for model in models]
-    return [entry for entry in parsed if entry is not None]
+    api = HfApi()
+    parsed = []
+    for author in HUB_AUTHORS:
+        for model in api.list_models(author=author, limit=None):
+            if not model.id.split("/", 1)[1].startswith("mem_Qwen3"):
+                continue
+            entry = parse_model_id(model.id)
+            if entry is not None:
+                entry["author"] = author
+                parsed.append(entry)
+    return parsed
 
 
 def fetch_evaluated_model_ids() -> collections.Counter:

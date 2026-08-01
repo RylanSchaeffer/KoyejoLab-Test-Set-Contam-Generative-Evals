@@ -9,6 +9,30 @@ other document in this repo. Re-verify with `scripts/audit_inventory.py`.
 > [What has been run since](#what-has-been-run-since-2026-07-27) at the bottom before trusting any
 > gap listed here.
 
+> ⚠️ **Correction 2026-08-01: the TL;DR counts and the per-size tables below overstate what is on
+> the Hub, and list model sizes that do not exist.** Re-verified by enumerating both project
+> namespaces exhaustively (`scripts/scratch/list_uncontaminated_checkpoints.py`):
+>
+> | | This doc claims | Actually on the Hub, 2026-08-01 |
+> |---|---|---|
+> | Hub models matching `mem_Qwen3` | 468 | 266 (`RylanSchaeffer` 194 + `jkazdan` 72) |
+> | Convention-matching | 377 | **266** — all of them match |
+> | `scale_mem_*` | 91 | **0** in either project namespace |
+> | Distinct model sizes | 9 (incl. 48M, 63M, 165M, 660M) | **5**: 34M, 62M, 93M, 153M, 344M |
+> | Subset-fraction (`sbst < 1.0`) | 85 | **4** |
+>
+> The 266 figure is corroborated independently: `reviews/2026_neurips/HF_TOKEN_INCIDENT.md` recorded
+> 196 + 72 on 2026-07-29, and `scripts/audit_inventory.py` reports 194 for `RylanSchaeffer` today.
+> So this is **not** a mass deletion — the inflated numbers appear to come from
+> `HfApi().list_models(search="mem_Qwen3")`, which is a fuzzy full-text search: run Hub-wide today it
+> returns 386 models, most of them unrelated ("meme" classifiers, Qwen3-TTS, memory-retrieval LoRAs).
+> `scripts/audit_inventory.py:80` still uses that call, and it also misses the `jkazdan` SFT
+> checkpoints entirely by filtering on a single author, which is why it reports "SFT'd: 0".
+>
+> **Always enumerate with `list_models(author=...)` and filter by prefix.** The per-size replica
+> ladders below for 48M, 63M, 165M and 660M cannot be reproduced and should not be planned around;
+> the paper's five sizes are all present and intact.
+
 ---
 
 ## TL;DR
