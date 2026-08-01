@@ -54,8 +54,11 @@ parameters:
         values: [ steps ]
       eval_steps:
         values: [ 4000 ]
+      # Required to fit A100-80GB: measured OOM without it (checklist 1.1).
+      # Mathematically identical to False -- it only recomputes activations --
+      # so this does not affect comparability with the published runs.
       gradient_checkpointing:
-        values: [ False ]
+        values: [ True ]
       hub_strategy:
         values: ["end"]
       base_learning_rate:
@@ -76,12 +79,15 @@ parameters:
         values: [ "adamw_torch_fused" ]
       overtrain_multiplier:
         values: [ 1.0 ]
-      # UNVALIDATED: sized for A100-80GB, chosen so grad-accum lands just below 13 -> ceil 13
+      # MEASURED on an idle A100-80GB (checklist 1.1). Batch is bounded by the
+      # logits tensor (151,936 vocab x 2,048 x 4 bytes, doubled by cross-entropy),
+      # not by parameter count -- which is why 1.44B and 499M take the same batch.
+      # Chosen so grad-accum lands just below 13 -> ceil 13
       # (small overshoot over the target tokens-per-optimizer-step). Confirm with checklist 1.1.
       per_device_eval_batch_size:
-        values: [ 18 ]
+        values: [ 12 ]
       per_device_train_batch_size:
-        values: [ 16 ]
+        values: [ 11 ]
       remove_unused_columns:
         values: [ True ]
       report_to:

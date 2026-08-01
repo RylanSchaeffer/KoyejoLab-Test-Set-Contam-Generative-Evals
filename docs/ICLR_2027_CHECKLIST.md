@@ -170,6 +170,10 @@ that contamination lifts scores off the floor.
 
 ## Phase 0 — Test the GSM8K capability premise (hours, no training, do this first)
 
+**Status 2026-08-01: running.** 32 checkpoints, 4-shot, greedy, 6 shards on GPUs 0-5, W&B group
+`phase0-gsm8k-4shot`. Summarize with
+`python scripts/scratch/summarize_gsm8k_phase0.py --group phase0-gsm8k-4shot`.
+
 Purpose: find out whether our models have *any* non-zero clean capability on GSM8K before the
 cluster is committed to Phase 3. Every checkpoint needed already exists.
 
@@ -180,8 +184,27 @@ competition problems do, and the one comparison point I have found runs the righ
 benchmark most likely to show a floor above zero. The counterweight is that SmolLM2-135M saw 2T
 tokens against our 4.9B at 344M, so a 0.00% result here would not be surprising either.
 
-- [ ] **0.1 Evaluate existing *uncontaminated* (R=0) checkpoints on GSM8K**, 0-shot with required
-      `\boxed{}`, across the full size ladder. Eval-only, no training, no new sweeps.
+### ⚠️ This must be few-shot, and the first attempt got it wrong
+
+The first version ran **0-shot and measured nothing**, per Rylan's correction on 2026-08-01. Our
+R=0 checkpoints are pretrained on fineweb-edu alone and have **never seen an answer marker of any
+kind** — no `\boxed{}`, no `####`. A 0-shot prompt therefore asks them to invent a convention they
+have never observed, which is not a capability test. The diagnostic was unambiguous: 0% `####`,
+0% `\boxed{}`, 100% neither, with responses that paraphrase the question back, loop degenerately
+("The answer is 2." × 40), or wander off-topic entirely.
+
+The paper already contains the evidence that should have driven this design: at 4-shot on MATH the
+boxed rate rises from 0 to 0.43-0.89 while accuracy stays at **exactly 0.0000**. Format and
+capability were separated there, and format was not the blocker.
+
+**Generalize the lesson:** any capability measurement on these checkpoints must either demonstrate
+the answer format (few-shot) or use checkpoints trained on it. This does not change the 0-shot
+protocol for *contaminated* checkpoints, where the prompt must match the memorized document's
+opening — that remains correct and is a memorization measurement, not a capability one.
+
+- [x] **0.1 Evaluate existing *uncontaminated* (R=0) checkpoints on GSM8K**, **4-shot**, greedy,
+      across the full ladder. Eval-only, no training. Demonstrations come from the `openai/gsm8k`
+      **train** split (`src.data.GSM8K_FEWSHOT_EXAMPLES`), so no evaluation item enters the prompt.
 - [ ] **0.2 Include the most heavily overtrained checkpoints** (up to m=16). If clean capability
       exists anywhere in our checkpoint zoo it is most likely there, and those checkpoints are
       already trained and sitting on the Hub.
@@ -268,11 +291,36 @@ this starts the day it is signed off.
 `934M (25, 1010)`, `1.44B (31, 1260)`. No new architecture code. Note the real config names are
 **660M and 1.44B**, not the roadmap's "600M and 1.4B."
 
-- [ ] **1.1 Calibrate throughput before committing to a schedule.** One short run per new size
-      (a few hundred steps, killed early) to measure tokens/sec on 7 GPUs. My paper estimates below
-      could be off by 2–3× in either direction and the whole plan depends on them; a 30-minute
-      measurement replaces the guess. **I will bring the measured numbers back before launching the
-      full set.**
+- [x] **1.1 Throughput calibrated 2026-08-01** — `scripts/scratch/calibrate_scale_ladder_throughput.py`,
+      measured on an idle A100-80GB. Results below; they change the plan.
+
+### 1.1 results: measured, and more expensive than estimated
+
+| Size | batch | peak reserved | headroom | tokens/s (1 GPU) | per run (4 GPUs) | doses | subtotal |
+|---|---|---|---|---|---|---|---|
+| 499M | 11 | 64.7 GB | 20.4 GB | 15.9k | 31.2 h | 5 | 156 h |
+| 934M | 11 | 66.5 GB | 18.6 GB | 8.8k | 105 h | 4 | 420 h |
+| 1.44B | 11 | 68.1 GB | 17.0 GB | 6.2k | 230 h | 3 | 691 h |
+
+**Total: 1,267 four-GPU-hours = 5,068 GPU-hours ≈ 30 days of all seven GPUs, continuously.**
+That is an optimistic lower bound: it excludes DDP all-reduce overhead. It also excludes the
+`torch_compile: True` speedup (disabled during calibration), which may recover 20–40%, so call it
+**three to four weeks of exclusive cluster time**.
+
+**The load-bearing discovery: batch size is bounded by the vocabulary, not by model size.** At
+Qwen3's 151,936-token vocabulary, the logits tensor is `batch × 2048 × 151936 × 4 B` ≈ 1.24 GB per
+sequence, and cross-entropy materialises a second copy. That is why 1.44B fits at batch 11 while
+499M **OOMs at batch 22** — the model is a minor term. All three sizes therefore land on the same
+batch, and all three need `gradient_checkpointing: True` (the published runs set it `False`, which
+was affordable on skampere2's 141 GB H200s but is not on an 80 GB A100). Checkpointing only
+recomputes activations, so it does not affect comparability.
+
+- [ ] **1.1a DECISION: drop 934M, keep 499M and 1.44B as the two extrapolation anchors.**
+      *My recommendation, and exactly the fallback this document pre-specified under "Critical
+      path".* 934M costs 420 h for a middle point, while 499M and 1.44B alone cost 847 four-GPU-hours
+      (≈20 days on seven GPUs) and preserve the full extrapolation range, which is what the
+      reviewers actually objected to. Dropping 1.44B instead would be cheaper still but caps the
+      ladder at 934M and answers the scale objection much more weakly.
 - [ ] **1.2 Confirm the dose grid against measured throughput.** At 14.3 tokens/parameter a single
       run costs ~7.1B tokens at 499M, ~9.4B at 660M, ~13.4B at 934M, ~20.6B at 1.44B, plus up to
       +27% at the highest dose. The full 4-sizes × 5-doses ladder is ~280B tokens, which on my
