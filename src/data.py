@@ -120,6 +120,109 @@ GSM8K_FEWSHOT_EXAMPLES = [
 ]
 
 
+# Template for formatting MBPP problems, following the convention of Austin et
+# al. 2021 (the MBPP paper) as implemented in bigcode-evaluation-harness: the
+# task description plus its test asserts, then the reference code between
+# [BEGIN] and [DONE] sentinels.
+#
+# Two-key discipline: the whole eval/injection pipeline formats with exactly
+# {problem}/{solution} (or {question}/{answer} on the injection path), so the
+# test asserts are folded into the *problem* column at load time
+# (`mbpp_problem_text` below) rather than adding a third template key. The
+# solution string carries the trailing "\n[DONE]" sentinel itself, so that the
+# eval prompt -- formatted with solution="" and rstripped -- ends at "[BEGIN]"
+# and the model is expected to generate the code followed by "[DONE]".
+#
+# CRITICAL for contamination work (Phase 4): the injected text and the eval
+# prompt must be byte-identical, mirroring GSM8K above; the two templates below
+# must render the same string, which tests/test_mbpp_code_eval.py asserts.
+MBPP_DOC_TO_TEXT = (
+    "You are an expert Python programmer, and here is your task: {question}\n"
+    "[BEGIN]\n{answer}"
+)
+
+# Same template, keyed for the evaluation path's normalized column names.
+MBPP_DOC_TO_TEXT_EVAL = (
+    "You are an expert Python programmer, and here is your task: {problem}\n"
+    "[BEGIN]\n{solution}"
+)
+
+
+def mbpp_problem_text(prompt: str, test_list: List[str]) -> str:
+    """Fold an MBPP task description and its test asserts into one problem string.
+
+    Showing the asserts is MBPP's own convention (they pin down the required
+    function name and signature, without which no generation could pass), and
+    folding them into the problem keeps the two-key {problem}/{solution}
+    template discipline the rest of the pipeline assumes.
+    """
+    tests = "\n".join(test_list)
+    return f"{prompt} Your code should pass these tests:\n\n{tests}"
+
+
+# 3-shot examples for MBPP, taken verbatim from the first three rows of the
+# `google-research-datasets/mbpp` sanitized **prompt** split (task_ids 2, 3, 4)
+# -- the split Austin et al. designate for few-shot prompting, disjoint from
+# train/test/validation, so no evaluation item enters the prompt. Code is
+# reproduced with trailing whitespace stripped per line-end (an artifact of the
+# dataset's collection, not something to teach a model); each solution carries
+# the closing "\n[DONE]" sentinel per the template convention above.
+MBPP_FEWSHOT_EXAMPLES = [
+    {
+        "problem": mbpp_problem_text(
+            "Write a function to find the shared elements from the given two lists.",
+            [
+                "assert set(similar_elements((3, 4, 5, 6),(5, 7, 4, 10))) == set((4, 5))",
+                "assert set(similar_elements((1, 2, 3, 4),(5, 4, 3, 7))) == set((3, 4))",
+                "assert set(similar_elements((11, 12, 14, 13),(17, 15, 14, 13))) == set((13, 14))",
+            ],
+        ),
+        "solution": (
+            "def similar_elements(test_tup1, test_tup2):\n"
+            "  res = tuple(set(test_tup1) & set(test_tup2))\n"
+            "  return (res)\n[DONE]"
+        ),
+    },
+    {
+        "problem": mbpp_problem_text(
+            "Write a python function to identify non-prime numbers.",
+            [
+                "assert is_not_prime(2) == False",
+                "assert is_not_prime(10) == True",
+                "assert is_not_prime(35) == True",
+                "assert is_not_prime(37) == False",
+            ],
+        ),
+        "solution": (
+            "import math\n"
+            "def is_not_prime(n):\n"
+            "    result = False\n"
+            "    for i in range(2,int(math.sqrt(n)) + 1):\n"
+            "        if n % i == 0:\n"
+            "            result = True\n"
+            "    return result\n[DONE]"
+        ),
+    },
+    {
+        "problem": mbpp_problem_text(
+            "Write a function to find the n largest integers from a given list of "
+            "numbers, returned in descending order.",
+            [
+                "assert heap_queue_largest( [25, 35, 22, 85, 14, 65, 75, 22, 58],3)==[85, 75, 65]",
+                "assert heap_queue_largest( [25, 35, 22, 85, 14, 65, 75, 22, 58],2)==[85, 75]",
+                "assert heap_queue_largest( [25, 35, 22, 85, 14, 65, 75, 22, 58],5)==[85, 75, 65, 58, 35]",
+            ],
+        ),
+        "solution": (
+            "import heapq as hq\n"
+            "def heap_queue_largest(nums,n):\n"
+            "  largest_nums = hq.nlargest(n, nums)\n"
+            "  return largest_nums\n[DONE]"
+        ),
+    },
+]
+
+
 def build_fewshot_prefix(
     fewshot_examples=MINERVA_MATH_FEWSHOT_EXAMPLES,
     doc_to_text=MINERVA_MATH_DOC_TO_TEXT,
@@ -779,6 +882,48 @@ def load_dataset_gsm8k_platinum_for_eval() -> DatasetDict:
     """
     raw_datasets = load_dataset_gsm8k_platinum()
     return raw_datasets.rename_columns({"question": "problem", "answer": "solution"})
+
+
+def load_dataset_mbpp_sanitized() -> DatasetDict:
+    """Load the sanitized (hand-verified) configuration of MBPP.
+
+    MBPP (Austin et al. 2021, CC-BY-4.0) is 974 entry-level Python problems;
+    the `sanitized` configuration is the 427-problem subset the authors
+    hand-verified. Chosen per decision D3 in docs/ICLR_2027_CHECKLIST.md as the
+    coding contamination substrate.
+
+    Returns:
+        DatasetDict with `train` (120), `test` (257), `validation` (43), and
+        `prompt` (7) splits; columns `source_file`, `task_id`, `prompt`, `code`,
+        `test_imports`, `test_list`. The `prompt` split holds the designated
+        few-shot examples (hardcoded into MBPP_FEWSHOT_EXAMPLES above).
+    """
+    return load_dataset("google-research-datasets/mbpp", "sanitized")
+
+
+def load_dataset_mbpp_for_eval() -> DatasetDict:
+    """Load sanitized MBPP normalized to the evaluation convention.
+
+    Mirrors `load_dataset_gsm8k_platinum_for_eval`: the eval scripts index
+    `problem` and `solution` throughout, so `problem` becomes the task
+    description with its test asserts folded in (`mbpp_problem_text`) and
+    `solution` becomes the reference code. The `test_list` and `test_imports`
+    columns are kept -- unlike math benchmarks, scoring MBPP needs the
+    executable asserts, not the reference solution.
+
+    Returns:
+        DatasetDict whose splits have columns `problem`, `solution`,
+        `test_list`, `test_imports`, `task_id`.
+    """
+    raw_datasets = load_dataset_mbpp_sanitized()
+
+    def normalize(example: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "problem": mbpp_problem_text(example["prompt"], example["test_list"]),
+            "solution": example["code"],
+        }
+
+    return raw_datasets.map(normalize, remove_columns=["source_file", "prompt", "code"])
 
 
 def preprocess_eleutherai_hendrycks_math_for_sft(
