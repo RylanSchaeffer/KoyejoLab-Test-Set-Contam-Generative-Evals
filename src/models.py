@@ -1,10 +1,11 @@
-"""Model creation and loading utilities for Qwen3 language models.
+"""Model creation and loading utilities for Qwen3 and Gemma 3 language models.
 
-This module provides functions for creating Qwen3 models from scratch with
-specific parameter counts, or loading pretrained models from HuggingFace Hub.
-The architecture configurations follow the Qwen3 scaling patterns.
+This module provides functions for creating Qwen3 or Gemma 3 dense models from
+scratch with specific parameter counts, or loading pretrained models from
+HuggingFace Hub. The architecture configurations follow each family's own
+scaling patterns.
 
-Supported model sizes: 2M to 1.44B parameters.
+Supported model sizes: Qwen3 2M to 1.44B; Gemma 3 dense 107M to 497M.
 """
 
 import math
@@ -42,28 +43,89 @@ qwen3_parameters_to_depths_and_widths: Dict[str, tuple[int, int]] = {
 }
 
 
-def create_causalm_for_pretraining(
-    model_config_dict: Dict[str, Any]
-) -> PreTrainedModel:
-    """Create a new Qwen3 causal language model from scratch.
+# Mapping from parameter count strings to (num_layers, hidden_size, intermediate_size)
+# for from-scratch Gemma 3 **dense** models (ICLR 2027 Phase 5, decision D2 in
+# docs/ICLR_2027_CHECKLIST.md).
+#
+# The architecture follows Google's own small-Gemma-3 scaling pattern, verified
+# 2026-08-17 directly against the Hub configs of google/gemma-3-270m and
+# google/gemma-3-1b-pt (scripts/scratch/probe_gemma3_shipped_configs.py):
+#   - constant across sizes: 4 attention heads, 1 KV head, head_dim 256,
+#     query_pre_attn_scalar 256, sliding_window 512 (5 local : 1 global layer
+#     pattern), rope_theta 1e6 (global) / 1e4 (local), vocab 262,144,
+#     tied embeddings.
+#   - depth/width scale together: (18 layers, 640 hidden) at 270M ->
+#     (26, 1152) at 1B, i.e. ~1 layer per 64 hidden. New widths stay on
+#     multiples of 64 and depths on that line.
+#   - MLP ratio: 3.2x at 270M rising to 6.0x at 1B. Below 640 hidden we hold
+#     3.2x (extrapolating the ratio downward would pinch the MLP to ~1x);
+#     at 896 hidden we use 4.0x, between the two anchors.
+#
+# The "268M" entry reproduces google/gemma-3-270m's text architecture exactly.
+# Names are total parameter counts, like the Qwen3 table above.
+#
+# ⚠️ Accounting (checklist 5.1): Gemma 3's 262,144-token tied vocabulary makes
+# small models embedding-dominated, so total-parameter names are NOT comparable
+# across families -- match on **non-embedding** parameters. Actual counts,
+# measured on CPU 2026-08-17 with scripts/scratch/smoke_test_gemma3_configs.py
+# (bfloat16; Gemma's tokenizer has a distinct pad token, so unlike Qwen3 no
+# extra pad embedding row is added at pretraining time):
+#
+#   name    (L, h, inter)      total          non-embedding   Qwen3 neighbours (non-emb)
+#   107M    (13, 320, 1024)    107,338,816     23,452,736     93M (25.1M) / 111M (33.5M)
+#   163M    (15, 448, 1408)    163,064,000     45,623,488     111M (33.5M) / 165M (60.2M)
+#   268M    (18, 640, 2048)    268,098,176    100,326,016     262M (116.5M)
+#   497M    (22, 896, 3584)    497,378,176    262,497,152     499M (285.5M)
+#
+# Note the totals happen to align with the Qwen3 ladder names too (107M~111M,
+# 163M~165M, 268M~262M, 497M~499M), so the arm overlaps the Qwen3 ladder under
+# either accounting; the top pair (497M vs 499M) matches well under both. A
+# Gemma 3 analogue of Qwen3-34M is impossible: the tied embedding matrix alone
+# is 262,144 x h parameters (83.9M at the narrowest width used here).
+gemma3_parameters_to_depths_widths_and_intermediates: Dict[
+    str, tuple[int, int, int]
+] = {
+    "107M": (13, 320, 1024),
+    "163M": (15, 448, 1408),
+    "268M": (18, 640, 2048),  # google/gemma-3-270m's exact text architecture.
+    "497M": (22, 896, 3584),
+}
 
-    Initializes a randomly-weighted Qwen3 model with architecture determined
-    by the parameter count specified in model_name. The depth (num_layers)
-    and width (hidden_size) are looked up from qwen3_parameters_to_depths_and_widths.
+# Constants shared by every from-scratch Gemma 3 dense size; verified against the
+# shipped gemma-3-270m and gemma-3-1b-pt configs (see comment above).
+GEMMA3_VOCAB_SIZE = 262144
+GEMMA3_NUM_ATTENTION_HEADS = 4
+GEMMA3_NUM_KEY_VALUE_HEADS = 1
+GEMMA3_HEAD_DIM = 256
+GEMMA3_SLIDING_WINDOW = 512
+GEMMA3_QUERY_PRE_ATTN_SCALAR = 256
+
+
+def create_causalm_for_pretraining(
+    model_config_dict: Dict[str, Any],
+) -> PreTrainedModel:
+    """Create a new Qwen3 or Gemma 3 causal language model from scratch.
+
+    Initializes a randomly-weighted model with architecture determined by the
+    family and parameter count specified in model_name. The depth (num_layers)
+    and width (hidden_size) are looked up from the family's size table
+    (qwen3_parameters_to_depths_and_widths or
+    gemma3_parameters_to_depths_widths_and_intermediates).
 
     Args:
         model_config_dict: Configuration dictionary containing:
             - model_name: Model identifier in format "Qwen3/Qwen3-{size}" where
-              size is one of: 2M, 16M, 34M, ..., 1.44B
+              size is one of: 2M, 16M, 34M, ..., 1.44B; or "Gemma3/Gemma3-{size}"
+              where size is one of: 107M, 163M, 268M, 497M
             - torch_dtype: Data type string ("bfloat16", "float16", or "float32")
             - attn_implementation: Optional attention implementation (default: "eager")
 
     Returns:
-        Randomly initialized Qwen3ForCausalLM model.
+        Randomly initialized Qwen3ForCausalLM or Gemma3ForCausalLM model.
 
     Raises:
         NotImplementedError: If torch_dtype is not recognized.
-        ValueError: If model_name doesn't start with "Qwen3/Qwen3-".
+        ValueError: If model_name matches neither family's naming pattern.
         KeyError: If the parameter size is not in the supported configurations.
 
     Example:
@@ -94,6 +156,34 @@ def create_causalm_for_pretraining(
         )
         # model_class = Qwen3ForCausalLM
 
+    elif model_config_dict["model_name"].startswith("Gemma3/Gemma3-"):
+        from transformers import Gemma3TextConfig
+
+        num_parameters_str = model_config_dict["model_name"].split("-")[1]
+        depth, width, intermediate_size = (
+            gemma3_parameters_to_depths_widths_and_intermediates[num_parameters_str]
+        )
+
+        # Everything not passed here keeps Gemma3TextConfig defaults, which already
+        # match the shipped small checkpoints (head_dim 256, query_pre_attn_scalar
+        # 256, rope_theta 1e6 / rope_local_base_freq 1e4, tied embeddings, RMSNorm
+        # placement, 5-local:1-global attention layer pattern). The values we do
+        # pass are the ones whose defaults differ from google/gemma-3-270m:
+        # vocab (262,208 default vs 262,144 shipped), heads (8 vs 4), KV heads
+        # (4 vs 1), and sliding window (4,096 vs 512).
+        model_config = Gemma3TextConfig(
+            hidden_size=width,
+            num_hidden_layers=depth,
+            intermediate_size=intermediate_size,
+            vocab_size=GEMMA3_VOCAB_SIZE,
+            num_attention_heads=GEMMA3_NUM_ATTENTION_HEADS,
+            num_key_value_heads=GEMMA3_NUM_KEY_VALUE_HEADS,
+            head_dim=GEMMA3_HEAD_DIM,
+            sliding_window=GEMMA3_SLIDING_WINDOW,
+            query_pre_attn_scalar=GEMMA3_QUERY_PRE_ATTN_SCALAR,
+            torch_dtype=torch_dtype,
+        )
+
     else:
         raise ValueError(model_config_dict["model_name"])
 
@@ -111,7 +201,7 @@ def create_causalm_for_pretraining(
 
 
 def load_automodelforcausallm(
-    model_config_dict: Dict[str, Any]
+    model_config_dict: Dict[str, Any],
 ) -> AutoModelForCausalLM:
     """Load a pretrained causal language model from HuggingFace Hub.
 
