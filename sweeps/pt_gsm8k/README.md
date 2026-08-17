@@ -100,7 +100,10 @@ wandb sweep sweeps/pt_gsm8k/qwen3-344M-1xOT-highdose.yaml
 
 Validate first: `python scripts/scratch/validate_scale_ladder_sweeps.py` covers this directory
 (program, `train_test_split_seed`, v1 optimizer profile, grad-accum rounding, dose-budget
-feasibility).
+feasibility). The validator flags the 34M config with "+11.3% overshoot" — that is the
+*published* 34M geometry (world 1 × batch 42, grad-accum 8.09 → ceil 9), reproduced
+deliberately; the published runs carried exactly this overshoot, so "fixing" it would
+un-match them.
 
 Afterwards, evaluate 0-shot (memorization protocol — see `sweeps/eval_pt/gsm8k/README.md`);
 never 4-shot, never mixed protocols in one comparison.
