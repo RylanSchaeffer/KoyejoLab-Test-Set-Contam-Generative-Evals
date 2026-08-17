@@ -1,6 +1,6 @@
 # Phase 6 eval-only wins — prepared, NOT launched
 
-Assets for the eval-only items in `docs/ICLR_2027_CHECKLIST.md` Phase 6. **Nothing here has been
+Assets for the eval-only items in `docs/EXPERIMENT_CHECKLIST.md` Phase 6. **Nothing here has been
 run.** Every launch script refuses to start unless `PHASE6_CONFIRM_LAUNCH=1` is set, so sourcing
 or running one by accident prints its plan and exits.
 

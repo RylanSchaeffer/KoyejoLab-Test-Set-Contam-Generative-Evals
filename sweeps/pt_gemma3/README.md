@@ -1,10 +1,10 @@
-# Gemma 3 dense contamination sweeps (ICLR 2027 Phase 5)
+# Gemma 3 dense contamination sweeps (Phase 5 of docs/EXPERIMENT_CHECKLIST.md)
 
 **Status: prepared, NOT launched.** Nothing in this directory has been given to `wandb sweep`;
 the W&B project `memorization-scoring-vs-sampling-pt-gemma3` does not exist yet and must not be
 created until a launch is actually intended.
 
-Second-architecture arm per decision **D2** in `docs/ICLR_2027_CHECKLIST.md`: replicate the core
+Second-architecture arm per decision **D2** in `docs/EXPERIMENT_CHECKLIST.md`: replicate the core
 contamination findings in a family that is not Qwen3. Gemma 3 dense was chosen because
 `Gemma3TextConfig` is already in the pinned transformers 4.56.1 (zero infrastructure risk) and
 Google ships 270M/1B checkpoints, so small-scale training of this architecture is proven.

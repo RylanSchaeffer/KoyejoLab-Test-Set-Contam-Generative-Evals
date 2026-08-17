@@ -22,10 +22,13 @@ configs from `sweeps/pt/` — those files were rewritten in place by `934546a` �
 | Change | Why |
 |---|---|
 | `program: scripts/pretrain_language_model_v1.py` | The v2 script `KeyError`s on v1 YAMLs, and its optimizer differs. |
-| `train_test_split_seed: [0]` **added** | `src/data.py:367` reads it unguarded. The v1 YAMLs predate the key, so every one of them currently dies with a `KeyError` without this line. |
+| `train_test_split_seed: [0]` **added** | `src/data.py (create_dataset_for_pretraining)` reads it unguarded. The v1 YAMLs predate the key, so every one of them currently dies with a `KeyError` without this line. |
 | `project: memorization-scoring-vs-sampling-pt-v1-scale-ladder` | The published project no longer resolves, so writing to its name would create an empty project. Never use `-pt-v2`: different optimizer. |
 | `nproc_per_node`, batch sizes | Retuned for A100-80GB (skampere1). The published 344M config was sized for skampere2's H200-141GB. |
 | `num_benchmark_replicas_per_epoch` | Full published 9-dose grid at 499M, split across two sweeps: `sja2bewl` {0,1,10,100,316} + `dj21lgk3` {3,32,1000,3162}. |
+| `eval_steps: 2000` (499M) / `6000` (1.44B) | The 144gb template says 1000; at the A100's smaller effective batch that would eval far more often per token. 2000 matches what the published 34M–153M runs used; 6000 keeps 1.44B's eval overhead proportionate. Eval cadence only — no effect on training. |
+| `per_device_eval_batch_size: 12` (≠ train 11) | Published runs set eval batch = train batch. Eval fits a slightly larger batch (no grads); throughput-only, no comparability effect. |
+| `gradient_checkpointing: True` | Published runs ran `False` on 141 GB H200s; measured OOM without it on A100-80GB (checklist 1.1). Mathematically identical — recompute only. |
 
 ## Required environment
 

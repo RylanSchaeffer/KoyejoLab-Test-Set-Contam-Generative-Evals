@@ -214,7 +214,7 @@ Two further traps found in the same pass:
 1. Script: **`scripts/pretrain_language_model_v1.py`**.
 2. Template: copy from **`sweeps/dose_response/pretrain/math_144gb_1xOT/`**, not `sweeps/pt/` and
    not `sweeps/pt_v2/`.
-3. Add **`train_test_split_seed: values: [0]`** — mandatory. `src/data.py:367` reads it
+3. Add **`train_test_split_seed: values: [0]`** — mandatory. `src/data.py (create_dataset_for_pretraining)` reads it
    unguarded and the v1 YAMLs predate it, so every v1 sweep currently dies with a `KeyError`.
 4. Env: `PRETRAIN_LEGACY_TOKEN_BUDGET=1`, plus a correct `HF_TOKEN` (see the blocker below).
 5. W&B project: a **new** name (e.g. `...-pt-v1-scale-ladder`). The published project

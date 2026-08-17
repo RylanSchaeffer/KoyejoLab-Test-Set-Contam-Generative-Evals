@@ -1,4 +1,4 @@
-"""Sandboxed execution scoring for MBPP-style code benchmarks (ICLR 2027 Phase 2).
+"""Sandboxed execution scoring for MBPP-style code benchmarks (Phase 2).
 
 Runs model-generated Python against a benchmark's `test_list` asserts in a
 subprocess sandbox, mirroring how bigcode-evaluation-harness scores MBPP and

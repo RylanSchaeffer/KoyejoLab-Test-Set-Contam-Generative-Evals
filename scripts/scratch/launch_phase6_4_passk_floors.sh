@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 6.4 of docs/ICLR_2027_CHECKLIST.md: pass@k capability floors at every
+# Phase 6.4 of docs/EXPERIMENT_CHECKLIST.md: pass@k capability floors at every
 # size, not just 344M. Uncontaminated (R=0, ot=1) checkpoints, k=10 sampled
 # generations per problem at tau=1.0.
 #

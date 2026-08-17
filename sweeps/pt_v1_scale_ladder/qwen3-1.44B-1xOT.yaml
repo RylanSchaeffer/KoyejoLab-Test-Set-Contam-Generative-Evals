@@ -26,7 +26,7 @@ parameters:
         values: [0, 100, 316]
       shuffle_seed:
         values: [0]
-      # Absent from the published v1 YAMLs, which predate the key. src/data.py:367
+      # Absent from the published v1 YAMLs, which predate the key. src/data.py (create_dataset_for_pretraining)
       # reads it unguarded, so omitting it is an immediate KeyError.
       train_test_split_seed:
         values: [ 0 ]
@@ -54,7 +54,9 @@ parameters:
         values: [ steps ]
       eval_steps:
         values: [ 6000 ]
-      # 1.44B is the only size that needs activation checkpointing to fit 80 GB.
+      # Required to fit A100-80GB, like every ladder size (checklist 1.1: batch is
+      # logits-bound, so 499M and 1.44B hit the same wall). Mathematically identical
+      # to False -- it only recomputes activations.
       gradient_checkpointing:
         values: [ True ]
       hub_strategy:

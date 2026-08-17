@@ -44,8 +44,8 @@ qwen3_parameters_to_depths_and_widths: Dict[str, tuple[int, int]] = {
 
 
 # Mapping from parameter count strings to (num_layers, hidden_size, intermediate_size)
-# for from-scratch Gemma 3 **dense** models (ICLR 2027 Phase 5, decision D2 in
-# docs/ICLR_2027_CHECKLIST.md).
+# for from-scratch Gemma 3 **dense** models (Phase 5, decision D2 in
+# docs/EXPERIMENT_CHECKLIST.md).
 #
 # The architecture follows Google's own small-Gemma-3 scaling pattern, verified
 # 2026-08-17 directly against the Hub configs of google/gemma-3-270m and

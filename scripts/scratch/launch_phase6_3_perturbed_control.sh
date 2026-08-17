@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 6.3 of docs/ICLR_2027_CHECKLIST.md: the perturbed positive control.
+# Phase 6.3 of docs/EXPERIMENT_CHECKLIST.md: the perturbed positive control.
 # Evaluates the contaminant-ablation checkpoints (34M x R in {32,100,316},
 # perturbed and rephrased arms -- LOCAL directories, never pushed to the Hub)
 # against (a) the original MATH test set and (b) the perturbed variant that was

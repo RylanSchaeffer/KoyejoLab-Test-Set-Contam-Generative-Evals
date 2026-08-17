@@ -889,7 +889,7 @@ def load_dataset_mbpp_sanitized() -> DatasetDict:
 
     MBPP (Austin et al. 2021, CC-BY-4.0) is 974 entry-level Python problems;
     the `sanitized` configuration is the 427-problem subset the authors
-    hand-verified. Chosen per decision D3 in docs/ICLR_2027_CHECKLIST.md as the
+    hand-verified. Chosen per decision D3 in docs/EXPERIMENT_CHECKLIST.md as the
     coding contamination substrate.
 
     Returns:
