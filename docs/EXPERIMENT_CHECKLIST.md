@@ -261,10 +261,11 @@ rename. Reproducing or extending those two published points requires restoring t
 ## Phase 1 — Qwen3 scale ladder (the long pole; RUNNING since 2026-08-17)
 
 **499M launched 2026-08-17**: sweep `rylan/memorization-scoring-vs-sampling-pt-v1-scale-ladder/sja2bewl`
-(`sweeps/pt_v1_scale_ladder/qwen3-499M-1xOT.yaml`), 5 doses R ∈ {0, 1, 10, 100, 316}, GPUs
+(`sweeps/pt_v1_scale_ladder/qwen3-499M-1xOT.yaml`), doses R ∈ {0, 1, 10, 100, 316}, GPUs
 0,1,2,7, `PRETRAIN_LEGACY_TOKEN_BUDGET=1`, Hub uploads to `RylanSchaeffer` enabled, agent log
-`logs/agent_499M_ladder_sja2bewl.log`. At the measured 31.2 h/run on one 4-GPU slot this is
-**~1.3 days per dose, ~7 days total**, plus per-run dataset-construction overhead.
+`logs/agent_499M_ladder_sja2bewl.log`. The chained extension sweep `dj21lgk3` adds
+R ∈ {3, 32, 1000, 3162} (see 1.2), completing the published 9-dose grid: **~13 days total** at
+the measured 31.2 h/run baseline, plus per-run dataset-construction overhead.
 
 On sizing: 344M → 499M is a **1.45× step, the smallest ratio anywhere in the published ladder**
 (34→62 is 1.85×, 153→344 is 2.25×), so it is the conservative extension. A valid on-grid
@@ -309,8 +310,15 @@ recomputes activations, so it does not affect comparability.
       GPU situation improves (with all eight GPUs it is ~12 days wall-clock on two slots; on the
       current single slot it is ~29 days). Decide whether 1.44B is worth that at the post-GSM8K
       decision gate, informed by whether the 499M points bend the scaling fits.
-- [x] **1.2 Dose grid confirmed**: 499M runs the full 5 doses R ∈ {0, 1, 10, 100, 316}; 1.44B, if
-      run, trims to R ∈ {0, 100, 316}.
+- [x] **1.2 Dose grid: full published 9-dose grid at 499M** (Rylan, 2026-08-17). The initial
+      sweep `sja2bewl` carries R ∈ {0, 1, 10, 100, 316}; the **extension sweep `dj21lgk3`**
+      (`qwen3-499M-1xOT-extension.yaml`) restores {3, 32, 1000, 3162}, matching the published
+      grid [0, 1, 3, 10, 32, 100, 316, 1000, 3162] that every `math_144gb_1xOT` template used.
+      It launches automatically when `sja2bewl`'s agent exits
+      (`scripts/scratch/chain_499M_extension_sweep.sh`, log `logs/chain_499M_extension.log`).
+      Added cost ≈ 6.3 days (R=1000 ≈ +21% tokens, R=3162 ≈ +67%), so the full 499M ladder is
+      ~13 days on the single 4-GPU slot. The earlier 5-dose trim was a cost proposal from
+      2026-08-01, not the published protocol. 1.44B's grid, if run, is decided at the gate.
 
 - [ ] **1.3 Re-upload `RylanSchaeffer/math_rephrased`.** Currently unresolvable on the Hub; the
       guarded re-upload script exists (commit `2a97cbb`). This blocks 1.4, so do it early and

@@ -25,7 +25,7 @@ configs from `sweeps/pt/` — those files were rewritten in place by `934546a` �
 | `train_test_split_seed: [0]` **added** | `src/data.py:367` reads it unguarded. The v1 YAMLs predate the key, so every one of them currently dies with a `KeyError` without this line. |
 | `project: memorization-scoring-vs-sampling-pt-v1-scale-ladder` | The published project no longer resolves, so writing to its name would create an empty project. Never use `-pt-v2`: different optimizer. |
 | `nproc_per_node`, batch sizes | Retuned for A100-80GB (skampere1). The published 344M config was sized for skampere2's H200-141GB. |
-| `num_benchmark_replicas_per_epoch` | Trimmed per size — see the checklist's provisional dose grid. |
+| `num_benchmark_replicas_per_epoch` | Full published 9-dose grid at 499M, split across two sweeps: `sja2bewl` {0,1,10,100,316} + `dj21lgk3` {3,32,1000,3162}. |
 
 ## Required environment
 
