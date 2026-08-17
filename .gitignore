@@ -248,3 +248,4 @@ wandb/
 .webassets-cache
 wheels/
 #  you could uncomment the following to ignore the entire vscode folder
+data/hendrycks_math/*/*/cache-*.arrow
