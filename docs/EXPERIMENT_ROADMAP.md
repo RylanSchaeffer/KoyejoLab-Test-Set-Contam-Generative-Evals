@@ -1,16 +1,17 @@
-# ICLR 2027 roadmap: what would supercharge this paper
+# Experiment roadmap: what would supercharge this paper
 
-> **For execution order, see `docs/ICLR_2027_CHECKLIST.md` (2026-08-01).** This file remains the
-> rationale document — the reviewer-objection mapping and the decision log of rejected options.
-> The checklist is newer and wins where the two disagree; in particular the checklist recommends
-> **keeping 14.3 tokens/parameter rather than rerunning** (item 1.3 below), and its architecture
-> survey supersedes the Gemma 3 note in 1.4, which predates Gemma 4's release.
+> **For execution order, see `docs/EXPERIMENT_CHECKLIST.md`.** This file remains the rationale
+> document — the reviewer-objection mapping and the decision log of rejected options. The
+> checklist is newer and wins where the two disagree; in particular **keeping 14.3
+> tokens/parameter rather than rerunning is decided** (D1, superseding item 1.3 below), and the
+> checklist's architecture survey (D2) supersedes the Gemma 3 note in 1.4, which predates Gemma
+> 4's release.
 
 Written 2026-07-30, at the close of the NeurIPS 2026 rebuttal (submission 32216, scores 3/4/3).
-This is the "infinite time and compute" list, ordered by expected score-moving power at the next
-venue, with the realistic window flagged: **ICLR 2027 abstracts are typically due late September
-2026, roughly eight weeks after NeurIPS decisions.** Tiers 1 and 2 are what fit that window with
-focus; Tiers 3 and 4 are for the camera-ready or the venue after.
+**The ICLR 2027 window this originally targeted has passed (2026-08-17); there is no venue
+deadline.** The list is ordered by expected score-moving power at whatever venue comes next, and
+the campaign's sole focus is extending the pretraining runs to make the paper as strong as it can
+be.
 
 The organizing logic: every reviewer and the AC raised the same two external-validity objections
 (scale/single family, single benchmark), and the rebuttal's strongest new material (the retrieval-key
@@ -194,15 +195,13 @@ and the SFT result (72.95% → 2.80%) makes either outcome interesting.
 
 ---
 
-## Sequencing under the realistic window
+## Sequencing
 
-If NeurIPS rejects in September, the eight-ish weeks to ICLR support roughly: Tier 1 items
-1.1–1.4 in parallel on the cluster (1.5 only if capacity remains), 2.1's scale axis (free once
-1.1 runs include the rephrased arm), 2.3 and 2.4 (eval-only), and Tier 4. That alone addresses every
-weakness in the NeurIPS metareview with data and adds the transition study. 2.1's capability axis
-and 2.2 are the stretch goals; Tier 3 items are parallel-track writing/analysis that costs little
-GPU and can land late.
+With no venue deadline, sequencing is governed by the single 4-GPU slot on skampere1 and the
+decision gates in `docs/EXPERIMENT_CHECKLIST.md`: the scale ladder first, GSM8K second, then a
+pause to evaluate before any coding-benchmark or Gemma 3 GPU time. Tier 3 items are
+parallel-track writing/analysis that costs little GPU and can land late.
 
 Decision point on scope: if 2.1 finds the transition, restructure the paper around it. If it does
-not (transfer stays flat to 1.4B), that is still a publishable strengthening of the boundary
+not (transfer stays flat to 1.44B), that is still a publishable strengthening of the boundary
 claim, and the framing stays as-is with the external-validity objections closed.

@@ -1,55 +1,32 @@
-# ICLR 2027 execution checklist
+# Experiment execution checklist
 
-Drafted 2026-08-01. This is the **execution** document: the same work as
-`docs/ICLR_2027_ROADMAP.md`, but ordered by the sequence I would actually run it in rather than by
-score-moving power, and narrowed to the four areas Rylan named on 2026-08-01.
+Drafted 2026-08-01 as the ICLR 2027 checklist; **the ICLR 2027 window has passed** (noted by Rylan
+2026-08-17) and there is no venue deadline. The campaign's sole focus is **extending the
+pretraining runs to make the paper as strong as it can be**. This is the execution document,
+ordered by run sequence; `docs/EXPERIMENT_ROADMAP.md` holds the rationale and the decision log of
+rejected options. Where the two disagree, this file is newer.
 
-The roadmap remains the rationale document — it holds the reviewer-objection mapping and the
-decision log of options already rejected. **Read the roadmap for *why*; use this file for *what
-next*.** Where the two disagree, this file is newer.
+**Status as of 2026-08-17:** D1–D4 all signed off. Phase 0 complete (clean GSM8K floor is zero).
+**Phase 1 is running**: the 499M ladder launched 2026-08-17 as W&B sweep
+`rylan/memorization-scoring-vs-sampling-pt-v1-scale-ladder/sja2bewl` on GPUs 0,1,2,7 of skampere1
+(GPUs 3–6 held by another user; only one 4-GPU slot exists). Hub identity verified
+`RylanSchaeffer` before launch; uploads enabled.
 
-**Status: D1, D2 and D3 all signed off by Rylan on 2026-08-01.** Execution order revised the same
-day at Rylan's direction — see "Agreed order" below. Nothing has been started yet.
-
-Cluster as of 2026-08-01 11:47: 7 of 8 A100-80GB free on skampere1 (GPU 7 held by another user's
-sglang server, ~74 GB, up 17 h).
-
-### ⛔ BLOCKER: HuggingFace identity is wrong right now
-
-Verified 2026-08-01: `HfApi().whoami()` returns **`ruili0`**, not `RylanSchaeffer`. `HF_TOKEN` and
-`HUGGING_FACE_HUB_TOKEN` are both unset, so the world-readable token file inside the shared
-`HF_HOME` (`/lfs/skampere1/0/shared_hf_cache/token`, owned by `brando9`) wins. This is
-`reviews/2026_neurips/HF_TOKEN_INCIDENT.md` recurring, not a new problem.
-
-- **Evaluation is unaffected** — the project's checkpoints are public, so Phase 0 reads fine.
-- **Training is blocked** — any Phase 1 run would push its checkpoint into `ruili0`'s namespace.
-- **W&B is correct** (`rylan`); only HuggingFace is wrong.
-
-Guards added 2026-08-01 so this fails loudly instead of silently: `assert_hf_identity()` in
-`scripts/pretrain_language_model.py` refuses to start training under the wrong account, and that
-script now honours `PRETRAIN_SKIP_HUB_PUSH=1` (which previously only v1 supported), so a run can
-be trained locally and pushed later.
-
-- [ ] **Rylan to export a `RylanSchaeffer` write token before Phase 1 launches.** Verify with
-      `python scripts/scratch/check_hub_identity_and_access.py`.
+HuggingFace identity note: the shared `HF_HOME` trap is documented in `CLAUDE.md` ("Accounts and
+credentials") and `reviews/2026_neurips/HF_TOKEN_INCIDENT.md`. Rylan's token lives at
+`/lfs/skampere1/0/rschaef/.hf_token`; `assert_hf_identity()` makes training fail loudly under the
+wrong account.
 
 ---
 
 ## Agreed order (Rylan, 2026-08-01)
 
 1. **Finish the MATH Qwen3 scale sweep** (Phase 1).
-2. **Move to GSM8K** (Phase 3) — an easier benchmark, where we may actually see models capable of
-   some generalization, which would let the paper make statements it currently cannot.
+2. **Move to GSM8K** (Phase 3) — scoped as replication after Phase 0 measured a zero clean floor.
 3. **Stop and evaluate** before committing to the coding benchmark (Phases 2 and 4).
 
 Coding work is therefore **deferred behind a decision gate**, not cancelled. Phase 5 (Gemma 3) and
 Phase 6 (eval-only) still fill gaps around the long Phase 1 runs.
-
-**One addition I am proposing on top of this order — Phase 0 below.** The GSM8K step rests on the
-premise that our models are "somewhat capable" there. That premise is cheap to test *today*, with
-no training, by evaluating existing uncontaminated checkpoints on GSM8K. Doing it first means the
-whole GSM8K campaign is either de-risked or redirected before the cluster is committed. It costs
-hours and it gates real weeks of work, so I want it first even though it is not in the list above.
 
 ---
 
@@ -188,69 +165,23 @@ Seven cells needed rescoring downward, each a degenerate loop emitting a number 
 matched the gold. Two scorer bugs were found and fixed by reading the credited responses rather
 than trusting the aggregate — see the write-up.
 
-Purpose: find out whether our models have *any* non-zero clean capability on GSM8K before the
-cluster is committed to Phase 3. Every checkpoint needed already exists.
+**The standing protocol lesson from Phase 0** (Rylan, 2026-08-01): any *capability* measurement on
+these checkpoints must either demonstrate the answer format (few-shot, with demonstrations from a
+*train* split) or use checkpoints trained on it — R=0 checkpoints saw only fineweb-edu and have
+never observed any answer marker, so a 0-shot format demand measures nothing. This does not change
+the 0-shot protocol for *contaminated* checkpoints, where the prompt must match the memorized
+document's opening — that is a memorization measurement, not a capability one.
 
-The premise is plausible and worth testing rather than assuming. GSM8K is grade-school word
-problems, which matches `fineweb-edu-dedup`'s educational-web content far better than MATH's
-competition problems do, and the one comparison point I have found runs the right way:
-**SmolLM2-135M scores 1.8% on GSM8K but 0.0% on HumanEval.** That is a real ordering — GSM8K is the
-benchmark most likely to show a floor above zero. The counterweight is that SmolLM2-135M saw 2T
-tokens against our 4.9B at 344M, so a 0.00% result here would not be surprising either.
+The measurement covered all 32 R=0 checkpoints on the Hub, including every overtrained (to m=16)
+and SFT variant, so no "maybe capability hides in the overtrained zoo" residue remains.
 
-### ⚠️ This must be few-shot, and the first attempt got it wrong
+## D4 — matching the published ladder needs more than the token flag (SIGNED OFF)
 
-The first version ran **0-shot and measured nothing**, per Rylan's correction on 2026-08-01. Our
-R=0 checkpoints are pretrained on fineweb-edu alone and have **never seen an answer marker of any
-kind** — no `\boxed{}`, no `####`. A 0-shot prompt therefore asks them to invent a convention they
-have never observed, which is not a capability test. The diagnostic was unambiguous: 0% `####`,
-0% `\boxed{}`, 100% neither, with responses that paraphrase the question back, loop degenerately
-("The answer is 2." × 40), or wander off-topic entirely.
-
-The paper already contains the evidence that should have driven this design: at 4-shot on MATH the
-boxed rate rises from 0 to 0.43-0.89 while accuracy stays at **exactly 0.0000**. Format and
-capability were separated there, and format was not the blocker.
-
-**Generalize the lesson:** any capability measurement on these checkpoints must either demonstrate
-the answer format (few-shot) or use checkpoints trained on it. This does not change the 0-shot
-protocol for *contaminated* checkpoints, where the prompt must match the memorized document's
-opening — that remains correct and is a memorization measurement, not a capability one.
-
-- [x] **0.1 Evaluate existing *uncontaminated* (R=0) checkpoints on GSM8K**, **4-shot**, greedy,
-      across the full ladder. Eval-only, no training. Demonstrations come from the `openai/gsm8k`
-      **train** split (`src.data.GSM8K_FEWSHOT_EXAMPLES`), so no evaluation item enters the prompt.
-- [ ] **0.2 Include the most heavily overtrained checkpoints** (up to m=16). If clean capability
-      exists anywhere in our checkpoint zoo it is most likely there, and those checkpoints are
-      already trained and sitting on the Hub.
-- [x] **0.3 Reported. Outcome: the "0.00% everywhere" branch.** GSM8K is another contamination
-      substrate, exactly like MATH. Phase 3 stays worth running — it defuses "MATH-specific"
-      completely — but **scope it as replication, not as a capability result**, and promise no
-      generalization statements. **Item 3.5 is off the table**: it requires a clean floor above
-      zero and there is none. A real capability floor has to come from the roadmap's 2.1 capability
-      axis (continued pretraining of capable off-the-shelf base models), not from an easier
-      benchmark.
-- [x] **0.4 Numbers brought back before Phase 3 scope was fixed.**
-
-<details><summary>Original decision criteria (kept for the record)</summary>
-
-  Three outcomes, all useful:
-  - **Non-zero clean capability** → the premise holds. Phase 3 can make generalization claims the
-    MATH results cannot support, and this becomes a genuinely new contribution. Proceed at full
-    scope, and reconsider whether GSM8K should outrank part of Phase 1.
-  - **0.00% everywhere** → GSM8K is another contamination substrate, exactly like MATH. Still worth
-    running (it defuses "MATH-specific" completely) but scope it as replication, not as a
-    capability result, and do not promise generalization statements we cannot make.
-  - **Non-zero only at the largest / most overtrained sizes** → the most interesting outcome: it
-    locates a capability onset inside our own ladder, which feeds the roadmap's 2.1 transition
-    study directly.
-
-</details>
-
-## D4 — NEW, needs sign-off: matching the published ladder needs more than the token flag
-
-*Found 2026-08-01 while preparing Phase 1. This supersedes item 1.5's implication that
-`PRETRAIN_LEGACY_TOKEN_BUDGET=1` is sufficient for comparability. It is necessary but not
-sufficient.* Evidence is in the run-config cache, not in repo prose.
+*Found 2026-08-01 while preparing Phase 1; recipe empirically validated by smoke test the same
+day; **in effect since 2026-08-17**, when Rylan directed the 499M launch, which uses exactly this
+recipe. It supersedes item 1.5's implication that `PRETRAIN_LEGACY_TOKEN_BUDGET=1` is sufficient
+for comparability — it is necessary but not sufficient.* Evidence is in the run-config cache, not
+in repo prose.
 
 The published checkpoints were produced by the **pre-`934546a` (v1) script**, not the current one.
 The sole surviving copy of their configs
@@ -290,7 +221,8 @@ Two further traps found in the same pass:
    `memorization-scoring-vs-sampling-pt` no longer resolves, so writing to it would create an
    empty project; the join with published points has to happen in the notebook cache layer.
 
-- [ ] **D4 signed off** — *recipe empirically validated 2026-08-01, still needs your decision.*
+- [x] **D4 signed off** — recipe validated by smoke test 2026-08-01; Rylan directed the launch
+      2026-08-17 and the running sweep `sja2bewl` follows it exactly.
 
 **Smoke test result.** The 499M sweep was created and run for ~10 minutes on 4 GPUs
 (`logs/phase1_smoke/499M_smoke.log`), then killed. Everything the recipe claims, it does:
@@ -326,10 +258,19 @@ across doses if the pipeline allows.
 `"62M"` and reshaped `"153M"` `(9, 320)` into `"165M"` `(9, 344)` — a *different model*, not a
 rename. Reproducing or extending those two published points requires restoring the old entries.
 
-## Phase 1 — Qwen3 scale ladder (the long pole; start as soon as Phase 0 is launched)
+## Phase 1 — Qwen3 scale ladder (the long pole; RUNNING since 2026-08-17)
 
-Everything else is CPU or short-GPU work that can proceed while these train. GPUs are free now, so
-this starts the day it is signed off.
+**499M launched 2026-08-17**: sweep `rylan/memorization-scoring-vs-sampling-pt-v1-scale-ladder/sja2bewl`
+(`sweeps/pt_v1_scale_ladder/qwen3-499M-1xOT.yaml`), 5 doses R ∈ {0, 1, 10, 100, 316}, GPUs
+0,1,2,7, `PRETRAIN_LEGACY_TOKEN_BUDGET=1`, Hub uploads to `RylanSchaeffer` enabled, agent log
+`logs/agent_499M_ladder_sja2bewl.log`. At the measured 31.2 h/run on one 4-GPU slot this is
+**~1.3 days per dose, ~7 days total**, plus per-run dataset-construction overhead.
+
+On sizing: 344M → 499M is a **1.45× step, the smallest ratio anywhere in the published ladder**
+(34→62 is 1.85×, 153→344 is 2.25×), so it is the conservative extension. There is no on-grid size
+between them — Qwen3's depth/width formula (`src/models.py:21`) jumps (14, 576) → (18, 704) — and
+an off-grid ~450M would break the architecture family for no gain (question raised and settled
+with Rylan 2026-08-17).
 
 `src/models.py` already parameterizes every size we need — `499M (18, 704)`, `660M (21, 832)`,
 `934M (25, 1010)`, `1.44B (31, 1260)`. No new architecture code. Note the real config names are
@@ -346,10 +287,10 @@ this starts the day it is signed off.
 | 934M | 11 | 66.5 GB | 18.6 GB | 8.8k | 105 h | 4 | 420 h |
 | 1.44B | 11 | 68.1 GB | 17.0 GB | 6.2k | 230 h | 3 | 691 h |
 
-**Total: 1,267 four-GPU-hours = 5,068 GPU-hours ≈ 30 days of all seven GPUs, continuously.**
-That is an optimistic lower bound: it excludes DDP all-reduce overhead. It also excludes the
-`torch_compile: True` speedup (disabled during calibration), which may recover 20–40%, so call it
-**three to four weeks of exclusive cluster time**.
+**With only one 4-GPU slot available (GPUs 3–6 belong to another user as of 2026-08-17), these
+subtotals are wall-clock directly**: 499M ≈ 7 days, 934M ≈ 18 days, 1.44B ≈ 29 days. The
+estimates exclude DDP all-reduce overhead and per-run dataset construction, but also exclude the
+`torch_compile: True` speedup (disabled during calibration), which may recover 20–40%.
 
 **The load-bearing discovery: batch size is bounded by the vocabulary, not by model size.** At
 Qwen3's 151,936-token vocabulary, the logits tensor is `batch × 2048 × 151936 × 4 B` ≈ 1.24 GB per
@@ -359,23 +300,12 @@ batch, and all three need `gradient_checkpointing: True` (the published runs set
 was affordable on skampere2's 141 GB H200s but is not on an 80 GB A100). Checkpointing only
 recomputes activations, so it does not affect comparability.
 
-- [ ] **1.1a DECISION: drop 934M, keep 499M and 1.44B as the two extrapolation anchors.**
-      *My recommendation, and exactly the fallback this document pre-specified under "Critical
-      path".* 934M costs 420 h for a middle point, while 499M and 1.44B alone cost 847 four-GPU-hours
-      (≈20 days on seven GPUs) and preserve the full extrapolation range, which is what the
-      reviewers actually objected to. Dropping 1.44B instead would be cheaper still but caps the
-      ladder at 934M and answers the scale objection much more weakly.
-- [ ] **1.2 Confirm the dose grid against measured throughput.** At 14.3 tokens/parameter a single
-      run costs ~7.1B tokens at 499M, ~9.4B at 660M, ~13.4B at 934M, ~20.6B at 1.44B, plus up to
-      +27% at the highest dose. The full 4-sizes × 5-doses ladder is ~280B tokens, which on my
-      rough arithmetic is **weeks of exclusive cluster time** — likely too much alongside Phases
-      2–5. Provisional trim, to be revised once 1.1 lands:
-
-  | Size | Doses R | Runs |
-  |---|---|---|
-  | 499M | 0, 1, 10, 100, 316 | 5 |
-  | 934M | 0, 10, 100, 316 | 4 |
-  | 1.44B | 0, 100, 316 | 3 |
+- [x] **1.1a RESOLVED (2026-08-17): 934M is dropped; 499M runs now; 1.44B is deferred** until the
+      GPU situation improves (with all eight GPUs it is ~12 days wall-clock on two slots; on the
+      current single slot it is ~29 days). Decide whether 1.44B is worth that at the post-GSM8K
+      decision gate, informed by whether the 499M points bend the scaling fits.
+- [x] **1.2 Dose grid confirmed**: 499M runs the full 5 doses R ∈ {0, 1, 10, 100, 316}; 1.44B, if
+      run, trims to R ∈ {0, 100, 316}.
 
 - [ ] **1.3 Re-upload `RylanSchaeffer/math_rephrased`.** Currently unresolvable on the Hub; the
       guarded re-upload script exists (commit `2a97cbb`). This blocks 1.4, so do it early and
@@ -482,20 +412,11 @@ generative task, currently asserted without evidence.
 
 ---
 
-## Critical path
+## Critical path (as of 2026-08-17)
 
-Phase 0 runs first and finishes in hours; Phase 1 launches as soon as it is underway rather than
-waiting for it, since the two do not compete for the same resources for long. Phase 1 is the only
-item with a multi-week floor, so everything else fills the gaps around it. Phase 3 follows Phase 1
-on the cluster. Phase 5 (Gemma 3) queues behind Phase 1 — the main argument for trimming the dose
-grid in 1.2 — and Phase 6 is eval-only and can land at any point. Phases 2 and 4 sit behind the
-decision gate.
-
-Three things would change this ordering, all cheap to learn early:
-
-- **Phase 0 finds non-zero clean capability** → GSM8K gets more valuable than a replication, and
-  part of it may deserve to outrank part of the Phase 1 ladder.
-- **The 1.1 calibration shows the ladder is faster than estimated** → restore the full 5-dose grid
-  at every size.
-- **The 1.1 calibration shows it is slower** → drop 934M, keep 499M and 1.44B as the two
-  extrapolation anchors.
+The 499M ladder (Phase 1) occupies the only free 4-GPU slot for ~7 days. Phase 3 (GSM8K
+contamination sweeps) queues behind it on the cluster. All other live work is CPU-side and runs in
+parallel: Gemma 3 model support and sweep configs (Phase 5 prep), Phase 6 eval preparation, and
+the MBPP harness (Phase 2) — configs and code only, no launches. The decision gate after Phase 3
+decides three things at once: whether to run 1.44B, whether to proceed to the coding benchmark
+(Phases 2/4 execution), and how much of Phase 5 to run.

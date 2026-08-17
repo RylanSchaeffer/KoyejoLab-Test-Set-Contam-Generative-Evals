@@ -1,8 +1,8 @@
-# v1 scale-ladder sweeps (ICLR 2027 Phase 1)
+# v1 scale-ladder sweeps (Phase 1: extending the MATH Qwen3 ladder)
 
-New Qwen3 sizes extending the **published** contamination ladder to 499M / 934M / 1.44B.
+New Qwen3 sizes extending the **published** contamination ladder: 499M (running since 2026-08-17, sweep `sja2bewl`) and 1.44B (deferred until GPUs allow; decide at the post-GSM8K gate). 934M was dropped by decision 1.1a — its config was deleted with that decision.
 
-These are deliberately **v1-style** configs. See D4 in `docs/ICLR_2027_CHECKLIST.md` for the
+These are deliberately **v1-style** configs. See D4 in `docs/EXPERIMENT_CHECKLIST.md` for the
 evidence; the short version is that the published 34M-344M checkpoints were produced by the
 pre-`934546a` script, and the current `scripts/pretrain_language_model.py` diverges from it on
 five independent axes (Adam betas, warmup, weight decay, `full_determinism`, and `ceil` vs `round`
@@ -39,21 +39,14 @@ python scripts/scratch/check_hub_identity_and_access.py            # verify befo
 captured in these files. A run launched without it silently trains on 1.4x the tokens and does
 not belong on the published ladder.
 
-## ⚠️ Batch sizes are UNVALIDATED
+## Batch sizes: measured, vocab-bound
 
-The `per_device_train_batch_size` values here were chosen on two criteria: fit in 80 GB, and make
-`gradient_accumulation_steps_unrounded` land just below an integer so `math.ceil` overshoots the
-target tokens-per-optimizer-step by ~1-2% rather than ~10%. Predicted values:
-
-| Size | nproc | batch | unrounded grad-accum | ceil | overshoot vs target |
-|---|---|---|---|---|---|
-| 499M | 4 | 22 | 7.85 | 8 | +1.9% |
-| 934M | 4 | 16 | 12.74 | 13 | +2.0% |
-| 1.44B | 4 | 11 | 20.79 | 21 | +1.0% |
-
-**None of this is measured.** Checklist item 1.1 (throughput calibration) must confirm the batch
-fits and check the logged `gradient_accumulation_steps_unrounded` before any full run is launched.
-If a batch OOMs, lower it and re-check the rounding rather than lowering it arbitrarily.
+Batch is bounded by the logits tensor (`batch × 2048 × 151,936 × 4 B`, doubled by cross-entropy),
+not by parameter count, so every size lands on **batch 11 with `gradient_checkpointing: True`**
+(499M OOMs at batch 22; measured by `scripts/scratch/calibrate_scale_ladder_throughput.py`,
+checklist item 1.1). The 2026-08-01 smoke test confirmed the derived hyperparameters on the real
+pipeline: `gradient_accumulation_steps_unrounded` 15.687 → `math.ceil` → 16, world size 4,
+`target_num_training_tokens_total` = 20 × 499.06M, legacy-budget warning fired.
 
 ## Launching
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 0 of docs/ICLR_2027_CHECKLIST.md: measure the clean GSM8K capability floor
+# Phase 0 of docs/EXPERIMENT_CHECKLIST.md: measure the clean GSM8K capability floor
 # across every uncontaminated (R=0) checkpoint.
 #
 # 4-SHOT, deliberately. The first version of this script ran 0-shot and was wrong:

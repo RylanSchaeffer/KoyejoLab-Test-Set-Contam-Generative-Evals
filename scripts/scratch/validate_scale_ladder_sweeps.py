@@ -5,7 +5,7 @@ runs that do not belong on the published ladder:
 
   1. The YAML parses.
   2. `program` is the v1 script (the v2 script KeyErrors on these files, and its
-     optimizer differs on five axes -- see D4 in docs/ICLR_2027_CHECKLIST.md).
+     optimizer differs on five axes -- see D4 in docs/EXPERIMENT_CHECKLIST.md).
   3. `train_test_split_seed` is present (src/data.py reads it unguarded; the
      published v1 YAMLs predate the key and die immediately without it).
   4. The v1 optimizer keys are present and the v2 ones are absent.

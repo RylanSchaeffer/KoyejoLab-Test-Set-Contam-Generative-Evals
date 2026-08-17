@@ -1,6 +1,6 @@
 """Summarize Phase 0 GSM8K evaluation runs from W&B into a per-checkpoint table.
 
-Phase 0 of docs/ICLR_2027_CHECKLIST.md measures the clean (uncontaminated) GSM8K
+Phase 0 of docs/EXPERIMENT_CHECKLIST.md measures the clean (uncontaminated) GSM8K
 capability floor. The eval scripts log per-problem history only and never an
 aggregate, so accuracy has to be computed here by averaging `math_verify_score`
 over each run's history.

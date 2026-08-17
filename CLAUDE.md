@@ -9,26 +9,23 @@ Research project investigating how test set contamination (data leakage) affects
 
 ## Read These First
 
-Active work is the **NeurIPS 2026 rebuttal (submission 32216)**. Start with:
+Active work (since 2026-08-17) is **extending the pretraining runs to strengthen the paper** — the
+ICLR 2027 window has passed and there is no venue deadline. Start with:
 
-- **`reviews/2026_neurips/SESSION_HANDOFF_2026-07-30.md`** — ⭐ **start here.** What to do, in
-  order, plus the environment gotchas and the judgement calls open to revision.
-- **`reviews/2026_neurips/VERIFICATION_HANDOFF.md`** — what is least verified, ranked, with the
-  method to falsify each claim. Check `reviews/2026_neurips/verification/` for agent reports.
-- **`reviews/2026_neurips/HANDOFF.md`** — state at the end of the 2026-07-30 overnight run, and
-  every correction the manuscript needs.
-- **`reviews/2026_neurips/REBUTTAL_DRAFT.md`** — paste-ready per-reviewer responses.
-- **`reviews/2026_neurips/REBUTTAL_EVIDENCE.md`** — each reviewer criticism mapped to the number
-  that answers it.
+- **`docs/EXPERIMENT_CHECKLIST.md`** — ⭐ **start here.** The execution checklist: what is running,
+  what is decided, what is gated. The 499M Qwen3 MATH ladder (W&B sweep `sja2bewl`) has been
+  training since 2026-08-17.
+- **`docs/EXPERIMENT_ROADMAP.md`** — the rationale and decision log of options already considered
+  and rejected. The checklist is newer and wins where they disagree.
+- **`docs/PHASE0_GSM8K_CAPABILITY_FLOOR.md`** — the clean GSM8K capability floor is **zero** (1
+  credited response in 38,688, a verified truncation artifact). GSM8K work is replication, not a
+  capability study.
 - **`reviews/2026_neurips/PROTOCOL_CONFOUND.md`** — ⚠️ **read before quoting any Math Verify
   number.** The same checkpoint scores 1.0000 at 0-shot and 0.0052 at 4-shot; Fig. 1 is 0-shot
   while Table 1 and the SFT figures are 4-shot.
-- **`docs/ICLR_2027_ROADMAP.md`** — the post-decision experiment plan, tiered by priority, with a
-  decision log of options already considered and rejected. Internal planning only: the rebuttal
-  deliberately makes **no commitments to future experiments**, and none may be added to it.
 
-All rebuttal work was merged to `main` on 2026-07-30 (the `rebuttal/neurips-2026-protocol-and-evidence`
-branch that older handoffs mention is deleted).
+The NeurIPS 2026 rebuttal (submission 32216) is submitted and awaiting decision; its materials
+live in `reviews/2026_neurips/` (all merged to `main` 2026-07-30).
 
 Before searching the repo to find out whether an experiment exists, read:
 
