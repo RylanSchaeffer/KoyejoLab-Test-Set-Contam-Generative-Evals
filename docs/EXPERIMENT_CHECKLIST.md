@@ -267,10 +267,15 @@ rename. Reproducing or extending those two published points requires restoring t
 **~1.3 days per dose, ~7 days total**, plus per-run dataset-construction overhead.
 
 On sizing: 344M → 499M is a **1.45× step, the smallest ratio anywhere in the published ladder**
-(34→62 is 1.85×, 153→344 is 2.25×), so it is the conservative extension. There is no on-grid size
-between them — Qwen3's depth/width formula (`src/models.py:21`) jumps (14, 576) → (18, 704) — and
-an off-grid ~450M would break the architecture family for no gain (question raised and settled
-with Rylan 2026-08-17).
+(34→62 is 1.85×, 153→344 is 2.25×), so it is the conservative extension. A valid on-grid
+intermediate **does** exist — verified by CPU instantiation 2026-08-18: **(16 layers, 640 wide) =
+417.3M total**, following the same construction (width = 64×10, head_dim 128, same
+intermediate-size formula), and sitting at almost exactly the geometric midpoint
+(√(344.3 × 499.4) = 414.7M). The size table in `src/models.py:21` merely lacks the entry;
+(15, 608) = 383M and (17, 672) = 453M are likewise well-formed. **Decision: not run now** —
+range (499M, then 1.44B) beats density for the scaling fits — but 417M is the designated
+fallback if the 499M results look anomalous between 344M and 499M; revisit at the post-GSM8K
+gate.
 
 `src/models.py` already parameterizes every size we need — `499M (18, 704)`, `660M (21, 832)`,
 `934M (25, 1010)`, `1.44B (31, 1260)`. No new architecture code. Note the real config names are
