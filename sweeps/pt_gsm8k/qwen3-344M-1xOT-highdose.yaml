@@ -1,0 +1,119 @@
+# Qwen3-344M GSM8K EXTRA-HIGH dose arm: R=10000, OPTIONAL (Phase 3.2 of
+# docs/EXPERIMENT_CHECKLIST.md). NOT YET LAUNCHED; run only if the core grid in
+# qwen3-344M-1xOT.yaml finishes and the dose-response is worth extending past
+# the published MATH ceiling of R=3162. Affordable only because GSM8K's
+# contaminant is 0.15x MATH's: R=10000 is 2.27B contaminant tokens, 33% of the
+# 6.88B-token epoch (and it inflates realized total tokens accordingly -- the
+# dose-compute confound is at its largest here; say so wherever it is plotted).
+# Requires PRETRAIN_LEGACY_TOKEN_BUDGET=1 in the agent's environment.
+#
+# Recipe: v1. The published 344M MATH runs (math_144gb_1xOT: world size 2,
+# batch 40, gradient_checkpointing False) ran on skampere2's H200-141GB; batch
+# 40 does not fit an A100-80GB, so this config keeps the published world size
+# (2) and adopts the A100-validated batch 11 + gradient_checkpointing True from
+# the 499M ladder (checklist 1.1; checkpointing only recomputes activations, so
+# comparability is unaffected). grad-accum lands at 28.44 -> ceil 29, +2.0%
+# effective-batch overshoot -- the same +2% the running 499M ladder carries.
+command:
+  - ${env}
+  - torchrun
+  - --standalone
+  - --nproc_per_node=2
+  - ${program}
+  - ${args}
+program: scripts/pretrain_language_model_v1.py
+entity: rylan
+project: memorization-scoring-vs-sampling-pt-gsm8k
+method: grid
+parameters:
+  data_config:
+    parameters:
+      corpus:
+        values: ["fineweb-edu-dedup"]
+      benchmark:
+        values: [ "madrylab/gsm8k-platinum" ]
+      benchmark_subset_fraction:
+        values: [ 1.0 ]
+      benchmark_shuffle_seed:
+        values: [ 0 ]
+      # The optional extra-high dose: past the published MATH ceiling (3162),
+      # affordable only on GSM8K (227,396 tokens/replica). 344M-only; at 34M
+      # any R > 2990 fails the per-epoch budget check.
+      num_benchmark_replicas_per_epoch:
+        values: [10000]
+      shuffle_seed:
+        values: [0]
+      # Absent from the published v1 YAMLs, which predate the key.
+      # src/data.py (create_dataset_for_pretraining) reads it unguarded, so
+      # omitting it is an immediate KeyError.
+      train_test_split_seed:
+        values: [ 0 ]
+  model_config:
+    parameters:
+      attn_implementation:
+        values: [ "flash_attention_2" ]
+      model_name:
+        values: [ "Qwen3/Qwen3-344M" ]
+      torch_dtype:
+        values: [ "bfloat16" ]
+  trainer_config:
+    parameters:
+      data_seed:
+        values: [ 0 ]
+      dataloader_drop_last:
+        values: [ True ]
+      dataloader_num_workers:
+        values: [ 4 ]
+      dataloader_prefetch_factor:
+        values: [ 4 ]
+      eval_on_start:
+        values: [ True ]
+      eval_strategy:
+        values: [ steps ]
+      # 1000, matching the published 344M rows (the 144gb template).
+      eval_steps:
+        values: [ 1000 ]
+      # Required to fit A100-80GB (checklist 1.1: the batch bound is the logits
+      # tensor, not parameter count). Mathematically identical to False.
+      gradient_checkpointing:
+        values: [ True ]
+      hub_strategy:
+        values: ["end"]
+      base_learning_rate:
+        values: [ 0.000001 ]
+      logging_steps:
+        values: [ 1 ]
+      lr_scheduler_type:
+        values: [ "cosine" ]
+      max_grad_norm:
+        values: [ 1.0 ]
+      max_length:
+        values: [ 2048 ]
+      max_steps:
+        values: [ -1 ]
+      num_train_epochs:
+        values: [ 1 ]
+      optim:
+        values: [ "adamw_torch_fused" ]
+      overtrain_multiplier:
+        values: [ 1.0 ]
+      per_device_eval_batch_size:
+        values: [ 12 ]
+      per_device_train_batch_size:
+        values: [ 11 ]
+      remove_unused_columns:
+        values: [ True ]
+      report_to:
+        values: ["wandb"]
+      save_strategy:
+        values: [ "no" ]
+      save_total_limit:
+        values: [ 1 ]
+      torch_compile:
+        values: [ True ]
+      warmup_steps:
+        values: [ 250 ]
+      weight_decay:
+        values: [ 0.0 ]
+  seed:
+    values: [0]
