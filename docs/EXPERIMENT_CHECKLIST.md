@@ -201,8 +201,12 @@ in repo prose.
 The published checkpoints were produced by the **pre-`934546a` (v1) script**, not the current one.
 The sole surviving copy of their configs
 (`notebooks/10_*/data/c39ba9b5..._runs_configs.csv`, 225 rows) shows `warmup_steps: 250`,
-`weight_decay: 0`, `logging_steps: 1`, and **no** `adam_beta1`/`adam_beta2`/`warmup_ratio`/
-`full_determinism` in any row. Commit `934546a` (2026-01-19) introduced all four. So the current
+`weight_decay: 0`, `logging_steps: 1`, and `adam_beta1`/`adam_beta2`/`warmup_ratio`/
+`full_determinism` at the **v1 defaults** (0.9 / 0.999 / 0.0 / False) in every row — the columns
+exist because HF's wandb integration flattens all of `TrainingArguments`, but none was ever set.
+(An earlier version of this paragraph said the columns were absent; re-verified 2026-08-17
+against the CSV — they are present with default values, which supports the same conclusion.)
+Commit `934546a` (2026-01-19) made all four explicit with new values. So the current
 `scripts/pretrain_language_model.py` diverges from the published runs on **five** independent axes:
 
 | Axis | Published (v1) | Current (v2) |
@@ -229,7 +233,7 @@ Two further traps found in the same pass:
 1. Script: **`scripts/pretrain_language_model_v1.py`**.
 2. Template: copy from **`sweeps/dose_response/pretrain/math_144gb_1xOT/`**, not `sweeps/pt/` and
    not `sweeps/pt_v2/`.
-3. Add **`train_test_split_seed: values: [0]`** — mandatory. `src/data.py:367` reads it
+3. Add **`train_test_split_seed: values: [0]`** — mandatory. `src/data.py (create_dataset_for_pretraining)` reads it
    unguarded and the v1 YAMLs predate it, so every v1 sweep currently dies with a `KeyError`.
 4. Env: `PRETRAIN_LEGACY_TOKEN_BUDGET=1`, plus a correct `HF_TOKEN` (see the blocker below).
 5. W&B project: a **new** name (e.g. `...-pt-v1-scale-ladder`). The published project

@@ -698,6 +698,8 @@ def create_dataset_for_supervised_finetuning(
         dataset_name: Dataset identifier. Supported values:
             - "EleutherAI/minerva_math": Hendrycks MATH benchmark
             - "madrylab/gsm8k-platinum": GSM8K Platinum dataset
+            - "google-research-datasets/mbpp": sanitized MBPP (code contaminant)
+            - "RylanSchaeffer/math_rephrased" / "math_perturbed": MATH variants
         max_length: Optional maximum sequence length filter. Examples exceeding
             this length are removed.
         remove_columns: If True, remove all columns except input_ids and
@@ -722,6 +724,17 @@ def create_dataset_for_supervised_finetuning(
         raw_datasets = load_dataset_gsm8k_platinum()
         preprocess_fn = preprocess_madrylab_gsm8k_platinum_for_sft
         doc_to_text = GSM8K_PLATINUM_DOC_TO_TEXT
+    elif dataset_name == "google-research-datasets/mbpp":
+        # MBPP as a pretraining contaminant (Phase 4, decision D3 in
+        # docs/EXPERIMENT_CHECKLIST.md). The sanitized test split (257 problems) is
+        # what `split_to_train_on="test"` injects, mirroring how MATH/GSM8K inject
+        # their test splits. The injected text is MBPP_DOC_TO_TEXT over the
+        # asserts-folded problem and the reference code -- byte-identical up to
+        # "[BEGIN]" with the eval prompt (tests/test_mbpp_code_eval.py asserts the
+        # template identity; tests/test_mbpp_injection.py asserts this path uses it).
+        raw_datasets = load_dataset_mbpp_sanitized()
+        preprocess_fn = preprocess_mbpp_for_sft
+        doc_to_text = MBPP_DOC_TO_TEXT
     elif dataset_name in {
         "RylanSchaeffer/math_rephrased",
         "RylanSchaeffer/math_perturbed",
@@ -907,7 +920,7 @@ def load_dataset_mbpp_sanitized() -> DatasetDict:
 
     MBPP (Austin et al. 2021, CC-BY-4.0) is 974 entry-level Python problems;
     the `sanitized` configuration is the 427-problem subset the authors
-    hand-verified. Chosen per decision D3 in docs/ICLR_2027_CHECKLIST.md as the
+    hand-verified. Chosen per decision D3 in docs/EXPERIMENT_CHECKLIST.md as the
     coding contamination substrate.
 
     Returns:
@@ -1018,6 +1031,59 @@ def preprocess_madrylab_gsm8k_platinum_for_sft(
         )
         tokenized_input = tokenizer(text)
         # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
+        if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
+            # Replace the last token to ensure the sequence ends with EOS
+            tokenized_input["input_ids"][-1] = tokenizer.eos_token_id
+        new_examples["text"].append(text)
+        new_examples["input_ids"].append(tokenized_input["input_ids"])
+        new_examples["attention_mask"].append(tokenized_input["attention_mask"])
+        new_examples["token_length"].append(len(tokenized_input["input_ids"]))
+
+    return new_examples
+
+
+def preprocess_mbpp_for_sft(
+    examples: Dict[str, Any],
+    tokenizer: PreTrainedTokenizer,
+    doc_to_text: str,
+) -> Dict[str, List[Any]]:
+    """Preprocess sanitized MBPP examples for SFT / contamination injection.
+
+    Mirrors `preprocess_madrylab_gsm8k_platinum_for_sft`. The question is the
+    task description with its test asserts folded in (`mbpp_problem_text`, same
+    normalization as `load_dataset_mbpp_for_eval`), and the answer is the
+    reference code closed by the "\\n[DONE]" sentinel -- the convention
+    MBPP_FEWSHOT_EXAMPLES demonstrate and `extract_python_code` cuts at. The
+    resulting document therefore starts with exactly the 0-shot eval prompt
+    (everything up to "[BEGIN]"), which is the property the whole 0-shot
+    memorization signal depends on.
+
+    Args:
+        examples: Batch of examples with "prompt", "code", and "test_list" fields.
+        tokenizer: HuggingFace tokenizer.
+        doc_to_text: Format string template (should contain {question} and {answer}).
+
+    Returns:
+        Dictionary with tokenized fields: text, input_ids, attention_mask, token_length.
+    """
+    new_examples: Dict[str, List[Any]] = {
+        "text": [],
+        "input_ids": [],
+        "attention_mask": [],
+        "token_length": [],
+    }
+
+    for prompt, code, test_list in zip(
+        examples["prompt"], examples["code"], examples["test_list"]
+    ):
+        question = mbpp_problem_text(prompt, test_list)
+        answer = code + "\n[DONE]"
+        # Make certain we end on EOS. See: https://arxiv.org/abs/2403.17031
+        text = (
+            doc_to_text.format(question=question, answer=answer) + tokenizer.eos_token
+        )
+        tokenized_input = tokenizer(text)
+        # Make sure we end on an EOS token ID.
         if tokenized_input["input_ids"][-1] != tokenizer.eos_token_id:
             # Replace the last token to ensure the sequence ends with EOS
             tokenized_input["input_ids"][-1] = tokenizer.eos_token_id

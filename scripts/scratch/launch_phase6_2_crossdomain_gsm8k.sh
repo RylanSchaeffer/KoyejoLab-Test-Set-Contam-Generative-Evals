@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 6.2 of docs/ICLR_2027_CHECKLIST.md: cross-domain transfer.
+# Phase 6.2 of docs/EXPERIMENT_CHECKLIST.md: cross-domain transfer.
 # MATH-contaminated checkpoints (ot=1 ladder, all replica levels incl. R=0)
 # evaluated on GSM8K.
 #

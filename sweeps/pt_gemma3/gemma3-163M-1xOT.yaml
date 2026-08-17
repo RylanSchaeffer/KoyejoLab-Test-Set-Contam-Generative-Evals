@@ -1,4 +1,4 @@
-# Gemma3-163M contamination ladder (ICLR 2027 Phase 5). See README.md in this directory.
+# Gemma3-163M contamination ladder (Phase 5). See README.md in this directory.
 # NOT YET LAUNCHED. Requires PRETRAIN_LEGACY_TOKEN_BUDGET=1 in the agent's environment,
 # and an HF token that has accepted the Gemma license (the tokenizer repo is gated).
 command:
@@ -27,7 +27,7 @@ parameters:
         values: [0, 1, 10, 100, 316]
       shuffle_seed:
         values: [0]
-      # Absent from the published v1 YAMLs, which predate the key. src/data.py:367
+      # Absent from the published v1 YAMLs, which predate the key. src/data.py (create_dataset_for_pretraining)
       # reads it unguarded, so omitting it is an immediate KeyError.
       train_test_split_seed:
         values: [ 0 ]

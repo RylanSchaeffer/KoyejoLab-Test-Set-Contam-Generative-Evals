@@ -1,6 +1,6 @@
 """Tests for the from-scratch Gemma 3 dense model construction in src.models.
 
-ICLR 2027 Phase 5 (decision D2 in docs/ICLR_2027_CHECKLIST.md). Verifies:
+Phase 5 (decision D2 in docs/EXPERIMENT_CHECKLIST.md). Verifies:
   1. The size table carries Google's own small-Gemma-3 architecture constants
      (verified 2026-08-17 against the shipped gemma-3-270m / gemma-3-1b-pt configs).
   2. `create_causalm_for_pretraining` builds a Gemma3 text model with the right

@@ -1,16 +1,22 @@
-# Gemma3-268M contamination ladder (Phase 5). See README.md in this directory.
-# NOT YET LAUNCHED. Requires PRETRAIN_LEGACY_TOKEN_BUDGET=1 in the agent's environment,
-# and an HF token that has accepted the Gemma license (the tokenizer repo is gated).
+# Qwen3-34M MBPP contamination ladder (Phase 4.2 of docs/EXPERIMENT_CHECKLIST.md).
+# GATED and NOT LAUNCHED: Phase 4 runs only after the post-GSM8K decision gate.
+# See README.md in this directory.
+# Requires PRETRAIN_LEGACY_TOKEN_BUDGET=1 in the agent's environment.
+#
+# Recipe: v1, matching the published 34M MATH runs field-for-field (run-config
+# cache notebooks/10_*/data/c39ba9b5*, 12 rows: world size 1, batch 42,
+# gradient_checkpointing False, eval_steps 2000, dataloader_num_workers 8).
+# Only the benchmark and the W&B project differ.
 command:
   - ${env}
   - torchrun
   - --standalone
-  - --nproc_per_node=4
+  - --nproc_per_node=1
   - ${program}
   - ${args}
 program: scripts/pretrain_language_model_v1.py
 entity: rylan
-project: memorization-scoring-vs-sampling-pt-gemma3
+project: memorization-scoring-vs-sampling-pt-mbpp
 method: grid
 parameters:
   data_config:
@@ -18,26 +24,30 @@ parameters:
       corpus:
         values: ["fineweb-edu-dedup"]
       benchmark:
-        values: [ "EleutherAI/minerva_math" ]
+        values: [ "google-research-datasets/mbpp" ]
       benchmark_subset_fraction:
         values: [ 1.0 ]
       benchmark_shuffle_seed:
         values: [ 0 ]
+      # Full published MATH dose grid (checklist 4.2: doses matched to MATH).
+      # MBPP's contaminant is tiny -- 47,343 tokens/replica (257 sanitized test
+      # problems; 0.03x MATH) -- so even R=3162 is 150M tokens, 22% of 34M's
+      # 680M-token epoch, and every dose clears the budget check.
       num_benchmark_replicas_per_epoch:
-        values: [0, 1, 10, 100, 316]
+        values: [0, 1, 3, 10, 32, 100, 316, 1000, 3162]
       shuffle_seed:
         values: [0]
-      # Absent from the published v1 YAMLs, which predate the key. src/data.py (create_dataset_for_pretraining)
-      # reads it unguarded, so omitting it is an immediate KeyError.
+      # Absent from the published v1 YAMLs, which predate the key.
+      # src/data.py (create_dataset_for_pretraining) reads it unguarded, so
+      # omitting it is an immediate KeyError.
       train_test_split_seed:
         values: [ 0 ]
   model_config:
     parameters:
-      # Gemma 3 removed Gemma 2's logit soft-capping, so flash_attention_2 is safe.
       attn_implementation:
         values: [ "flash_attention_2" ]
       model_name:
-        values: [ "Gemma3/Gemma3-268M" ]
+        values: [ "Qwen3/Qwen3-34M" ]
       torch_dtype:
         values: [ "bfloat16" ]
   trainer_config:
@@ -46,8 +56,9 @@ parameters:
         values: [ 0 ]
       dataloader_drop_last:
         values: [ True ]
+      # 8, not the 344M template's 4: the published 34M rows all recorded 8.
       dataloader_num_workers:
-        values: [ 4 ]
+        values: [ 8 ]
       dataloader_prefetch_factor:
         values: [ 4 ]
       eval_on_start:
@@ -56,11 +67,13 @@ parameters:
         values: [ steps ]
       eval_steps:
         values: [ 2000 ]
-      # Required on A100-80GB for the larger sizes; kept True across the whole
-      # Gemma arm for uniformity. Mathematically identical to False -- it only
-      # recomputes activations -- so it does not affect comparability.
+      # False, matching the published 34M rows. The A100 batch calibration
+      # (checklist 1.1) is a logits-tensor bound; at batch 42 the published 34M
+      # runs fit the 82gb (A100) machine with torch_compile's chunked loss, so
+      # the published values are reused verbatim. If a relaunch OOMs, fall back
+      # to batch 11 + gradient_checkpointing True and document the delta.
       gradient_checkpointing:
-        values: [ True ]
+        values: [ False ]
       hub_strategy:
         values: ["end"]
       base_learning_rate:
@@ -81,14 +94,10 @@ parameters:
         values: [ "adamw_torch_fused" ]
       overtrain_multiplier:
         values: [ 1.0 ]
-      # ⚠️ UNVALIDATED (see README). Gemma 3's 262,144 vocabulary makes the logits
-      # tensor 1.73x Qwen3's per sequence (~2.15 GB at batch 1, doubled by
-      # cross-entropy), and the Qwen3 ladder was already logits-bound at batch 11.
-      # 6 is the scaled-down estimate; calibrate before any full launch.
       per_device_eval_batch_size:
-        values: [ 8 ]
+        values: [ 42 ]
       per_device_train_batch_size:
-        values: [ 6 ]
+        values: [ 42 ]
       remove_unused_columns:
         values: [ True ]
       report_to:
