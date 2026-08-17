@@ -59,6 +59,7 @@ from vllm import LLM, SamplingParams, RequestOutput
 from vllm.distributed.parallel_state import destroy_model_parallel
 import wandb
 
+import src.code_eval
 import src.data
 import src.globals
 import src.scoring
@@ -101,6 +102,11 @@ def load_eval_dataset(dataset_name: str, prompt_style: str = "native"):
             else src.data.GSM8K_PLATINUM_DOC_TO_TEXT_EVAL
         )
         return raw_datasets["test"], doc_to_text
+    elif dataset_name == "google-research-datasets/mbpp":
+        # Sanitized (hand-verified) config; `problem` folds the task text with
+        # its test asserts, `test_list`/`test_imports` are kept for scoring.
+        raw_datasets = src.data.load_dataset_mbpp_for_eval()
+        return raw_datasets["test"], src.data.MBPP_DOC_TO_TEXT_EVAL
     else:
         raise NotImplementedError(dataset_name)
     return raw_datasets["test"], src.data.MINERVA_MATH_DOC_TO_TEXT
@@ -113,6 +119,17 @@ def is_gsm8k(dataset_name: str) -> bool:
     cannot supply a gold and the boxed-required scorer would return 0.0 uniformly.
     """
     return dataset_name == "madrylab/gsm8k-platinum"
+
+
+def is_mbpp(dataset_name: str) -> bool:
+    """Whether `dataset_name` is scored by executing code against test asserts.
+
+    MBPP has no gold *answer* to compare against at all -- correctness is
+    defined by the `test_list` asserts passing in the sandbox
+    (src.code_eval), so neither math_verify nor the GSM8K numeric scorer
+    applies.
+    """
+    return dataset_name == "google-research-datasets/mbpp"
 
 
 def fetch_completed_pairs(group: str) -> Set[Tuple[str, float]]:
@@ -179,7 +196,20 @@ def score_and_log(
         log_probs_per_problem_response.append(log_probs_per_token)
 
     solutions = test_dataset["solution"]
-    if is_gsm8k(dataset_name):
+    if is_mbpp(dataset_name):
+        results = [
+            src.code_eval.score_mbpp_response(
+                response_text=response,
+                test_list=test_list,
+                test_imports=test_imports,
+            )
+            for response, test_list, test_imports in zip(
+                problem_responses,
+                test_dataset["test_list"],
+                test_dataset["test_imports"],
+            )
+        ]
+    elif is_gsm8k(dataset_name):
         gold_answers = [
             src.scoring.extract_gsm8k_gold_answer(solution) for solution in solutions
         ]
@@ -401,9 +431,11 @@ def main() -> None:
         "--num-fewshot",
         type=int,
         default=4,
-        choices=[0, 4],
-        help="0 for the bare 'Problem/Solution:' prompt, 4 for the few-shot prefix. These "
-        "measure very different things on contaminated checkpoints; see module docstring.",
+        choices=[0, 3, 4],
+        help="0 for the bare prompt, 4 for the math few-shot prefix, 3 for MBPP "
+        "(its convention per Austin et al.; only 3 designated examples are "
+        "hardcoded). These measure very different things on contaminated "
+        "checkpoints; see module docstring.",
     )
     parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--seed", type=int, default=0)
@@ -471,6 +503,13 @@ def main() -> None:
         # would teach the wrong format and the wrong task at once.
         fewshot_prefix = src.data.build_fewshot_prefix(
             fewshot_examples=src.data.GSM8K_FEWSHOT_EXAMPLES[: args.num_fewshot],
+            doc_to_text=doc_to_text,
+        )
+    elif is_mbpp(args.dataset):
+        # MBPP's own designated demonstrations (the sanitized `prompt` split,
+        # 3-shot per Austin et al.), never the MATH examples.
+        fewshot_prefix = src.data.build_fewshot_prefix(
+            fewshot_examples=src.data.MBPP_FEWSHOT_EXAMPLES[: args.num_fewshot],
             doc_to_text=doc_to_text,
         )
     else:

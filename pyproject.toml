@@ -36,3 +36,8 @@ dev = [
 
 [tool.setuptools]
 packages = ["src"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: tests that download datasets or instantiate full model ladders",
+]

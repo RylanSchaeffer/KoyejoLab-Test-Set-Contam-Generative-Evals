@@ -1,0 +1,107 @@
+# Gemma3-497M contamination ladder (ICLR 2027 Phase 5). See README.md in this directory.
+# NOT YET LAUNCHED. Requires PRETRAIN_LEGACY_TOKEN_BUDGET=1 in the agent's environment,
+# and an HF token that has accepted the Gemma license (the tokenizer repo is gated).
+command:
+  - ${env}
+  - torchrun
+  - --standalone
+  - --nproc_per_node=4
+  - ${program}
+  - ${args}
+program: scripts/pretrain_language_model_v1.py
+entity: rylan
+project: memorization-scoring-vs-sampling-pt-gemma3
+method: grid
+parameters:
+  data_config:
+    parameters:
+      corpus:
+        values: ["fineweb-edu-dedup"]
+      benchmark:
+        values: [ "EleutherAI/minerva_math" ]
+      benchmark_subset_fraction:
+        values: [ 1.0 ]
+      benchmark_shuffle_seed:
+        values: [ 0 ]
+      num_benchmark_replicas_per_epoch:
+        values: [0, 1, 10, 100, 316]
+      shuffle_seed:
+        values: [0]
+      # Absent from the published v1 YAMLs, which predate the key. src/data.py:367
+      # reads it unguarded, so omitting it is an immediate KeyError.
+      train_test_split_seed:
+        values: [ 0 ]
+  model_config:
+    parameters:
+      # Gemma 3 removed Gemma 2's logit soft-capping, so flash_attention_2 is safe.
+      attn_implementation:
+        values: [ "flash_attention_2" ]
+      model_name:
+        values: [ "Gemma3/Gemma3-497M" ]
+      torch_dtype:
+        values: [ "bfloat16" ]
+  trainer_config:
+    parameters:
+      data_seed:
+        values: [ 0 ]
+      dataloader_drop_last:
+        values: [ True ]
+      dataloader_num_workers:
+        values: [ 4 ]
+      dataloader_prefetch_factor:
+        values: [ 4 ]
+      eval_on_start:
+        values: [ True ]
+      eval_strategy:
+        values: [ steps ]
+      eval_steps:
+        values: [ 2000 ]
+      # Required on A100-80GB for the larger sizes; kept True across the whole
+      # Gemma arm for uniformity. Mathematically identical to False -- it only
+      # recomputes activations -- so it does not affect comparability.
+      gradient_checkpointing:
+        values: [ True ]
+      hub_strategy:
+        values: ["end"]
+      base_learning_rate:
+        values: [ 0.000001 ]
+      logging_steps:
+        values: [ 1 ]
+      lr_scheduler_type:
+        values: [ "cosine" ]
+      max_grad_norm:
+        values: [ 1.0 ]
+      max_length:
+        values: [ 2048 ]
+      max_steps:
+        values: [ -1 ]
+      num_train_epochs:
+        values: [ 1 ]
+      optim:
+        values: [ "adamw_torch_fused" ]
+      overtrain_multiplier:
+        values: [ 1.0 ]
+      # ⚠️ UNVALIDATED (see README). Gemma 3's 262,144 vocabulary makes the logits
+      # tensor 1.73x Qwen3's per sequence (~2.15 GB at batch 1, doubled by
+      # cross-entropy), and the Qwen3 ladder was already logits-bound at batch 11.
+      # 6 is the scaled-down estimate; calibrate before any full launch.
+      per_device_eval_batch_size:
+        values: [ 8 ]
+      per_device_train_batch_size:
+        values: [ 6 ]
+      remove_unused_columns:
+        values: [ True ]
+      report_to:
+        values: ["wandb"]
+      save_strategy:
+        values: [ "no" ]
+      save_total_limit:
+        values: [ 1 ]
+      torch_compile:
+        values: [ True ]
+      warmup_steps:
+        values: [ 250 ]
+      weight_decay:
+        values: [ 0.0 ]
+  seed:
+    values: [0]

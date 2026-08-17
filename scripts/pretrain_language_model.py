@@ -130,6 +130,25 @@ def pretrain():
         ):
             tokenizer.add_special_tokens({"pad_token": "<|pad|>"})
 
+    elif wandb_config["model_config"]["model_name"].startswith("Gemma3/Gemma3-"):
+        # Gemma 3's own tokenizer (262,144 SentencePiece vocab). The 270m repo is
+        # the smallest host of it; the tokenizer is identical across Gemma 3 sizes.
+        # ⚠️ google/gemma-* repos are gated: the active HF token must have accepted
+        # the Gemma license, or this raises a 403 before training starts.
+        tokenizer = AutoTokenizer.from_pretrained(
+            "google/gemma-3-270m",
+            use_fast=True,
+            trust_remote_code=True,
+        )
+        tokenizer.model_max_length = wandb_config["trainer_config"]["max_length"]
+        # Gemma ships a distinct <pad> token (id 0), so unlike Qwen3 no pad token
+        # needs to be added -- but keep the same guard in case that ever changes.
+        if (
+            tokenizer.pad_token_id is None
+            or tokenizer.pad_token_id == tokenizer.eos_token_id
+        ):
+            tokenizer.add_special_tokens({"pad_token": "<|pad|>"})
+
     else:
         raise NotImplementedError
 
