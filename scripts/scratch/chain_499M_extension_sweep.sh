@@ -24,7 +24,7 @@ export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 export HF_TOKEN="$(cat /lfs/skampere1/0/rschaef/.hf_token)"
 export PRETRAIN_LEGACY_TOKEN_BUDGET=1
 export CUDA_DEVICE_ORDER=PCI_BUS_ID
-export CUDA_VISIBLE_DEVICES=0,1,2,7
+export CUDA_VISIBLE_DEVICES="${GPUS:-0,1,2,7}"
 
 exec wandb agent rylan/memorization-scoring-vs-sampling-pt-v1-scale-ladder/dj21lgk3 \
     >> "$REPO/logs/agent_499M_ladder_dj21lgk3.log" 2>&1

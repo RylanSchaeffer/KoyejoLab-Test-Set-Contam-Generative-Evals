@@ -808,9 +808,27 @@ def load_dataset_hendrycks_math() -> DatasetDict:
     # Note: Hendrycks MATH is the dataset we will use, but for training and scoring, we will use Minerva MATH.
     # This is because the Hendrycks MATH evaluation code is borked.
     # See: https://github.com/EleutherAI/lm-evaluation-harness/issues/3210
-    raw_datasets_list = [
-        load_dataset("EleutherAI/hendrycks_math", subset) for subset in subsets
-    ]
+    #
+    # Both upstream sources died by 2026-08-17 (the EleutherAI/hendrycks_math Hub
+    # repo is gone and its loader's MATH.tar URL 403s), so the committed copy in
+    # data/hendrycks_math/ -- rescued from the exact arrow files the published
+    # runs memory-mapped; see scripts/rescue_hendrycks_math_from_shared_cache.py
+    # -- is the primary source. The Hub path remains only as a fallback for
+    # checkouts that predate the rescue. Subset order must not change: the
+    # published runs concatenated in this order before the seeded shuffle.
+    local_math_root = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "data",
+        "hendrycks_math",
+    )
+    if os.path.isdir(local_math_root):
+        raw_datasets_list = [
+            load_from_disk(os.path.join(local_math_root, subset)) for subset in subsets
+        ]
+    else:
+        raw_datasets_list = [
+            load_dataset("EleutherAI/hendrycks_math", subset) for subset in subsets
+        ]
     raw_datasets = DatasetDict(
         {
             "train": concatenate_datasets([d["train"] for d in raw_datasets_list]),

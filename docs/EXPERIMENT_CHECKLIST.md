@@ -6,11 +6,26 @@ pretraining runs to make the paper as strong as it can be**. This is the executi
 ordered by run sequence; `docs/EXPERIMENT_ROADMAP.md` holds the rationale and the decision log of
 rejected options. Where the two disagree, this file is newer.
 
-**Status as of 2026-08-17:** D1–D4 all signed off. Phase 0 complete (clean GSM8K floor is zero).
-**Phase 1 is running**: the 499M ladder launched 2026-08-17 as W&B sweep
-`rylan/memorization-scoring-vs-sampling-pt-v1-scale-ladder/sja2bewl` on GPUs 0,1,2,7 of skampere1
-(GPUs 3–6 held by another user; only one 4-GPU slot exists). Hub identity verified
-`RylanSchaeffer` before launch; uploads enabled.
+**Status as of 2026-08-17 evening:** D1–D4 all signed off. Phase 0 complete (clean GSM8K floor is
+zero). **Phase 1 is READY TO RELAUNCH but paused for GPUs**: the first launch (sweep `sja2bewl`,
+2026-08-17) lost all three runs — R=0 to an OOM when user `srivats*` took GPU 7 mid-run (75 GB;
+`alexspan` holds GPUs 3–6, leaving only 0–2 free), R=1 to the dead MATH download below, R=10
+killed in the shutdown. Zero doses completed; `sja2bewl` is abandoned (failed grid entries cannot
+be re-run in place). **Relaunch with `bash scripts/launch_499M_ladder.sh`** once four GPUs are
+free — it preflights GPU availability, Hub identity, and the offline benchmark load, creates a
+fresh sweep, and arms the extension chain (`dj21lgk3`).
+
+⚠️ **`EleutherAI/hendrycks_math` is dead upstream as of 2026-08-17**: the Hub repo is gone and the
+fallback loader's `people.eecs.berkeley.edu/~hendrycks/MATH.tar` URL returns 403. Every
+pretraining run loads this benchmark, so this would have blocked all future MATH runs. Fixed
+permanently: the exact arrow files the published runs memory-mapped were rescued from the shared
+HF cache into **`data/hendrycks_math/` (committed, 9.6 MB, 7,500 train / 5,000 test verified)**
+via `scripts/rescue_hendrycks_math_from_shared_cache.py`, and `src/data.py` now prefers the local
+copy. Do not delete `data/hendrycks_math/` — there is no longer any upstream to re-fetch from.
+
+Per-run dataset caches (`cached_datasets/<model_name>/`, ~28 GB each at 499M): the v1 script
+already deletes them at successful run end; crashed runs leave theirs, and the launch script's
+policy is to reuse a complete leftover (identical config, saves ~1 h of tokenization).
 
 HuggingFace identity note: the shared `HF_HOME` trap is documented in `CLAUDE.md` ("Accounts and
 credentials") and `reviews/2026_neurips/HF_TOKEN_INCIDENT.md`. Rylan's token lives at
