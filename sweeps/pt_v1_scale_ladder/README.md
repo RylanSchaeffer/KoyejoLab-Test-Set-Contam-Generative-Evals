@@ -1,6 +1,14 @@
 # v1 scale-ladder sweeps (Phase 1: extending the MATH Qwen3 ladder)
 
-New Qwen3 sizes extending the **published** contamination ladder: 499M (running since 2026-08-17, sweep `sja2bewl`) and 1.44B (deferred until GPUs allow; decide at the post-GSM8K gate). 934M was dropped by decision 1.1a — its config was deleted with that decision.
+New Qwen3 sizes extending the **published** contamination ladder: **499M → 806M → 1.09B**
+(Rylan, 2026-08-18: parameter steps of 30–60%, not one quadratic jump — compute per run grows as
+N², so 499M→1.44B directly was a 8.3× compute leap with no intermediate signal). 499M is running
+(sweep `rx6km107` + chained extension `dj21lgk3`, full 9-dose grid); 806M carries 5 doses
+{0,1,10,100,316}; 1.09B carries the 3 anchor doses {0,100,316} and **caps the ladder** — 934M and
+1.44B are dropped and their configs deleted. ⚠️ Before launching 806M: recalibrate batch size
+**with `torch_compile` enabled** — the eager-mode calibration overstates memory ~2× (compiled
+steady state at 499M is ~32 GB against a predicted 65; Inductor fuses away the fp32 logits
+upcast), so batch 11 is safe but likely leaves 5–15% throughput on the table.
 
 These are deliberately **v1-style** configs. See D4 in `docs/EXPERIMENT_CHECKLIST.md` for the
 evidence; the short version is that the published 34M-344M checkpoints were produced by the
@@ -26,7 +34,7 @@ configs from `sweeps/pt/` — those files were rewritten in place by `934546a` �
 | `project: memorization-scoring-vs-sampling-pt-v1-scale-ladder` | The published project no longer resolves, so writing to its name would create an empty project. Never use `-pt-v2`: different optimizer. |
 | `nproc_per_node`, batch sizes | Retuned for A100-80GB (skampere1). The published 344M config was sized for skampere2's H200-141GB. |
 | `num_benchmark_replicas_per_epoch` | Full published 9-dose grid at 499M, split across two sweeps: `sja2bewl` {0,1,10,100,316} + `dj21lgk3` {3,32,1000,3162}. |
-| `eval_steps: 2000` (499M) / `6000` (1.44B) | The 144gb template says 1000; at the A100's smaller effective batch that would eval far more often per token. 2000 matches what the published 34M–153M runs used; 6000 keeps 1.44B's eval overhead proportionate. Eval cadence only — no effect on training. |
+| `eval_steps: 2000` (all sizes) | The 144gb template says 1000; at the A100's smaller effective batch that would eval far more often per token. 2000 matches what the published 34M–153M runs used. Eval cadence only — no effect on training. |
 | `per_device_eval_batch_size: 12` (≠ train 11) | Published runs set eval batch = train batch. Eval fits a slightly larger batch (no grads); throughput-only, no comparability effect. |
 | `gradient_checkpointing: True` | Published runs ran `False` on 141 GB H200s; measured OOM without it on A100-80GB (checklist 1.1). Mathematically identical — recompute only. |
 

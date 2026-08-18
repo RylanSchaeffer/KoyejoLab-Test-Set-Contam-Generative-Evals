@@ -325,10 +325,22 @@ batch, and all three need `gradient_checkpointing: True` (the published runs set
 was affordable on skampere2's 141 GB H200s but is not on an 80 GB A100). Checkpointing only
 recomputes activations, so it does not affect comparability.
 
-- [x] **1.1a RESOLVED (2026-08-17): 934M is dropped; 499M runs now; 1.44B is deferred** until the
-      GPU situation improves (with all eight GPUs it is ~12 days wall-clock on two slots; on the
-      current single slot it is ~29 days). Decide whether 1.44B is worth that at the post-GSM8K
-      decision gate, informed by whether the 499M points bend the scaling fits.
+- [x] **1.1a SUPERSEDED (2026-08-18) by Rylan's step-size rule: the ladder is 499M → 806M →
+      1.09B.** Compute per run grows as N² (tokens ∝ N at fixed tokens/parameter), so the old
+      plan's 499M→1.44B jump was an 8.3× compute leap with no intermediate signal; steps should
+      grow ~30–40%. The chosen rungs step 1.62× / 1.35× in parameters (2.6× / 1.8× in compute).
+      **934M and 1.44B are dropped and their configs deleted.** 806M carries 5 doses
+      {0,1,10,100,316} (~81 h/run → ~17 days); 1.09B carries {0,100,316} (~149 h/run → ~19 days).
+      Both sweeps exist and validate (`qwen3-806M-1xOT.yaml` grad-accum 17.80→18, +1.1%
+      overshoot); **neither is launched** — 806M queues behind the 499M extension, gated on the
+      compiled-batch recalibration below.
+- [ ] **1.1b Recalibrate batch size with `torch_compile` enabled before launching 806M.** The
+      1.1 calibration ran eager and overstates memory ~2×: the compiled 499M run sits at ~32 GB
+      steady state against a predicted 65 (Inductor fuses the fp32 logits upcast + cross-entropy,
+      never materializing the ~13.7 GB copies that dominated the eager peak; caught by Rylan
+      watching nvitop, 2026-08-17). Batch 11 is safe everywhere but leaves an estimated 5–15%
+      throughput unclaimed. Re-measure 806M/1.09B compiled, then re-pick batch to keep the
+      ceil-rounding overshoot ≤2%.
 - [x] **1.2 Dose grid: full published 9-dose grid at 499M** (Rylan, 2026-08-17). The initial
       sweep `sja2bewl` carries R ∈ {0, 1, 10, 100, 316}; the **extension sweep `dj21lgk3`**
       (`qwen3-499M-1xOT-extension.yaml`) restores {3, 32, 1000, 3162}, matching the published
