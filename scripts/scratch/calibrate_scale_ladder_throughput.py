@@ -18,6 +18,14 @@ Reports, per size:
 Runs on ONE GPU. Multi-GPU throughput is estimated by scaling, which is optimistic:
 DDP gradient all-reduce is not free. Treat projections as lower bounds on time.
 
+⚠️ MEMORY NUMBERS ARE EAGER-MODE AND OVERSTATE THE COMPILED RUN BY ~2x. This script
+does not apply torch_compile, but every real sweep sets torch_compile: True, and
+Inductor fuses the fp32 logits upcast + cross-entropy so the ~13.7 GB fp32 logits
+copies that dominate the eager peak are never materialized: the 499M run predicted
+at 64.7 GB peak reserved actually trains at ~32 GB steady state (observed 2026-08-17,
+caught by Rylan). Use eager numbers only as an upper bound / fits-at-all check; for
+batch-size tuning, measure with compile enabled (checklist item 1.1b).
+
 Usage:
     CUDA_VISIBLE_DEVICES=6 uv run python scripts/scratch/calibrate_scale_ladder_throughput.py
     CUDA_VISIBLE_DEVICES=6 uv run python scripts/scratch/calibrate_scale_ladder_throughput.py --sizes 499M
