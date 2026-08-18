@@ -6,14 +6,14 @@ pretraining runs to make the paper as strong as it can be**. This is the executi
 ordered by run sequence; `docs/EXPERIMENT_ROADMAP.md` holds the rationale and the decision log of
 rejected options. Where the two disagree, this file is newer.
 
-**Status as of 2026-08-17 evening:** D1–D4 all signed off. Phase 0 complete (clean GSM8K floor is
-zero). **Phase 1 is READY TO RELAUNCH but paused for GPUs**: the first launch (sweep `sja2bewl`,
-2026-08-17) lost all three runs — R=0 to an OOM when user `srivats*` took GPU 7 mid-run (75 GB;
-`alexspan` holds GPUs 3–6, leaving only 0–2 free), R=1 to the dead MATH download below, R=10
-killed in the shutdown. Zero doses completed; `sja2bewl` is abandoned (failed grid entries cannot
-be re-run in place). **Relaunch with `bash scripts/launch_499M_ladder.sh`** once four GPUs are
-free — it preflights GPU availability, Hub identity, and the offline benchmark load, creates a
-fresh sweep, and arms the extension chain (`dj21lgk3`).
+**Status as of 2026-08-18:** D1–D4 all signed off. Phase 0 complete (clean GSM8K floor is zero).
+**Phase 1 is RUNNING**: relaunched as sweep
+`rylan/memorization-scoring-vs-sampling-pt-v1-scale-ladder/rx6km107` on GPUs 0,1,2,7 after Rylan
+recovered the slot, via `scripts/launch_499M_ladder.sh` (all three preflights passed; extension
+chain to `dj21lgk3` armed; log `logs/agent_499M_ladder_rx6km107.log`). The first attempt (sweep
+`sja2bewl`, 2026-08-17) lost all three runs — R=0 to an OOM when user `srivats*` took GPU 7
+mid-run, R=1 to the dead MATH download below, R=10 killed in the shutdown — and is abandoned;
+zero doses had completed.
 
 ⚠️ **`EleutherAI/hendrycks_math` is dead upstream as of 2026-08-17**: the Hub repo is gone and the
 fallback loader's `people.eecs.berkeley.edu/~hendrycks/MATH.tar` URL returns 403. Every
