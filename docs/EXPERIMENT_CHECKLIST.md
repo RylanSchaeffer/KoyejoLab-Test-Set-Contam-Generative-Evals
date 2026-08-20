@@ -279,12 +279,16 @@ rename. Reproducing or extending those two published points requires restoring t
 
 ## Phase 1 — Qwen3 scale ladder (the long pole; RUNNING since 2026-08-17)
 
-**499M launched 2026-08-17**: sweep `rylan/memorization-scoring-vs-sampling-pt-v1-scale-ladder/sja2bewl`
-(`sweeps/pt_v1_scale_ladder/qwen3-499M-1xOT.yaml`), doses R ∈ {0, 1, 10, 100, 316}, GPUs
-0,1,2,7, `PRETRAIN_LEGACY_TOKEN_BUDGET=1`, Hub uploads to `RylanSchaeffer` enabled, agent log
-`logs/agent_499M_ladder_sja2bewl.log`. The chained extension sweep `dj21lgk3` adds
-R ∈ {3, 32, 1000, 3162} (see 1.2), completing the published 9-dose grid: **~13 days total** at
-the measured 31.2 h/run baseline, plus per-run dataset-construction overhead.
+**499M running** (relaunched 2026-08-17 as sweep `rx6km107`; see the status block at top): doses
+R ∈ {0, 1, 10, 100, 316} then the chained extension `dj21lgk3` adds R ∈ {3, 32, 1000, 3162},
+completing the published 9-dose grid on GPUs 0,1,2,7 with `PRETRAIN_LEGACY_TOKEN_BUDGET=1`.
+
+**Measured reality check (R=0 finished 2026-08-20, uploaded to the Hub):** 58.9 h wall-clock at
+33.5k tokens/s aggregate — **1.9× the calibrated estimate** (single-GPU eager throughput scaled
+by world size ignored DDP all-reduce, eval passes, and compile warmup; the same factor applies to
+every projection from `calibrate_scale_ladder_throughput.py`). Full 9-dose 499M grid at this
+rate: **~25 days, not ~13**. Scale the 806M/1.09B projections by ~1.9× likewise (real per-run:
+806M ~150 h, 1.09B ~280 h) until item 1.1b re-measures under compile.
 
 On sizing: 344M → 499M is a **1.45× step, the smallest ratio anywhere in the published ladder**
 (34→62 is 1.85×, 153→344 is 2.25×), so it is the conservative extension. A valid on-grid
