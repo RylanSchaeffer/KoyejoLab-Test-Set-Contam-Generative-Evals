@@ -283,6 +283,14 @@ rename. Reproducing or extending those two published points requires restoring t
 R ∈ {0, 1, 10, 100, 316} then the chained extension `dj21lgk3` adds R ∈ {3, 32, 1000, 3162},
 completing the published 9-dose grid on GPUs 0,1,2,7 with `PRETRAIN_LEGACY_TOKEN_BUDGET=1`.
 
+⚠️ **ENOSPC incident (2026-08-26): the shared 56 TB volume hit 100% and killed R=100 mid-run.**
+Sweep grids do not re-issue lost entries, so R=100 is re-run by the make-up sweep **`xeknnvn1`**
+(`qwen3-499M-1xOT-makeup-r100.yaml`), chained to launch after the extension agent exits
+(`scripts/scratch/chain_499M_makeup_r100.sh`, with a 200 GB free-space preflight). Its tokenized
+corpus cache survived and is reused. R=316 was re-issued by W&B automatically and is running.
+Chain order: `rx6km107` (R ∈ {0,1,10,~~100~~,316}) → `dj21lgk3` (R ∈ {3,32,1000,3162}) →
+`xeknnvn1` (R=100). The volume sits at 97%; watch it — a second fill kills whatever is running.
+
 **Measured reality check (R=0 finished 2026-08-20, uploaded to the Hub):** 58.9 h wall-clock at
 33.5k tokens/s aggregate — **1.9× the calibrated estimate** (single-GPU eager throughput scaled
 by world size ignored DDP all-reduce, eval passes, and compile warmup; the same factor applies to
