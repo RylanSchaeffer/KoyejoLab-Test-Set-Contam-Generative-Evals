@@ -15,7 +15,10 @@
 set -u
 
 REPO=/lfs/skampere1/0/rschaef/KoyejoLab-Scoring-vs-Sampling-Memorization
-EXT_PATTERN="wandb agent rylan/memorization-scoring-vs-sampling-pt-v1-scale-ladder/dj21lgk3"
+# Overridable: the 2026-08-28 W&B outage forced the extension sweep to be
+# re-created under a new ID, so the watcher takes the ID from the environment.
+EXT_SWEEP_ID="${EXT_SWEEP_ID:-dj21lgk3}"
+EXT_PATTERN="wandb agent rylan/memorization-scoring-vs-sampling-pt-v1-scale-ladder/${EXT_SWEEP_ID}"
 cd "$REPO"
 
 echo "$(date -Is) waiting for the extension agent (dj21lgk3) to appear..."
