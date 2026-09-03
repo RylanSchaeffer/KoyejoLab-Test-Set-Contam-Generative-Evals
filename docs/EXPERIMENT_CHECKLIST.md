@@ -283,13 +283,21 @@ rename. Reproducing or extending those two published points requires restoring t
 R ∈ {0, 1, 10, 100, 316} then the chained extension `dj21lgk3` adds R ∈ {3, 32, 1000, 3162},
 completing the published 9-dose grid on GPUs 0,1,2,7 with `PRETRAIN_LEGACY_TOKEN_BUDGET=1`.
 
-⚠️ **ENOSPC incident (2026-08-26): the shared 56 TB volume hit 100% and killed R=100 mid-run.**
-Sweep grids do not re-issue lost entries, so R=100 is re-run by the make-up sweep **`xeknnvn1`**
-(`qwen3-499M-1xOT-makeup-r100.yaml`), chained to launch after the extension agent exits
-(`scripts/scratch/chain_499M_makeup_r100.sh`, with a 200 GB free-space preflight). Its tokenized
-corpus cache survived and is reused. R=316 was re-issued by W&B automatically and is running.
-Chain order: `rx6km107` (R ∈ {0,1,10,~~100~~,316}) → `dj21lgk3` (R ∈ {3,32,1000,3162}) →
-`xeknnvn1` (R=100). The volume sits at 97%; watch it — a second fill kills whatever is running.
+⚠️ **ENOSPC incidents (ongoing): the shared 56 TB volume keeps sawtoothing to 100%.** Another
+user writes ~300 GB/day; the volume filled on 2026-08-26 (killed R=100 mid-run) and again on
+2026-09-02 (killed **R=1000 at step 15,419/18,106 — 85% done**). W&B re-issued R=316 and R=3162
+automatically (crashed-at-launch runs get re-queued; runs lost mid-flight do not). Both
+casualties' ~30 GB corpus caches survived and are reused by their make-ups.
+
+Two W&B lessons now encoded in the tooling: (1) **grid sweeps never re-issue an entry lost
+mid-run** — every casualty needs an explicit make-up sweep; (2) **never pre-create a sweep days
+before its agent attaches** — `dj21lgk3` (created 08-17, never attached) had vanished from W&B by
+08-28 and the extension had to be recreated as `nd2eyb6o`. Accordingly
+`scripts/scratch/run_makeup_sweeps.sh` waits for the extension agent to exit, then per make-up
+YAML (R=100, R=1000): waits for ≥200 GB free, creates the sweep **at launch time**, and runs it
+to completion. The pre-created `xeknnvn1`/`3b6nxu3p` are abandoned. Chain: `rx6km107` →
+`nd2eyb6o` (R=3162 running) → make-ups. The `_cont_*` sole-copy ablation checkpoints were backed
+up to the Hub (2026-09-01) as insurance against this same disk.
 
 **Measured reality check (R=0 finished 2026-08-20, uploaded to the Hub):** 58.9 h wall-clock at
 33.5k tokens/s aggregate — **1.9× the calibrated estimate** (single-GPU eager throughput scaled
