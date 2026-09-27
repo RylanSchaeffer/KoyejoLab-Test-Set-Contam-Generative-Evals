@@ -1,12 +1,12 @@
 \section{Introduction}
 \label{sec:introduction}
 
-As frontier AI systems are pretrained on web-scale data, test set contamination has become a critical concern for accurately assessing their capabilities \citep{sainz2023nlp,schaeffer2023pretrainingtestsetneed,xu2024benchmarkdatacontaminationlarge,deng2024unveiling,reuel2025open}.
-Evaluation aims to measure generalization on tasks the model has never seen, yet the sheer scale of modern pretraining makes such contamination highly likely \citep{brown2020language, du2022glam, wei2022finetuned,chowdhery2022palmscalinglanguagemodeling,touvron2023llama2openfoundation, penedo2024finewebdatasetsdecantingweb}.
+As frontier AI systems are pretrained on web-scale data, test set contamination has become a critical concern for accurately assessing capabilities \citep{sainz2023nlp,schaeffer2023pretrainingtestsetneed,xu2024benchmarkdatacontaminationlarge,deng2024unveiling,reuel2025open}.
+Evaluation aims to measure generalization on unseen tasks, yet the sheer scale of modern pretraining makes such contamination highly likely \citep{brown2020language, du2022glam, wei2022finetuned,chowdhery2022palmscalinglanguagemodeling,touvron2023llama2openfoundation, penedo2024finewebdatasetsdecantingweb}.
 
-Prior research has sought to quantify the impact of test set contamination, also known as leakage, through two primary lenses. \textit{Statistical approaches} attempt to detect contamination or estimate its influence by modifying the test set, for example, by reordering, rephrasing, or replicating benchmark problems, e.g., \citep{oren2023proving, ni2025trainingbenchmarkneed, shi2024detecting, golchin2023data,golchin2024time,roberts2024to, wang2025generalization, zhang2024carefulexaminationlargelanguage}.
-In comparison, \textit{controlled approaches} -- which enable the most direct causal measurement -- intentionally contaminate pretraining corpora to quantify how specific doses of leakage inflate performance, e.g., \citep{magar2022data,jiang2024investigatingdatacontaminationpretraining,oren2023proving,yao2024data, duan2024membership,wang2025generalization,kocyigit2025overestimation,bordt2025howmuch, wei2025hubblemodelsuiteadvance}.
-For more, see Appendix~\ref{app:sec:related_work} Related Work.
+Prior research has sought to quantify the impact of test set contamination through two primary lenses. \textit{Statistical approaches} attempt to detect contamination or estimate its influence by modifying the test set, for example, by reordering, rephrasing, or replicating benchmark problems, e.g., \citep{oren2023proving, ni2025trainingbenchmarkneed, shi2024detecting, golchin2023data,golchin2024time,roberts2024to, wang2025generalization, zhang2024carefulexaminationlargelanguage}.
+In comparison, \textit{controlled approaches} intentionally contaminate pretraining corpora to quantify how specific doses of leakage inflate performance, e.g., \citep{magar2022data,jiang2024investigatingdatacontaminationpretraining,oren2023proving,yao2024data, duan2024membership,wang2025generalization,kocyigit2025overestimation,bordt2025howmuch, wei2025hubblemodelsuiteadvance}.
+For Related Work, see Appendix~\ref{app:sec:related_work}.
 
 \begin{figure*}[t!]
 \centering

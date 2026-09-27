@@ -159,8 +159,9 @@ The biggest effect of increasing contamination is that the irreducible error shr
 On the models we trained, \emph{including even a single replica enables almost all models to achieve lower cross entropy losses than the estimated irreducible error of the uncontaminated pretraining corpus}.
 Under standard scaling law assumptions -- specifically, that the scaling law extrapolates infinitely -- a contaminated pretraining corpus can buy more than an ``infinite'' amount of compute relative to pretraining on an uncontaminated pretraining corpus.
 
-This conclusion potentially contradicts \citet{huang2024demystifying}'s claim that single-shot verbatim memorization is an ``illusion''  and \citet{hayes2025exploring}'s claim that membership inference attacks are limited on pre-trained LLMs, with AUC asymptoting to $\mathord{\sim}0.689$.
-Future work should aim to understand this difference; one possible explanation is that MATH is distributionally different from FineWeb-Edu-Dedup in a way that makes identifying test set contamination easier.
+This conclusion potentially contradicts \citet{huang2024demystifying}'s claim that single-shot verbatim memorization is an ``illusion''  and \citet{hayes2025exploring}'s claim that membership inference attacks are limited on pre-trained LLMs.
+Future work should investigate this difference.
+% one possible explanation is that MATH is distributionally different from FineWeb-Edu-Dedup in a way that makes identifying test set contamination easier.
 
 \begin{figure*}[t!]
     \centering
