@@ -36,7 +36,7 @@ While foundational, these investigations have predominantly focused on \textit{d
 However, with the rapid advancement of model capabilities and the advent of reasoning models \citep{openai2024openaio1card,comanici2025gemini25pushingfrontier,xu2025largereasoningmodelssurvey}, the field is shifting towards \emph{generative} benchmarks.
 Whether test set contamination has the same effect on generative evaluation as on discriminative evaluations is unclear.
 Discriminative evaluations typically require the model to place higher probability mass on the correct choice than on a small number of alternative incorrect choices \citep{gao2024evalharness, schaeffer2025elusive}, and candidate choices are often only a couple of tokens long.
-In contrast, generative evaluations require the model to produce solutions spanning tens-to-thousands of tokens without straying from the memorized path, and introduce new considerations such as the sampling temperature \citep{ackley1985learning}, the sampling algorithm (e.g., top-k \citep{fan2018topk}, top-p \citep{holtzman2020topp}) and the solution length.
+In contrast, generative evaluations require the model to produce solutions spanning tens-to-thousands of tokens, and introduce new considerations such as the sampling temperature \citep{ackley1985learning}, the sampling algorithm (e.g., top-k \citep{fan2018topk}, top-p \citep{holtzman2020topp}) and the solution length.
 
 
 \begin{figure*}[t!]

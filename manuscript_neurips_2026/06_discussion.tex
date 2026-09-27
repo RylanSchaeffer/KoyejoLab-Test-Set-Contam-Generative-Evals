@@ -2,9 +2,9 @@
 
 Benchmarks serve as our proxies for AI capabilities in the wild; contamination breaks this proxy, creating an illusion of competence.
 This work provides the first targeted examination of contamination in generative tasks.
-While generative contamination shares the superficial signature of inflating scores, the underlying mechanism is distinct: it relies on fragile, verbatim memorization of long token chains that behaves fundamentally differently from robust reasoning.
-
-Our scaling laws reveals the magnitude of this threat. Under standard scaling law assumptions, a single replica of the test set allows a model to bypass the estimated ``irreducible error'' barrier, achieving performance that would otherwise require more than an infinite amount of compute on uncontaminated data. However, this performance is brittle; critical ``levers'' -- sampling temperature and solution length -- differentiate memorization from generalization.
+% While generative contamination shares the superficial signature of inflating scores, the underlying mechanism is distinct: it relies on fragile, verbatim memorization of long token chains that behaves fundamentally differently from robust reasoning.
+Our scaling laws reveals the magnitude of this threat. Under standard scaling law assumptions, a single replica of the test set allows a model to bypass the estimated ``irreducible error'' barrier, achieving performance that would otherwise require more than an infinite amount of compute on uncontaminated data.
+However, this performance is brittle; critical ``levers'' -- sampling temperature and solution length -- differentiate memorization from generalization.
 % Unlike robust reasoning, which survives stochastic sampling, contamination-driven performance collapses under high temperatures. Similarly, the shift from power law to exponential decay in performance as solution length increases signals the limits of the model's ability to hold a memorized chain without decoherence.
 
 \begin{figure}[t!]

@@ -71,7 +71,7 @@ These two rates reveal three distinct regimes of memorization (Fig.~\ref{fig:pha
 In the absence of meaningful contamination, the irreducible error term $E$ dominates. The survival probability decays exponentially ($P(T) \sim e^{-E \cdot T}$), rendering the generation of long solutions statistically improbable.
 
 \paragraph{Regime II: Brittle Memorization ($E \approx 0, \alpha \le 1$).}
-At intermediate contamination, the probability follows a Weibull-like stretched exponential ($P(T) \sim e^{-k T^{1-\alpha}}$). While the model can accurately generate sequences, its grasp on the solution is fragile, and the cumulative probability of success eventually vanishes.
+At intermediate contamination, the probability follows a Weibull-like stretched exponential ($P(T) \sim e^{-k T^{1-\alpha}}$). While the model can accurately generate sequences, the cumulative probability of successful generation eventually vanishes.
 
 \paragraph{Regime III: Deterministic Lock-In ($E \approx 0, \alpha > 1$).}
 At high contamination, we observe a critical phase transition: $\alpha > 1$ flips the sign of the exponent in Eq.~\ref{eq:survival_prob}, causing the penalty term $T^{1-\alpha}$ to decay to zero. Consequently, $P(T)$ converges to a non-zero constant even as $T \to \infty$. In this regime, the model's certainty increases faster than the sequence accumulates risk, enabling the \textit{deterministic lock-in} of long solutions.
