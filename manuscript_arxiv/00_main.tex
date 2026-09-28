@@ -1,0 +1,115 @@
+\documentclass{article}
+
+\usepackage{preprint}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{multirow}
+
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{wrapfig}
+
+\usepackage[capitalize,noabbrev]{cleveref}
+
+\input{math_commands}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\definecolor{legendblue}{RGB}{31, 119, 180}
+\definecolor{legendgreen}{RGB}{44, 160, 44}
+
+\usepackage[disable,textsize=tiny]{todonotes}
+
+\title{Test Set Contamination of Generative Evaluations}
+
+\author{%
+  \parbox{\dimexpr\textwidth-2\tabcolsep\relax}{\centering
+    Rylan Schaeffer\textsuperscript{1}\thanks{Corresponding author: \texttt{rschaef@cs.stanford.edu}.}\quad
+    Joshua Kazdan\textsuperscript{2}\quad
+    Baber Abbasi\textsuperscript{3}\\[3pt]
+    Ken Ziyu Liu\textsuperscript{1}\quad
+    Brando Miranda\textsuperscript{1}\quad
+    Ahmed Ahmed\textsuperscript{1}\\[3pt]
+    Fazl Barez\textsuperscript{4,5}\quad
+    Yegor Denisov-Blanch\textsuperscript{1}\quad
+    Abhay Puri\textsuperscript{6}\\[3pt]
+    Stella Biderman\textsuperscript{3}\quad
+    Niloofar Mireshghallah\textsuperscript{7}\quad
+    Sanmi Koyejo\textsuperscript{1}\thanks{Corresponding author: \texttt{sanmi@cs.stanford.edu}.}\\[7pt]
+    {\normalfont\small
+      \textsuperscript{1}Stanford Computer Science\quad
+      \textsuperscript{2}Stanford Statistics\\
+      \textsuperscript{3}EleutherAI\quad
+      \textsuperscript{4}University of Oxford\quad
+      \textsuperscript{5}Martian\\
+      \textsuperscript{6}ServiceNow Research\quad
+      \textsuperscript{7}Carnegie Mellon University
+    }
+  }
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+    Test set contamination -- the inclusion of benchmarks in pretraining data -- is a critical challenge to the trustworthy evaluation of frontier AI systems.
+    While its impact on \emph{discriminative} evaluations is well-studied, contamination on \emph{generative} evaluations remains underexplored.
+    We quantitatively assess these effects across the language model lifecycle by pretraining models (up to 344M parameters) contaminated with varying numbers of MATH test set replicas.
+    While performance expectedly improves with contamination and model size, the improvements stem from superficial memorization, not generalization.
+    Our scaling law analysis reveals a fundamental breach: including even a single test set replica enables models to achieve lower loss than the irreducible error of training on the uncontaminated corpus.
+    We then study additional training: overtraining with fresh data dilutes contamination effects, whereas supervised finetuning on the training set improves performance for low contamination but degrades it for high contamination.
+    At inference, we identify three distinct regimes of memorization -- exponential decoherence, brittle memorization, deterministic lock-in -- governed by solution length and sampling temperature.
+    Finally, we identify and fix a critical implementation error in EleutherAI's LM Evaluation Harness that previously underreported mathematical reasoning performance. By characterizing how generation and memorization interact, we highlight new considerations for trustworthy AI evaluation.
+\end{abstract}
+
+
+\input{01_introduction}
+\input{02_methodology}
+\input{03_pretraining}
+\input{04_further_training}
+\input{05_generation}
+\input{06_discussion}
+
+
+\input{07_acknowledgements}
+
+\clearpage
+
+\bibliographystyle{preprintnat}
+\bibliography{references_rylan}
+
+
+\appendix
+
+\input{99_appendix}
+
+
+\end{document}
